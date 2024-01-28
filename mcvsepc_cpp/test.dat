@@ -1,0 +1,3 @@
+sync   		2            0.      1.e20           C_synchrotron    add  0
+$switchCase   4
+*Ecut         keV	1

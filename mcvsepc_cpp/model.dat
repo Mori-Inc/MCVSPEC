@@ -1,0 +1,5 @@
+mcvspec   4             0.      1.e20           C_MCVSPEC    add  0
+Rm/R_wd   " "           10      1.1     1.1     1000.   1000.   0.01
+MDOT0     g/cm2/s       1.      0.      0.      100.    100.    0.01
+M         Msun          1.      0.      0.      1.4     1.4     0.01
+Abundance " "           1.      0.      0.      5.      5.      0.01
