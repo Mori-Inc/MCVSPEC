@@ -1,8 +1,19 @@
 # X-ray Spectral Models for Magnetic CV's
 
-There are three versions of MCVSPEC, our spectral model for X-ray emissions from magnetic cataclysmic variables. 
+This is MCVSPEC, our spectral model for modelling X-ray emissions from magnetic cataclysmic variables (Bridges et al. in prep).
 
-The common input parameters are: reflectOn (switch parameter to determine whether to model reflection from WD surface; 1 if yes), M (WD mass), f (fractional accretion area), luminosity (L, in 10^33 ergs/s), Z_wd (WD surface abundance relative to solar), Z (accretion column abundance relative to solar), and cos i (inclination angle of reflecting surface). Depending on source type and spin equilibrium, there's an additional parameter used to estimate magnetospheric radius.
+MCVSPEC has three versions. The common input parameters are:
+| Variable       | Units                 | Description                                                           |
+|----------------|-----------------------|-----------------------------------------------------------------------|
+| `reflectOn`    | 1 or 0                | Switch to determine if reflection from WD surface is internally modeled (1 = yes)|
+| `M`            | Solar masses (M☉)     | Mass of the white dwarf (WD)                                           |
+| `f`            | Dimensionless (0 to 1) | Fractional accretion area of the WD                                    |
+| `L`            | 10^33 ergs/s           | Luminosity of the WD                                                   |
+| `Z_wd`         | Relative to solar      | WD surface abundance                                  |
+| `Z`            | Relative to solar      | Accretion column abundance                            |
+| `cos i`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the reflecting surface              |
+
+Depending on source type and spin equilibrium, there's an additional parameter used to estimate magnetospheric radius.
 
 POLARSPEC: model for polars. Accepts B (magnetic field in 10^6 G)
 
