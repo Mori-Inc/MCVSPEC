@@ -269,8 +269,8 @@ void POLARSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK,
 
     std::valarray<Real> REFLECTPARAM1(5);
     if (reflectOn==1){
-        shockratio = X[VGRID-1] / R_wd;
-        REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
+        //shockratio = X[VGRID-1] / R_wd;
+        //REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
         //std::cout << "reflect param = " << REFLECTPARAM1[0] << std::endl;
         REFLECTPARAM1[1]=0.0;
         REFLECTPARAM1[2]=WDABUN;
@@ -306,6 +306,10 @@ void POLARSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK,
             apec(energyArray, PARAM1, spectrumNumber,flux, fluxError, initString);
         }else{
             CXX_bremss(energyArray, PARAM1, spectrumNumber, fluxArray, fluxError,initString);
+        }
+        if (reflectOn==1){
+            REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+X[k]/R_wd,2),0.5);
+            CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, fluxArray, fluxError, initString);
         }
 
         /*
@@ -350,9 +354,9 @@ void POLARSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK,
             fluxArray[l]=fluxArray[l]+flux[l];
         }
     }
-    if (reflectOn==1){
-        CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, fluxArray, fluxError, initString);
-    }
+   // if (reflectOn==1){
+    //    CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, fluxArray, fluxError, initString);
+    //}
 }
 
 void SHOCK_SHOOT(Real h_init, int ITER, Real tol, int VGRID, RealArray& RHO, RealArray& P, RealArray& TK,
