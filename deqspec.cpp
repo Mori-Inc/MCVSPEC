@@ -319,9 +319,9 @@ void DEQSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
     }
         
     std::valarray<Real> REFLECTPARAM1(5);
-    shockratio = X[VGRID-1] / R_wd;
+    //shockratio = X[VGRID-1] / R_wd;
     if (reflectOn==1){
-        REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
+        //REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
         //"reflect param = " << REFLECTPARAM1[0] << std::endl;
         REFLECTPARAM1[1]=0.0;
         REFLECTPARAM1[2]=WDABUN;
@@ -358,7 +358,10 @@ void DEQSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
             //xsbrms_((float*)&energyArray[0], NE, (float*)&PARAM1[0], spectrumNumber, (float*)&flux[0], (float*)&fluxError[0]);
             CXX_bremss(energyArray, PARAM1, spectrumNumber, fluxArray, fluxError,initString);
         }
-
+        if (reflectOn==1){
+            REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+X[k]/R_wd,2),0.5);
+            CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, fluxArray, fluxError, initString);
+        }
         /*
      ! Now multiplies the calculated spectrum by the volume and density^2
      ! of the particular element for each energy bin. This is required becaus
@@ -400,9 +403,6 @@ void DEQSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
         for(int l=0;l<NE;l++){
             fluxArray[l]=fluxArray[l]+flux[l];
         }
-    }
-    if (reflectOn==1){
-    CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, fluxArray, fluxError, initString);
     }
 }
 
