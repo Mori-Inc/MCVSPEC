@@ -5,7 +5,7 @@ This is MCVSPEC, our spectral model for modelling X-ray emissions from magnetic 
 MCVSPEC has three versions. The common input parameters are:
 | Variable       | Units                 | Description                                                           |
 |----------------|-----------------------|-----------------------------------------------------------------------|
-| `reflectOn`    | 1 or 0                | Switch to determine if reflection from WD surface is internally modeled (1 = yes)|
+| `reflectOn`    | 0, 1, or 2             | Switch to determine if and how reflection from WD surface is modeled (0 = no, 1 = once at the end, 2 = varying heights along the column)|
 | `M`            | Solar masses (M☉)     | Mass of the white dwarf (WD)                                           |
 | `f`            | Dimensionless (0 to 1) | Fractional accretion area of the WD                                    |
 | `L`            | 10^33 ergs/s           | Luminosity of the WD                                                   |
