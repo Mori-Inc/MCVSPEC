@@ -319,18 +319,28 @@ void DEQSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
     }
         
     std::valarray<Real> REFLECTPARAM1(5);
-    //shockratio = X[VGRID-1] / R_wd;
-    if (reflectOn==1){
+    if ((reflectOn==1) ||(reflectOn==2)){
+        //shockratio = X[VGRID-1] / R_wd;
         //REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
-        //"reflect param = " << REFLECTPARAM1[0] << std::endl;
+        //std::cout << "reflect param = " << REFLECTPARAM1[0] << std::endl;
         REFLECTPARAM1[1]=0.0;
         REFLECTPARAM1[2]=WDABUN;
         REFLECTPARAM1[3]=WDABUN;
         REFLECTPARAM1[4]=cosAngle;
     }
+    if (reflectOn==1){
+        shockratio = X[VGRID-1] / R_wd;
+        REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
+    }
     //Main loop. Loop over each vertical element to calculate and add the flux into the array
     for(int k=0;k<VGRID;k++){
-        
+                /* adds the flux for this vertical element to the existing flux in each
+     ! energy bin
+     !  */
+        for(int l=0;l<NE;l++){
+            fluxArray[l]=fluxArray[l]+flux[l];
+            flux[l]=0;
+        }
         /* Calculates the Mewe spectrum for each vertical element on the energy
         grid passed into it, using
         a) PARAM(1) the temperature in keV of the vertical element
@@ -356,12 +366,13 @@ void DEQSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
         }else{
             //std::cout << "is this ever used? " << std::endl;
             //xsbrms_((float*)&energyArray[0], NE, (float*)&PARAM1[0], spectrumNumber, (float*)&flux[0], (float*)&fluxError[0]);
-            CXX_bremss(energyArray, PARAM1, spectrumNumber, fluxArray, fluxError,initString);
+            CXX_bremss(energyArray, PARAM1, spectrumNumber, flux, fluxError,initString);
         }
-        if (reflectOn==1){
+        if (reflectOn==2){
             REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+X[k]/R_wd,2),0.5);
-            CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, fluxArray, fluxError, initString);
+            CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, flux, fluxError, initString);
         }
+
         /*
      ! Now multiplies the calculated spectrum by the volume and density^2
      ! of the particular element for each energy bin. This is required becaus
@@ -397,11 +408,13 @@ void DEQSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
                 flux[i]=DISTNORM*(X[k]-X[k-1])*(std::pow(NELEC[k]*1e-7,2)/NENH)*flux[i];
             }
         }
-        /* adds the flux for this vertical element to the existing flux in each
-     ! energy bin
-     !  */
+
+    }
+    if(reflectOn==1){
+        CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, flux, fluxError, initString);
         for(int l=0;l<NE;l++){
             fluxArray[l]=fluxArray[l]+flux[l];
+            flux[l]=0;
         }
     }
 }
