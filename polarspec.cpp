@@ -74,7 +74,7 @@ extern "C"
 void POLARSPEC(const RealArray& energyArray, const RealArray& params, int spectrumNumber, RealArray& fluxArray, RealArray& fluxErrArray,
 	  const string& initString)
 {
-    reflectOn = params[0];// 1 or 0, for whether to implement reflect
+    reflectOn = params[0];// 0, 1, or 2 for whether to implement reflect (0), only once (1), or at every iteration (2)
     B = params[1]; //Surface B-field [10^6 G]
     f = params[2];//fractional accretion area
     L = params[3]*std::pow(10,33.0); // luminosity
@@ -268,7 +268,7 @@ void POLARSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK,
     }
 
     std::valarray<Real> REFLECTPARAM1(5);
-    if (reflectOn==1){
+    if ((reflectOn==1) ||(reflectOn==2)){
         //shockratio = X[VGRID-1] / R_wd;
         //REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
         //std::cout << "reflect param = " << REFLECTPARAM1[0] << std::endl;
@@ -277,11 +277,23 @@ void POLARSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK,
         REFLECTPARAM1[3]=WDABUN;
         REFLECTPARAM1[4]=cosAngle;
     }
-
+    if (reflectOn==1){
+        shockratio = X[VGRID-1] / R_wd;
+        REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
+    }
 
     //Main loop. Loop over each vertical element to calculate and add the flux into the array
     for(int k=0;k<VGRID;k++){
-        
+        /* adds the flux for this vertical element to the existing flux in each
+     ! energy bin
+     !  */
+        for(int l=0;l<NE;l++){
+            fluxArray[l]=fluxArray[l]+flux[l];
+            flux[l]=0;
+        }
+        //for j fluxArray
+
+        //fluxArray
         /* Calculates the Mewe spectrum for each vertical element on the energy
         grid passed into it, using
         a) PARAM(1) the temperature in keV of the vertical element
@@ -305,11 +317,12 @@ void POLARSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK,
         if(TK[k]/KK<86){
             apec(energyArray, PARAM1, spectrumNumber,flux, fluxError, initString);
         }else{
-            CXX_bremss(energyArray, PARAM1, spectrumNumber, fluxArray, fluxError,initString);
+            CXX_bremss(energyArray, PARAM1, spectrumNumber, flux, fluxError,initString);
         }
-        if (reflectOn==1){
+
+        if (reflectOn==2){
             REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+X[k]/R_wd,2),0.5);
-            CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, fluxArray, fluxError, initString);
+            CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, flux, fluxError, initString);
         }
 
         /*
@@ -347,16 +360,15 @@ void POLARSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK,
                 flux[i]=DISTNORM*(X[k]-X[k-1])*(std::pow(NELEC[k]*1e-7,2)/NENH)*flux[i];
             }
         }
-        /* adds the flux for this vertical element to the existing flux in each
-     ! energy bin
-     !  */
+        
+    }
+    if(reflectOn==1){
+        CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, flux, fluxError, initString);
         for(int l=0;l<NE;l++){
             fluxArray[l]=fluxArray[l]+flux[l];
+            flux[l]=0;
         }
     }
-   // if (reflectOn==1){
-    //    CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, fluxArray, fluxError, initString);
-    //}
 }
 
 void SHOCK_SHOOT(Real h_init, int ITER, Real tol, int VGRID, RealArray& RHO, RealArray& P, RealArray& TK,
