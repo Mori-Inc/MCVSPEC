@@ -4,18 +4,15 @@
 
 #include <xsTypes.h>
 #include <XSFunctions/functionMap.h>
-
+#include <XSFunctions/funcWrappers.h>
+#include <gsl/gsl_roots.h>
+#include <gsl/gsl_errno.h>
 /*
-  MCVSPEC
+  IPSPEC
   ----
 
   Oct 2023: Accretion column temperature/density profile calculator for Intermediate Polars.
 
-  INPUT PARAMETERS:
-  PARAM(1) - Rm/R
-  PARAM(2) - Mdot, specific accretion rate
-  PARAM(3) - M, WD mass in solar masses
-  PARAM(4) - Z, Abundance
 */
 const int VGRIDMAX=250;
 const int RGRIDMAX=5;
@@ -35,9 +32,16 @@ Real inter1,inter2,inter3,inter4,inter5,inter6;//intermediate/placeholder variab
 //declarations of constants
 //Real Msun, Rsun, G, mue, mmw, A, mu, k, mH, alpha, beta, gamma;
 //declaration of white dwarf parameters
-Real M_3, M_wd, R_wd, shock_height, vff, n_elec_shock, Tshock, ES0, MDOT0, XS0, coeff;
+Real M_3, M_wd, R_wd, shock_height, vff, n_elec_shock, Tshock, ES0, MDOT0, MDOT, XS0, coeff;
+Real Pspin; 
 Real R_m;
 Real hstar;
+Real cosAngle;
+Real shockratio;
+Real f;
+Real L;
+Real WDABUN;
+Real reflectOn;
 
 Real Msun = 1.989100e+33;//solar mass [gram]
 Real Rsun = 6.9599e10;//solar radius [cm]
@@ -62,7 +66,7 @@ Real Newton_Solver(Real (*func)(Real, Real), Real (*func_prime)(Real, Real),
                     Real x0, Real coeff, Real tol, int maxIter);
 
 //Accretion Column ODE 
-void MCVSPEC_Shooting(int VGRID, RealArray& RHO, RealArray& P, RealArray& TK,
+void IPSPEC_Shooting(int VGRID, RealArray& RHO, RealArray& P, RealArray& TK,
                     RealArray& X, RealArray& NELEC, RealArray& SOLN);
 
 //Shock Height Correction
@@ -70,36 +74,27 @@ void XS_CORR(Real h_init, int ITER, Real tol, int VGRID, RealArray& RHO, RealArr
                     RealArray& X, RealArray& NELEC, RealArray& SOLN);
 
 //Generator of Spectrum From Accretion Column Profile
-void MCVSPEC_MEWE_SPECTRUM(int vgrid, const RealArray& X, const RealArray& TK, const RealArray& NELEC, Real METABUN, 
+void IPSPEC_MEWE_SPECTRUM(int vgrid, const RealArray& X, const RealArray& TK, const RealArray& NELEC, Real METABUN, 
                             Real DISTNORM, const RealArray& energyArray, int spectrumNumber, RealArray& fluxArray, int NE, const string& initString);
 
 /*---------------------------
         Primary routine
 ----------------------------*/
 extern "C"
-void MCVSPEC(const RealArray& energyArray, const RealArray& params, int spectrumNumber, RealArray& fluxArray, RealArray& fluxErrArray,
+void IPSPEC(const RealArray& energyArray, const RealArray& params, int spectrumNumber, RealArray& fluxArray, RealArray& fluxErrArray,
 	  const string& initString)
 {
-    /*
-    These are the input parameters:
-    M is the mass of the primary in solar masses
-    METABUN is the metal abundance: solar = 1.0
-    VGRID is the number of vertical layers in the accretion column!
-    R_ratio = PARAM(1) ! Ratio of Magnetospheric Radius to WD Radius
-    MDOT0   = PARAM(2) ! mass accretion rate [g/cm2/s]
-    M       = PARAM(3) ! WD mass in solar mass
-    METABUN = PARAM(4) ! Abundance
-    VGRID   = 50 ! Number of vertical grids fixed to 50
+    reflectOn = params[0];
+    Pspin = params[1]; // spin period in seconds; assumes spin equilibrium
+    f = params[2];//fractional accretion area
+    L = params[3]*std::pow(10,33.0); // luminosity
+    M = params[4]; // WD mass in solar mass
+    METABUN = params[5]; // ACCRETION COLUMN Abundance
+    WDABUN = params[6]; // WD SURFACE Abundance
+    cosAngle = params[7]; // cos i
 
-    Flux normalization factor for APEC model as we define our flux norm as (R [km] / d [kpc])^2
-    Note: PI*R_C^2/(4*PI*Distance^2) where R_C = accretion column radius [cm] and distance [cm]
-    */
-    R_ratio = params[0]; //Ratio of Magnetospheric Radius to WD Radius
-    MDOT0 = params[1]; // mass accretion rate [g/cm2/s]
-    M = params[2]; // WD mass in solar mass
-    METABUN = params[3]; // Abundance
+
     VGRID = 50; //Number of vertical grids fixed to 50
-
     RGRID = 1;//Number of radial zones in the accretion column
 
     DISTNORM = 2.62511E-34;
@@ -122,18 +117,21 @@ void MCVSPEC(const RealArray& energyArray, const RealArray& params, int spectrum
     M_3 = (5.816*Msun)/(std::pow(mmw,2.0)); //Chandresekar mass [grams]
     M_wd=M*Msun; //WD mass [grams]
     R_wd=Rsun*(0.0225/mmw)*std::pow(1.0-std::pow(M_wd/M_3,4.0/3.0),0.5)/std::pow(M_wd/M_3,1.0/3.0); //\WD radius [cm]
+    R_m=149803914.583*(std::pow(Pspin,2.0/3.0))*(std::pow(M,1.0/3.0));
 
+    MDOT = L/(G*M_wd*(1/R_wd-1/R_m));
+    MDOT0 = MDOT/(4*3.141592654*std::pow(R_wd,2.0)*f);
+    std::cout << "m dot = " << MDOT0 << std::endl;
     //intermediate steps
-    inter1 = (R_ratio*R_wd)/((2.75e8)*(std::pow(M,1.0/7.0))*(std::pow((R_wd/(1.e9)),-2.0/7.0)));
-    inter2 = (1.e33)/ M_wd;
+    inter1 = R_m/((2.75e8)*(std::pow(M,1.0/7.0))*(std::pow((R_wd/(1.e9)),-2.0/7.0)));
+    inter2 = (1.e33)/M_wd;
     inter3 = inter2* R_wd / G *(std::pow(inter1,(-7./2.)));
     inter4 = inter3 / (8.6e17*(std::pow(MDOT0,7./5.))*(std::pow(M,1./7.))*(std::pow(R_wd/(1.e9),9./5.)));
     inter5 = (std::pow(inter4,(-1./2.)))/R_wd * (1.e30)/R_wd /R_wd;
     inter6 = inter5/1.e6;
 
     B = std::pow(inter6,5./7.);
-
-    R_m=R_ratio*R_wd;
+    //std::cout << "B [MG] = " << B << std::endl;
 
     if(R_wd<R_m){
         vff=std::pow((2.*G*M_wd)*((1./R_wd)-(1./R_m)),0.5);//free fall velocity with R_m correction, Suleimanov (2016)
@@ -146,31 +144,31 @@ void MCVSPEC(const RealArray& energyArray, const RealArray& params, int spectrum
     XS0=std::pow(vff,3)*0.049/(2.*A*MDOT0);//shock height [cm] when B = 0
     coeff = std::pow(9.1e-3*(B/10.),2.85)*std::pow((Tshock/1.e8),2.0)*std::pow((n_elec_shock/1.e16),-1.85)*std::pow((XS0/1.e7),-0.85);
 
-    ES0 = Newton_Solver(epsilon_func, epsilon_func_prime, 1.e5, coeff, 1.e-7, 100);
+    ES0 = Newton_Solver(epsilon_func, epsilon_func_prime, 1.e5, coeff, 1.e-7, 200);
 
     shock_height = 7.59e6*(4.0/MDOT0)*std::pow(M/0.5,3./2.)*std::pow(R_wd/1.e9,-3./2.)/std::pow(1.+ES0,0.5);//shock height [cm] from equation 7c in\ Wu et al. 1994 paper
     
     int ITER=10;
-    MCVSPEC_Shooting(VGRID,RHO,P,TK,X,NELEC,SOLN);
+    IPSPEC_Shooting(VGRID,RHO,P,TK,X,NELEC,SOLN);
 
-    if ((X[VGRID-1]/R_wd)>0.01 && (X[VGRID-1]/R_wd)<2){
+    if ((X[VGRID-1]/R_wd)>0.01 && (X[VGRID-1]/R_wd)<10){
         XS_CORR(X[VGRID-1], ITER, 0.005, VGRID, RHO, P, TK, X, NELEC, SOLN);
     }
 
     B_approx = 52.2*std::pow(ES0,0.35)*std::pow(Tshock/1.0E8,-0.7)*std::pow(NELEC[VGRID-1]/1.0E16,0.65)*std::pow(shock_height/1.0E7,0.3);
     B_derived = 52.2*std::pow(ES0,0.35)*std::pow(TK[VGRID-1]/1.0E8,-0.7)*std::pow(NELEC[VGRID-1]/1.0E16,0.65)*std::pow(X[VGRID-1]/1.0E7,0.3);
 
-    std::cout << "White dwarf radius [10^7 cm] = " << R_wd * 1.0e-7 << std::endl;
-    std::cout << "Shock height [10^7 cm] (numerical) = " << X[VGRID-1] * 1.0e-7 << std::endl;
+    //std::cout << "White dwarf radius [10^7 cm] = " << R_wd * 1.0e-7 << std::endl;
+    //std::cout << "Shock height [10^7 cm] (numerical) = " << X[VGRID-1] * 1.0e-7 << std::endl;
     //std::cout << "Shock height [10^7 cm] (approximate) = " << shock_height * 1.0e-7 << std::endl;  // Same value as numerical
-    std::cout << "Shock height/R_wd = " << X[VGRID-1] / R_wd << std::endl;
-    std::cout << "Tshock [keV] = " << Tshock * 8.618e-8 << std::endl;
-    std::cout << "B [MG] (numerical) = " << B << std::endl;
+    std::cout << "h/R_wd = " << shock_height/ R_wd << std::endl;
+    //std::cout << "Tshock [keV] = " << Tshock * 8.618e-8 << std::endl;
+    //std::cout << "B [MG] (numerical) = " << B << std::endl;
     //std::cout << "B [MG] (approximate) = " << B_approx << std::endl;
     //std::cout << "B [MG] (derived) = " << B_derived << std::endl;
-    std::cout << "V_ff [10^8 cm/s] = " << vff*1.0e-8 << std::endl;
+    //std::cout << "V_ff [10^8 cm/s] = " << vff*1.0e-8 << std::endl;
 
-    MCVSPEC_MEWE_SPECTRUM(VGRID, X, TK, NELEC, METABUN, DISTNORM, energyArray, spectrumNumber, fluxArray, NE, initString);
+    IPSPEC_MEWE_SPECTRUM(VGRID, X, TK, NELEC, METABUN, DISTNORM, energyArray, spectrumNumber, fluxArray, NE, initString);
 }
 
 //function inside the integral in Wu 1994
@@ -204,38 +202,60 @@ epsilon: tolerance
 max_iter: maximum number of iterations
 root: solution for x 
 */
-Real Newton_Solver(Real (*func)(Real, Real), Real (*func_prime)(Real, Real), 
-                    Real x0, Real coeff, Real tol, int maxIter) 
-{
-    Real x = x0;
-    Real x_new;
-    for(int i = 0; i < maxIter; i++) {
-        Real f = func(x, coeff);
-        Real f_prime = func_prime(x, coeff);
-        
-        /*if (std::abs(f_prime) < tol) {
-            std::cerr << "Derivative is too small!" << std::endl;
-            return x;
-        }*/
-         if (std::abs(f) < tol) {
-            std::cerr << "The value is too small!" << std::endl;
-            return x;
-        }
-        
-        x_new = x - f / f_prime;
-        
-        if (std::abs(x_new - x) < tol) {
-            return x_new;
-        }
+struct Params {
+    Real coeff;
+};
+Real func_wrapper(Real x, void *params) {
+    Params *p = static_cast<Params*>(params);
+    return epsilon_func(x, p->coeff);
+}
 
-        x = x_new;
+Real func_prime_wrapper(Real x, void *params) {
+    Params *p = static_cast<Params*>(params);
+    return epsilon_func_prime(x, p->coeff);
+}
+
+void func_and_prime_wrapper(Real x, void *params, Real *y, Real *dy) {
+    Params *p = static_cast<Params*>(params);
+    *y = epsilon_func(x, p->coeff);
+    *dy = epsilon_func_prime(x, p->coeff);
+}
+
+Real Newton_Solver(Real (*func)(Real, Real), Real (*func_prime)(Real, Real), 
+                   Real x0, Real coeff, Real tol, int maxIter) {
+    Params params = {coeff};
+
+    gsl_function_fdf F;
+    F.f = &func_wrapper;
+    F.df = &func_prime_wrapper;
+    F.fdf = &func_and_prime_wrapper;
+    F.params = &params;
+
+    gsl_root_fdfsolver *solver = gsl_root_fdfsolver_alloc(gsl_root_fdfsolver_newton);
+    gsl_root_fdfsolver_set(solver, &F, x0);
+
+    Real x = x0;
+    int iter = 0;
+    int status;
+
+    do {
+        iter++;
+        status = gsl_root_fdfsolver_iterate(solver);
+        x = gsl_root_fdfsolver_root(solver);
+        status = gsl_root_test_residual(func_wrapper(x, &params), tol);
+    } while (status == GSL_CONTINUE && iter < maxIter);
+
+    gsl_root_fdfsolver_free(solver);
+
+    if (status != GSL_SUCCESS) {
+        std::cerr << "Failed to converge after " << maxIter << " iterations." << std::endl;
     }
-    std::cerr << "Max iterations reached!" << std::endl;
+
     return x;
 }
 
 //method to calculate temperature/density profile in accretion column
-void MCVSPEC_Shooting(int VGRID, RealArray& RHO, RealArray& P, RealArray& TK,
+void IPSPEC_Shooting(int VGRID, RealArray& RHO, RealArray& P, RealArray& TK,
                     RealArray& X, RealArray& NELEC, RealArray& SOLN){
     Real tau, y, tau_f, m1, m2, m3, m4, tau_i, y_i, n;
     int number_of_steps; //counter variables
@@ -287,7 +307,7 @@ void MCVSPEC_Shooting(int VGRID, RealArray& RHO, RealArray& P, RealArray& TK,
 }
 
 
-void MCVSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, const RealArray& NELEC, Real METABUN, 
+void IPSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, const RealArray& NELEC, Real METABUN, 
                             Real DISTNORM, const RealArray& energyArray, int spectrumNumber, RealArray& fluxArray, int NE, const string& initString){
     Real PI, KK, NENH;
     std::valarray<Real> PARAM1(3);
@@ -298,9 +318,31 @@ void MCVSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
     for(int j=0;j<NE;j++){
         fluxArray[j]=0.0;
     }
+        
+    std::valarray<Real> REFLECTPARAM1(5);
+    if ((reflectOn==1) ||(reflectOn==2)){
+        //shockratio = X[VGRID-1] / R_wd;
+        //REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
+        //std::cout << "reflect param = " << REFLECTPARAM1[0] << std::endl;
+        REFLECTPARAM1[1]=0.0;
+        REFLECTPARAM1[2]=WDABUN;
+        REFLECTPARAM1[3]=WDABUN;
+        REFLECTPARAM1[4]=cosAngle;
+    }
+    if (reflectOn==1){
+        shockratio = X[VGRID-1] / R_wd;
+        REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+shockratio,2),0.5);
+    }
+
     //Main loop. Loop over each vertical element to calculate and add the flux into the array
     for(int k=0;k<VGRID;k++){
-        
+                /* adds the flux for this vertical element to the existing flux in each
+     ! energy bin
+     !  */
+        for(int l=0;l<NE;l++){
+            fluxArray[l]=fluxArray[l]+flux[l];
+            flux[l]=0;
+        }
         /* Calculates the Mewe spectrum for each vertical element on the energy
         grid passed into it, using
         a) PARAM(1) the temperature in keV of the vertical element
@@ -324,7 +366,14 @@ void MCVSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
         if(TK[k]/KK<86){
             apec(energyArray, PARAM1, spectrumNumber,flux, fluxError, initString);
         }else{
-            xsbrms_((float*)&energyArray[0], NE, (float*)&PARAM1[0], spectrumNumber, (float*)&flux[0], (float*)&fluxError[0]);
+            //std::cout << "is this ever used? " << std::endl;
+            //xsbrms_((float*)&energyArray[0], NE, (float*)&PARAM1[0], spectrumNumber, (float*)&flux[0], (float*)&fluxError[0]);
+            CXX_bremss(energyArray, PARAM1, spectrumNumber, flux, fluxError,initString);
+        }
+        
+        if (reflectOn==2){
+            REFLECTPARAM1[0]=1-std::pow(1.-1./std::pow(1+X[k]/R_wd,2),0.5);
+            CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, flux, fluxError, initString);
         }
 
         /*
@@ -362,13 +411,16 @@ void MCVSPEC_MEWE_SPECTRUM(int VGRID, const RealArray& X, const RealArray& TK, c
                 flux[i]=DISTNORM*(X[k]-X[k-1])*(std::pow(NELEC[k]*1e-7,2)/NENH)*flux[i];
             }
         }
-        /* adds the flux for this vertical element to the existing flux in each
-     ! energy bin
-     !  */
+
+    }
+    if(reflectOn==1){
+        CXX_reflect(energyArray, REFLECTPARAM1, spectrumNumber, flux, fluxError, initString);
         for(int l=0;l<NE;l++){
             fluxArray[l]=fluxArray[l]+flux[l];
+            flux[l]=0;
         }
     }
+    
 }
 
 void XS_CORR(Real h_init, int ITER, Real tol, int VGRID, RealArray& RHO, RealArray& P, RealArray& TK,
@@ -386,11 +438,11 @@ void XS_CORR(Real h_init, int ITER, Real tol, int VGRID, RealArray& RHO, RealArr
         Tshock = (3*G*M_wd*mu*mH)/(8*k) * (1/(R_wd+hstar) - 1/R_m);
         XS0 = std::pow(vff,3)*0.049/(2.*A*MDOT0); //shock height [cm] when B = 0
         coeff = 9.1e-3*std::pow(B/10.,2.85)*std::pow(Tshock/1.e8,2.0)*std::pow(n_elec_shock/1.e16,-1.85)*std::pow(XS0/1.e7,-0.85);
-        ES0 = Newton_Solver(epsilon_func,epsilon_func_prime,1.e5,coeff,1.e-6,100);
+        ES0 = Newton_Solver(epsilon_func,epsilon_func_prime,1.e5,coeff,1.e-6,200);
 
-        MCVSPEC_Shooting(VGRID,RHO,P,TK,X,NELEC,SOLN);
+        IPSPEC_Shooting(VGRID,RHO,P,TK,X,NELEC,SOLN);
         hstar = X[VGRID-1];
-        std::cout << "shock_height " << X[VGRID - 1] << std::endl;
+        //std::cout << "shock_height " << X[VGRID - 1] << std::endl;
 
         if (R_wd + hstar > R_m) {
             shock_height = h_old;
