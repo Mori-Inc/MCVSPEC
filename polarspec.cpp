@@ -28,4 +28,5 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
 
     Shock_Height_Shooting(0.005, 100);
     MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
+    std::cout << "h/R_wd = " << shock_height/wd_radius << std::endl;
 }

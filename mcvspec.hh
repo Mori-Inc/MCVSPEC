@@ -116,7 +116,7 @@ inline int Normalized_Position_Derivative(double velocity_normed, const double p
                         pow(1.0-velocity_normed,alpha)*pow(velocity_normed,beta)));
     return GSL_SUCCESS;
 }
-inline void Runge_Kutta(double, double){
+inline void Runge_Kutta(double initial_veloicty, double initial_height){
     gsl_odeiv2_system accretion_column = {Normalized_Position_Derivative, nullptr, 1, &epsilon_shock};
     const gsl_odeiv2_step_type *ode_type = gsl_odeiv2_step_rkf45;
     gsl_odeiv2_step *ode_stepper = gsl_odeiv2_step_alloc(ode_type, 1);
