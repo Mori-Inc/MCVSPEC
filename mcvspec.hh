@@ -4,17 +4,24 @@
 #include <cmath>
 #include <iostream>
 #include <valarray>
+#include <algorithm>
 
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_odeiv2.h>
 
+#include <vector>
 #include <xsTypes.h>
 #include <funcWrappers.h>
 
 using std::string;
 using std::function;
 using std::valarray;
+using std::vector;
+using std::abs;
+using std::max;
+using std::min;
+using std::pow;
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -37,9 +44,8 @@ const double mass_limit = 5.816*solar_mass/(pow(wd_mol_mass,2.0));
 const double helium_ratio = (2*col_mol_mass-electron_molar_mass-proton_molar_mass)/(2*electron_molar_mass+4*proton_molar_mass-6*col_mol_mass);
 const double electron_ion_ratio = (1+2*helium_ratio)/(1+helium_ratio);
 const double apec_norm = 2.62511E-34; // (1/4)*(1 km/1 kpc)^2 normalization needed for apec
-const double shock_velocity = 0.25; // downstream velocity at shock, normalized to upstream free fall velocity at shock
-const double initial_veloicty = 0; // velocity at WD surface, normalized to upstream velocity at shock
-const double initial_height = 0;
+const double initial_veloicty = 0.25; // velocity at WD surface, normalized to upstream velocity at shock
+const double initial_height = 1.;
 const double absolute_err = 1e-3;
 const double relative_err = 1e-2;
 
@@ -50,7 +56,7 @@ inline int reflection_sel;
 inline double fractional_area, accretion_area, accretion_rate, specific_accretion;
 inline double shock_height, velocity_at_shock, shock_temperature, shock_electron_dens, b_free_shock_height;;
 inline double free_fall_velocity, wd_radius, mag_radius;
-inline double epsilon_shock, epsilon_zero; // ratio of brems cooling time to cytclotron cooling time
+inline double epsilon_shock; // ratio of brems cooling time to cytclotron cooling time
 
 const int max_num_grid_points = 200;
 inline int num_grid_points;
@@ -66,114 +72,155 @@ inline double Calculate_White_Dwarf_Radius(double m){
     // TODO: update to solve WD equation of state numerically
     return solar_radius*(0.0225/wd_mol_mass)*sqrt(1.0-pow(m/mass_limit,4./3.))/cbrt(m/mass_limit);
 }
+inline double Calculate_Accretion_Rate(double m, double luminosity, double r_wd){
+    return luminosity*r_wd/(grav_const*m);
+}
 inline double Calculate_Accretion_Rate(double m, double luminosity, double r_wd, double r_m){
     return luminosity/(grav_const*m*(1./r_wd - 1./r_m));
-}
-inline double Calculate_Accretion_Rate(double m, double luminosity, double r_wd){
-    return luminosity/(grav_const*m*(1./r_wd));
 }
 inline double Calculate_Magnetic_Field(double m, double accretion_rate, double r_wd, double r_m){
     return sqrt(32.*accretion_rate)*pow(grav_const*m, 1./4.)*pow(r_m,7./4.)*pow(r_wd,-3);
 }
-inline double Root_Finder(function<double(double, void*)> func, function<double(double, void*)> derivative, void* args, double estimate, int max_itter, double tolerance){
-    double x, x_new;
-    int i = 0;
-    while(i < max_itter && x > tolerance){
-        x -= func(x, args)/derivative(x, args);
-        i++;
-    }
-    return x;
+inline double Calculate_Free_Fall_Velocity(double m, double r_wd, double h_s){
+    return sqrt(2*grav_const*m/(r_wd+h_s));
 }
-inline double Epsilon_Diff(double eps_s, void* e_zero){
-    double eps_zero = *(double *)e_zero;
-    return eps_zero*pow(1.+eps_s, 0.425) - eps_s;
+inline double Calculate_Free_Fall_Velocity(double m, double r_wd, double h_s, double r_m){
+    return sqrt(2*grav_const*m*(1./(r_wd+h_s) - 1./r_m));
 }
-inline double Epsilon_Diff_Derivative(double eps_s, void* e_zero){
-    double eps_zero = *(double *)e_zero;
-    return 0.425*eps_zero*pow(1. + eps_s, -0.575) - 1.;
+inline double Calculate_Shock_Temperature(double v_ff){
+    return (3./16.)*col_mol_mass*hydrg_mass*v_ff*v_ff/boltz_const;
+}
+inline double Calculate_Shock_Density(double m_dot, double vel){
+    return m_dot/vel;
+}
+inline double Calculate_Epsilon(double b_field, double temp, double m_dot, double vel, double shock_height){
+    double density = Calculate_Shock_Density(m_dot, vel);
+    double n_e = density/(hydrg_mass*((col_mol_mass/electron_ion_ratio) + electron_molar_mass));
+    return 9.1e-3*pow(b_field/10e6,2.85)*pow(temp/1e8,2.)*pow(n_e/1e16,-1.85)*pow(shock_height/1e7,-0.85);
 }
 inline double Calculate_B_Free_Shock_Height(double v_freefall, double m_dot){
-    // TODO: replace url with doi
-    double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994: https://articles.adsabs.harvard.edu/pdf/1994ApJ...426..664W
+    double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
     return pow(v_freefall,3.)*integral/(2.*bremss_const*m_dot);
 }
-inline double Calculate_Epsilon(double b_field, double shock_temp, double shock_e_dens, double shock_height){
-    return 9.1e-3*pow(b_field/10.,2.85)*pow(shock_temp/1e8,2.)*pow(shock_e_dens/1e16,-1.85)*pow(shock_height/1e7,-0.85);
-}
-inline double Calculate_Shock_Temperature(double radius, double shock_height, double mag_radius){
-    return (3./8.)*grav_const*mass*col_mol_mass*hydrg_mass*(1/(radius+shock_height) - 1/mag_radius)/boltz_const;
-}
-inline double Calculate_Electron_Density(double accretion_rate, double v_free_fall){
-    return (accretion_rate/v_free_fall)*shock_velocity*electron_ion_ratio/(hydrg_mass*col_mol_mass);
-}
 
-
-inline int Normalized_Position_Derivative(double velocity_normed, const double position_normed[], double pos_derivative[], void* eps_s){
+inline double Normalized_Position_Derivative(double vel, double pos, void* eps_s){
     double epsilon_s = *(double *)eps_s;
-    double prefactor = pow(free_fall_velocity,3)/(2.*bremss_const*specific_accretion);
-    pos_derivative[0] = prefactor*(pow(velocity_normed,1.5)*(5.0-8.*velocity_normed)/sqrt(1-velocity_normed)/
-                        (1.+epsilon_s*pow(3.,-alpha)*pow(4.,alpha+beta)*
-                        pow(1.0-velocity_normed,alpha)*pow(velocity_normed,beta)));
-    return GSL_SUCCESS;
+    double prefactor = pow(free_fall_velocity,3)/(2.*shock_height*bremss_const*specific_accretion);
+    double cyclotron = 1/(1+epsilon_s*pow(4.,alpha+beta)*pow(3.,-alpha)*pow(1-vel,alpha)*pow(vel,beta));
+    return prefactor*vel*vel*(5.0-8.0*vel)/sqrt(vel*(1-vel))*cyclotron;
 }
-inline void Runge_Kutta(double initial_veloicty, double initial_height){
-    gsl_odeiv2_system accretion_column = {Normalized_Position_Derivative, nullptr, 1, &epsilon_shock};
-    const gsl_odeiv2_step_type *ode_type = gsl_odeiv2_step_rkf45;
-    gsl_odeiv2_step *ode_stepper = gsl_odeiv2_step_alloc(ode_type, 1);
-    gsl_odeiv2_control *ode_control = gsl_odeiv2_control_y_new(absolute_err, relative_err);
-    gsl_odeiv2_evolve *ode_evolver = gsl_odeiv2_evolve_alloc(1);
-    double vel = initial_veloicty;
-    double height[1] = {initial_height};
-    int n = 0;
-    double initial_step = absolute_err;
-    velocity[0] = vel*free_fall_velocity;
-    altitude[0] = height[0]*shock_height;
-    while (vel < shock_velocity){
-        int status = gsl_odeiv2_evolve_apply(ode_evolver, ode_control, ode_stepper, &accretion_column,
-                                             &vel, shock_velocity ,&initial_step, height);
-        if(status != GSL_SUCCESS){
-            break;
-        }
-        velocity[n] = vel*free_fall_velocity;
-        altitude[n] = height[0]*shock_height;
-        n += 1;
-    }
-    gsl_odeiv2_evolve_free(ode_evolver);
-    gsl_odeiv2_control_free(ode_control);
-    gsl_odeiv2_step_free(ode_stepper);
 
-    for (int i = 0; i < n; i++){
+inline void Dormand_Prince(function<double(double, double, void*)> func, void* args, vector<double>* t, vector<double>* y, double t_bound, double abs_err, double rel_err, int max_itter){
+    double a[5][5] = {{1./5.,0,0,0,0},
+                      {3./40., 9./40., 0,0,0},
+                      {44./45., -56./15., 32./9., 0,0},
+                      {19372./6561., -25360./2187., 64448./6561., -212./729.,0},
+                      {9017./3168., -355./33., 46732./5247., 49./176., -5103./18656.}};
+    double b[6] = {35./384., 0., 500./1113., 125./192., -2187./6784., 11./84.};
+    double c[7] = {0.,1./5.,3./10.,4./5.,8./9.,1.,1.};
+    double e[7] = {-71./57600., 0., 71./16695., -71./1920., 17253./339200., -22./525., 1./40.};
+
+    double k[7] = {func((*t)[0], (*y)[0],args),0.,0.,0.,0.,0.,0.};
+
+    double dir = (0. < (t_bound-(*t)[0])) - ((t_bound-(*t)[0]) < 0.); // direction of integration
+
+    double tol = abs_err + rel_err*abs((*y)[0]);
+    double f_0 = k[0];
+    double h_0 = 1e-2*abs((*y)[0])/abs(f_0);
+    double f_1 = func((*t)[0]+dir*h_0, (*y)[0]+dir*h_0*f_0, args);
+    double delta = abs(f_1-f_0)/(tol*h_0);
+    double h_1 = pow(1e-2/max(delta,abs(f_0/tol)),0.2);
+
+    double h = min(1e2*h_0,h_1);
+
+    double y_new, t_new, err, h_new, dy;
+    bool step_failed = false;
+
+    while(dir*(t_bound-t->back()) > 0 && t->size() < max_itter){
+        h = min(h,dir*(t_bound-t->back()));
+        t_new = t->back()+dir*h;
+
+        for(int i = 1; i<6; i++){
+            dy = 0;
+            for(int j = 0; j<i; j++){
+                dy += a[i-1][j]*k[j];
+            }
+            k[i] = func(t->back()+c[i]*dir*h, y->back()+dir*h*dy, args);
+        }
+
+        y_new = y->back() + dir*h*(b[0]*k[0]+b[1]*k[1]+b[2]*k[2]+b[3]*k[3]+b[4]*k[4]+b[5]*k[5]);
+        k[6] = func(t_new, y_new, args);
+
+        tol = abs_err + rel_err*max(abs(y->back()), abs(y_new));
+        err = h*abs(e[0]*k[0]+e[1]*k[1]+e[2]*k[2]+e[3]*k[3]+e[4]*k[4]+e[5]*k[5]+e[6]*k[6])/tol;
+
+        if(err < 1.){
+            if (err == 0){
+                h *= 10.;
+            }
+            else if(step_failed){
+                h *= min(0.9*pow(err,-0.2), 1.);
+            }
+            else{
+                h *= min(0.9*pow(err,-0.2), 10.);
+            }
+            step_failed = false;
+        }
+        else if(err >= 1.){
+            step_failed = true;
+            h *= max(0.9*pow(err,-0.2), 0.2);
+            continue;
+        }
+        else{
+            // if err is nan
+            h *= 0.2;
+            step_failed = true;
+            continue;
+        }
+
+        y->push_back(y_new);
+        t->push_back(t_new);
+        k[0] = k[6];
+    }
+
+    if (t->size() == max_itter){
+        cout << "Warning steps exceded max_itter, completion is not garunteed" << endl;
+    }
+}
+
+inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
+    double error = 1e100;
+    int itters = 0;
+    vector<double> norm_velocity;
+    vector<double> norm_height;
+
+
+    while(itters < max_itter && error > tolerance){
+        norm_velocity = {initial_veloicty};
+        norm_height = {initial_height};
+        Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 0.0, 0.0, 1e-3, 1e3);
+        error = abs(norm_height[norm_height.size()-1]-1);
+
+        shock_height *= 1-norm_height[norm_height.size()-1];
+        free_fall_velocity = Calculate_Free_Fall_Velocity(mass, wd_radius, shock_height);
+        if(is_ip){
+            free_fall_velocity = Calculate_Free_Fall_Velocity(mass, wd_radius, shock_height, mag_radius);
+        }
+        shock_temperature = Calculate_Shock_Temperature(free_fall_velocity);
+        epsilon_shock = Calculate_Epsilon(b_field, shock_temperature, specific_accretion, free_fall_velocity, shock_height);
+        itters++;
+    }
+    norm_velocity = {initial_veloicty};
+    norm_height = {initial_height};
+    Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 0.0, 0.0, 1e-3, 1e3);
+    for (int i = 0; i < norm_velocity.size(); i++){
+        velocity[i] = norm_velocity[i]*free_fall_velocity;
+        altitude[i] = norm_height[i]*shock_height;
         density[i] = specific_accretion/velocity[i];
         pressure[i] = specific_accretion*(free_fall_velocity - velocity[i]);
-        temperature[i] = shock_temperature*velocity[i]*(free_fall_velocity-velocity[i])*(16./(3.*pow(free_fall_velocity, 2)));
+        temperature[i] = (pressure[i]/density[i])*col_mol_mass*hydrg_mass/boltz_const;
         electron_dens[i] = density[i]*electron_ion_ratio/(hydrg_mass*col_mol_mass);
-    }
-    num_grid_points =  n;
-}
-inline void Shock_Height_Shooting(double tolerance, int max_itter){
-    double old_height, error;
-
-    error = 1e100;
-    int i = 0;
-
-    Runge_Kutta(initial_veloicty, initial_height);
-    shock_height = altitude[num_grid_points-1];
-    old_height = altitude[num_grid_points-1];
-
-    while(i < max_itter && error > tolerance){
-        free_fall_velocity = sqrt(2.*grav_const*mass*(1/(wd_radius+shock_height) - 1/mag_radius));
-        epsilon_shock = Calculate_Epsilon(b_field, shock_temperature, shock_electron_dens, shock_height);
-
-        Runge_Kutta(initial_veloicty, initial_height);
-
-        shock_height = altitude[num_grid_points-1];
-        if (wd_radius + shock_height > mag_radius) {
-            shock_height = old_height;
-            cerr << "Accretion column height has exceded magnetospheric radius" << endl;
-        }
-        error = abs((old_height-shock_height)/old_height);
-        old_height = shock_height;
-        i++;
+        cout << altitude[i]*1e-5 << " km " << velocity[i] << " cm/s " <<  boltz_const_kev*temperature[i] << " keV"<<endl;
     }
 }
 
