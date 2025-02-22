@@ -5,25 +5,22 @@
 #include <iostream>
 #include <valarray>
 #include <algorithm>
-
-#include <gsl/gsl_roots.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_odeiv2.h>
-
 #include <vector>
 #include <xsTypes.h>
 #include <funcWrappers.h>
+
+#include "tableau.hh"
 
 using std::string;
 using std::function;
 using std::valarray;
 using std::vector;
+using std::find;
 using std::abs;
 using std::max;
 using std::min;
 using std::pow;
 using std::cout;
-using std::cerr;
 using std::endl;
 
 const double pi = 3.14159265358979323846264338327950; // pi
@@ -35,6 +32,7 @@ const double col_mol_mass = 0.615; // mean molecular mass of acretion column (se
 const double bremss_const = 6.99e16; // bremsstrahlung constant (see Saxton: this coefficient gives the flux norm close to Suleimanov's model for the same WD mass input - 18% difference)
 const double boltz_const = 1.380658e-16; // Boltzmann constant in cgs
 const double boltz_const_kev = 8.617333262e-8;
+const double erg_to_kev = 1e-10/(1.602176634e-19);
 const double hydrg_mass = 1.672623e-24; // Mass of hydrogen in grams
 const double alpha = 2.0; // Thermodynamic Constant
 const double beta = 3.85; // Thermodynamic Constant
@@ -58,15 +56,13 @@ inline double shock_height, velocity_at_shock, shock_temperature, shock_electron
 inline double free_fall_velocity, wd_radius, mag_radius;
 inline double epsilon_shock; // ratio of brems cooling time to cytclotron cooling time
 
-const int max_num_grid_points = 200;
-inline int num_grid_points;
-inline valarray<double> density(max_num_grid_points);
-inline valarray<double> pressure(max_num_grid_points);
-inline valarray<double> temperature(max_num_grid_points);
-inline valarray<double> altitude(max_num_grid_points);
-inline valarray<double> velocity(max_num_grid_points);
-inline valarray<double> electron_dens(max_num_grid_points);
-inline valarray<double> offset_altitude(max_num_grid_points);
+inline vector<double> density;
+inline vector<double> pressure;
+inline vector<double> temperature;
+inline vector<double> altitude;
+inline vector<double> velocity;
+inline vector<double> electron_dens;
+inline vector<double> offset_altitude;
 
 inline double Calculate_White_Dwarf_Radius(double m){
     // TODO: update to solve WD equation of state numerically
@@ -110,17 +106,10 @@ inline double Normalized_Position_Derivative(double vel, double pos, void* eps_s
     return prefactor*vel*vel*(5.0-8.0*vel)/sqrt(vel*(1-vel))*cyclotron;
 }
 
-inline void Dormand_Prince(function<double(double, double, void*)> func, void* args, vector<double>* t, vector<double>* y, double t_bound, double abs_err, double rel_err, int max_itter){
-    double a[5][5] = {{1./5.,0,0,0,0},
-                      {3./40., 9./40., 0,0,0},
-                      {44./45., -56./15., 32./9., 0,0},
-                      {19372./6561., -25360./2187., 64448./6561., -212./729.,0},
-                      {9017./3168., -355./33., 46732./5247., 49./176., -5103./18656.}};
-    double b[6] = {35./384., 0., 500./1113., 125./192., -2187./6784., 11./84.};
-    double c[7] = {0.,1./5.,3./10.,4./5.,8./9.,1.,1.};
-    double e[7] = {-71./57600., 0., 71./16695., -71./1920., 17253./339200., -22./525., 1./40.};
-
+inline void Dormand_Prince(function<double(double, double, void*)> func, void* args, vector<double>* t, vector<double>* y, double t_bound, vector<double>* t_eval, vector<double>* y_eval, double abs_err, double rel_err, int max_itter){
     double k[7] = {func((*t)[0], (*y)[0],args),0.,0.,0.,0.,0.,0.};
+    double q[4] = {0,0,0,0};
+    y_eval->resize(t_eval->size());
 
     double dir = (0. < (t_bound-(*t)[0])) - ((t_bound-(*t)[0]) < 0.); // direction of integration
 
@@ -133,7 +122,7 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
 
     double h = min(1e2*h_0,h_1);
 
-    double y_new, t_new, err, h_new, dy;
+    double y_new, t_new, err, factor, dy, sigma;
     bool step_failed = false;
 
     while(dir*(t_bound-t->back()) > 0 && t->size() < max_itter){
@@ -143,7 +132,7 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
         for(int i = 1; i<6; i++){
             dy = 0;
             for(int j = 0; j<i; j++){
-                dy += a[i-1][j]*k[j];
+                dy += a[i][j]*k[j];
             }
             k[i] = func(t->back()+c[i]*dir*h, y->back()+dir*h*dy, args);
         }
@@ -156,13 +145,13 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
 
         if(err < 1.){
             if (err == 0){
-                h *= 10.;
+                factor = 10.;
             }
             else if(step_failed){
-                h *= min(0.9*pow(err,-0.2), 1.);
+                factor = min(0.9*pow(err,-0.2), 1.);
             }
             else{
-                h *= min(0.9*pow(err,-0.2), 10.);
+                factor = min(0.9*pow(err,-0.2), 10.);
             }
             step_failed = false;
         }
@@ -178,6 +167,29 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
             continue;
         }
 
+        if(t_eval->size() > 0){
+            for(int i = 0; i<sizeof(p[0])/sizeof(p[0][0]); i++){
+                q[i] = 0.;
+                for(int j = 0; j<sizeof(k)/sizeof(k[0]); j++){
+                    q[i] += k[j]*p[j][i];
+                }
+            }
+            for(double t_interp:*t_eval){
+                if((dir*(t_new-t_interp)<0)|(dir*(t_interp-t->back())<0)){
+                    continue;
+                }
+                sigma = (t_interp-t->back())/(dir*h);;
+                dy = 0.;
+                for(int i = 0; i < sizeof(q)/sizeof(q[0]); i++){
+                    dy += q[i]*pow(sigma,i+1);
+                }
+                dy *= dir*h;
+                int ind = find(t_eval->begin(), t_eval->end(), t_interp) - t_eval->begin();
+                (*y_eval)[ind] = y->back() + dy;
+            }
+        }
+
+        h *= factor;
         y->push_back(y_new);
         t->push_back(t_new);
         k[0] = k[6];
@@ -193,12 +205,13 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
     int itters = 0;
     vector<double> norm_velocity;
     vector<double> norm_height;
-
+    vector<double> vel_eval;
+    vector<double> pos_eval;
 
     while(itters < max_itter && error > tolerance){
         norm_velocity = {initial_veloicty};
         norm_height = {initial_height};
-        Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 0.0, 0.0, 1e-3, 1e3);
+        Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 0.0, &vel_eval, &pos_eval, 0.0, 1e-3, 1e3);
         error = abs(norm_height[norm_height.size()-1]-1);
 
         shock_height *= 1-norm_height[norm_height.size()-1];
@@ -212,15 +225,28 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
     }
     norm_velocity = {initial_veloicty};
     norm_height = {initial_height};
-    Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 0.0, 0.0, 1e-3, 1e3);
-    for (int i = 0; i < norm_velocity.size(); i++){
-        velocity[i] = norm_velocity[i]*free_fall_velocity;
-        altitude[i] = norm_height[i]*shock_height;
+
+    double kT = erg_to_kev*(3./16.)*hydrg_mass*col_mol_mass*free_fall_velocity*free_fall_velocity;
+
+    while(kT > 0.){
+        vel_eval.push_back((1.0-sqrt(1.0-4.*kT/(erg_to_kev*hydrg_mass*col_mol_mass*free_fall_velocity*free_fall_velocity)))/2);
+        kT -= 1.;
+    }
+
+    Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 0.0, &vel_eval, &pos_eval, 0.0, 1e-3, 1e3);
+    velocity.resize(vel_eval.size());
+    altitude.resize(vel_eval.size());
+    density.resize(vel_eval.size());
+    pressure.resize(vel_eval.size());
+    temperature.resize(vel_eval.size());
+    electron_dens.resize(vel_eval.size());
+    for (int i = 0; i < vel_eval.size(); i++){
+        velocity[i] = vel_eval[i]*free_fall_velocity;
+        altitude[i] = pos_eval[i]*shock_height;
         density[i] = specific_accretion/velocity[i];
         pressure[i] = specific_accretion*(free_fall_velocity - velocity[i]);
         temperature[i] = (pressure[i]/density[i])*col_mol_mass*hydrg_mass/boltz_const;
         electron_dens[i] = density[i]*electron_ion_ratio/(hydrg_mass*col_mol_mass);
-        cout << altitude[i]*1e-5 << " km " << velocity[i] << " cm/s " <<  boltz_const_kev*temperature[i] << " keV"<<endl;
     }
 }
 
@@ -228,7 +254,7 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
 
     int n = flux.size();
 
-    double segment_height = altitude[0];
+    double segment_height = 0;
 
     valarray<double> flux_from_layer(n);
     valarray<double> flux_error(n);
@@ -236,13 +262,13 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
     valarray<double> apec_parameters(3);
     valarray<double> refl_parameters(5);
 
-    refl_parameters[0] = 1-sqrt(1.0-1.0/pow(1+altitude[num_grid_points-1]/wd_radius,2));
+    refl_parameters[0] = 1-sqrt(1.0-1.0/pow(1+altitude.back()/wd_radius,2));
     refl_parameters[1] = 0.;
     refl_parameters[2] = wd_abund;
     refl_parameters[3] = wd_abund;
     refl_parameters[4] = cos_incl;
 
-    for(int i=0; i<num_grid_points; i++){
+    for(int i=0; i<altitude.size(); i++){
         for(int j=0; j<n; j++){
             flux[j] += flux_from_layer[j];
             flux_from_layer[j] = 0;
@@ -260,8 +286,14 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
         }
 
         // normalizes spectrum appropriately
-        if(i!=0){
-            segment_height = altitude[i]-altitude[i-1];
+        if(i==0){
+            segment_height = abs(altitude[i]-altitude[i+1])/2.;
+        }
+        else if(i==altitude.size()-1){
+            segment_height = abs(altitude[i]-altitude[i-1])/2.;
+        }
+        else{
+            segment_height = 0.5*(abs(altitude[i]-altitude[i-1]) + abs(altitude[i]-altitude[i+1]));
         }
         for(int j=0; j<n; j++){
             flux_from_layer[j] *= apec_norm*segment_height*pow(electron_dens[i]*1e-7,2)/electron_ion_ratio;
@@ -282,6 +314,7 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
     if(reflection_sel==1){
         CXX_reflect(energy, refl_parameters, spectrum_num, flux, flux_error, init_string);
     }
+    cout << flux[10] << endl;
 }
 
 #endif
