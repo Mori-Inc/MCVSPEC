@@ -1,6 +1,7 @@
 #ifndef TABLEAU_H
 #define TABLEAU_H
 inline const int order = 5;
+inline const int n_stages = 6;
 inline double a[6][order] = {{0,0,0,0,0},
                   {1./5.,0,0,0,0},
                   {3./40., 9./40., 0,0,0},

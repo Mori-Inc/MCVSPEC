@@ -107,8 +107,9 @@ inline double Normalized_Position_Derivative(double vel, double pos, void* eps_s
 }
 
 inline void Dormand_Prince(function<double(double, double, void*)> func, void* args, vector<double>* t, vector<double>* y, double t_bound, vector<double>* t_eval, vector<double>* y_eval, double abs_err, double rel_err, int max_itter){
-    double k[7] = {func((*t)[0], (*y)[0],args),0.,0.,0.,0.,0.,0.};
-    double q[4] = {0,0,0,0};
+    double k[n_stages+1];
+    k[0] = func((*t)[0], (*y)[0],args);
+    double q[order-1];
     y_eval->resize(t_eval->size());
 
     double dir = (0. < (t_bound-(*t)[0])) - ((t_bound-(*t)[0]) < 0.); // direction of integration
@@ -129,19 +130,23 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
         h = min(h,dir*(t_bound-t->back()));
         t_new = t->back()+dir*h;
 
-        for(int i = 1; i<6; i++){
+        for(int i = 1; i<n_stages; i++){
             dy = 0;
             for(int j = 0; j<i; j++){
                 dy += a[i][j]*k[j];
             }
             k[i] = func(t->back()+c[i]*dir*h, y->back()+dir*h*dy, args);
         }
-
-        y_new = y->back() + dir*h*(b[0]*k[0]+b[1]*k[1]+b[2]*k[2]+b[3]*k[3]+b[4]*k[4]+b[5]*k[5]);
-        k[6] = func(t_new, y_new, args);
-
+        y_new = 0;
+        err = 0;
+        for(int i = 0; i<n_stages; i++){
+            y_new += b[i]*k[i];
+            err += e[i]*k[i];
+        }
+        y_new = y->back() + dir*h*y_new;
+        k[n_stages] = func(t_new, y_new, args);
         tol = abs_err + rel_err*max(abs(y->back()), abs(y_new));
-        err = h*abs(e[0]*k[0]+e[1]*k[1]+e[2]*k[2]+e[3]*k[3]+e[4]*k[4]+e[5]*k[5]+e[6]*k[6])/tol;
+        err = h*abs(err+e[n_stages]*k[n_stages])/tol;
 
         if(err < 1.){
             if (err == 0){
@@ -168,9 +173,9 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
         }
 
         if(t_eval->size() > 0){
-            for(int i = 0; i<sizeof(p[0])/sizeof(p[0][0]); i++){
+            for(int i = 0; i<order-1; i++){
                 q[i] = 0.;
-                for(int j = 0; j<sizeof(k)/sizeof(k[0]); j++){
+                for(int j = 0; j<n_stages+1; j++){
                     q[i] += k[j]*p[j][i];
                 }
             }
@@ -180,7 +185,7 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
                 }
                 sigma = (t_interp-t->back())/(dir*h);;
                 dy = 0.;
-                for(int i = 0; i < sizeof(q)/sizeof(q[0]); i++){
+                for(int i = 0; i < order-1; i++){
                     dy += q[i]*pow(sigma,i+1);
                 }
                 dy *= dir*h;
@@ -192,7 +197,7 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
         h *= factor;
         y->push_back(y_new);
         t->push_back(t_new);
-        k[0] = k[6];
+        k[0] = k[n_stages];
     }
 
     if (t->size() == max_itter){
@@ -314,7 +319,6 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
     if(reflection_sel==1){
         CXX_reflect(energy, refl_parameters, spectrum_num, flux, flux_error, init_string);
     }
-    cout << flux[10] << endl;
 }
 
 #endif
