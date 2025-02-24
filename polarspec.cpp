@@ -16,7 +16,7 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     cos_incl = params[7]; // cos inclination angle
 
     //cout << "B = " << b_field << " , f = " << fractional_area << " , L = " << luminosity << " , m = " << mass << endl;
-
+    Set_Abundances(col_abund);
     wd_radius = Calculate_White_Dwarf_Radius(mass);
     accretion_area = fractional_area*4*pi*wd_radius*wd_radius;
     accretion_rate = Calculate_Accretion_Rate(mass, luminosity, wd_radius);
@@ -26,8 +26,7 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     // update v_ff + shock height now that we have an estimate for h
     free_fall_velocity = Calculate_Free_Fall_Velocity(mass, wd_radius, shock_height);
     shock_height = Calculate_B_Free_Shock_Height(free_fall_velocity, specific_accretion);
-    shock_temperature = Calculate_Shock_Temperature(free_fall_velocity);
-    epsilon_shock = Calculate_Epsilon(b_field, shock_temperature, specific_accretion, free_fall_velocity, shock_height);
+    epsilon_shock = Calculate_Epsilon(free_fall_velocity);
 
     Shock_Height_Shooting(0.005, 100, false);
     MCVspec_Spectrum(energy, spectrum_num, flux, init_string);

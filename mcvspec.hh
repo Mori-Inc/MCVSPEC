@@ -8,6 +8,7 @@
 #include <vector>
 #include <xsTypes.h>
 #include <funcWrappers.h>
+#include <XSFunctions/Utilities/FunctionUtility.h>
 
 #include "tableau.hh"
 
@@ -24,23 +25,32 @@ using std::cout;
 using std::endl;
 
 const double pi = 3.14159265358979323846264338327950; // pi
+const double electron_mass = 9.109383713928e-28;
 const double solar_mass = 1.989100e+33; // solar mass in grams
 const double solar_radius = 6.9599e10; // solar radius in cm
 const double grav_const = 6.672590e-8; // Newton's gravitational constant in cgs units
-const double wd_mol_mass = 2.0; // mean molecular mass of White dwarf
-const double col_mol_mass = 0.615; // mean molecular mass of acretion column (see Cropper 1999)
-const double bremss_const = 6.99e16; // bremsstrahlung constant (see Saxton: this coefficient gives the flux norm close to Suleimanov's model for the same WD mass input - 18% difference)
 const double boltz_const = 1.380658e-16; // Boltzmann constant in cgs
 const double boltz_const_kev = 8.617333262e-8;
-const double erg_to_kev = 1e-10/(1.602176634e-19);
-const double hydrg_mass = 1.672623e-24; // Mass of hydrogen in grams
+const double planck_const = 6.62607015e-27;
+const double fine_structure_constant = 7.2973525643e-3;
+const double erg_to_kev = 6.241509074461e8;
+const double amu_to_g =  1.6605390689252e-24; // mass of amu in grams
+inline double bremss_const = 6.99e16; // bremsstrahlung constant (see Saxton: this coefficient gives the flux norm close to Suleimanov's model for the same WD mass input - 18% difference)
+inline double epsilon_const = 1;
+inline double kt_const = 3./16.;
+inline double electron_density_const = 1;
+inline double avg_atomic_charge;
+const double shock_ratio = 4.;
 const double alpha = 2.0; // Thermodynamic Constant
 const double beta = 3.85; // Thermodynamic Constant
-const double proton_molar_mass = 1.0072764665789; // molar mass of a proton
-const double electron_molar_mass = 5.485799090441e-4; // molar mass of an electron
+const double gaunt_factor = 1.2;
+inline double abundances[14] = {1.,0,0,0,0,0,0,0,0,0,0,0,0,0};
+const int atomic_charge[14] = {1,2,6,7,8,10,12,13,14,16,18,20,26,28}; // charges of elements in abundances array
+const double atomic_mass[14] = {1.007975,4.002602,12.0106,14.006855,15.9994,20.17976,24.3055,
+                                26.98153843,28.085,32.0675,39.8775,40.0784,55.8452,58.69344};
+
+const double wd_mol_mass = 2.;
 const double mass_limit = 5.816*solar_mass/(pow(wd_mol_mass,2.0));
-const double helium_ratio = (2*col_mol_mass-electron_molar_mass-proton_molar_mass)/(2*electron_molar_mass+4*proton_molar_mass-6*col_mol_mass);
-const double electron_ion_ratio = (1+2*helium_ratio)/(1+helium_ratio);
 const double apec_norm = 2.62511E-34; // (1/4)*(1 km/1 kpc)^2 normalization needed for apec
 const double initial_veloicty = 0.25; // velocity at WD surface, normalized to upstream velocity at shock
 const double initial_height = 1.;
@@ -64,6 +74,34 @@ inline vector<double> velocity;
 inline vector<double> electron_dens;
 inline vector<double> offset_altitude;
 
+inline void Set_Abundances(double metalicity){
+    abundances[0] = metalicity*FunctionUtility::getAbundance(atomic_charge[0]);
+    abundances[1] = metalicity*FunctionUtility::getAbundance(atomic_charge[1]);
+    double norm = abundances[0]+abundances[1];
+    for(int i = 2; i < 14; i++){
+        abundances[i] = metalicity*FunctionUtility::getAbundance(atomic_charge[i]);
+        norm += metalicity*abundances[i];
+    }
+    double avg_ion_mass = 0;
+    avg_atomic_charge = 0;
+    double avg_charge_squared = 0;
+    for(int i = 0; i < 14; i++){
+        avg_ion_mass += (abundances[i]/norm)*atomic_mass[i];
+        avg_atomic_charge += (abundances[i]/norm)*atomic_charge[i];
+        avg_charge_squared += (abundances[i]/norm)*atomic_charge[i]*atomic_charge[i];
+    }
+    avg_ion_mass *= amu_to_g;
+    bremss_const = sqrt(2*pi/(3*electron_mass))*gaunt_factor;
+    bremss_const *= (4*planck_const*planck_const*pow(fine_structure_constant,3))/(3*pi*pi*electron_mass);
+    bremss_const *= avg_atomic_charge/(amu_to_g*avg_ion_mass+electron_mass*avg_atomic_charge);
+    bremss_const *= avg_charge_squared/(1+avg_atomic_charge);
+    epsilon_const = 2.838e-3*pow(shock_ratio, 37./20.)*pow(electron_mass,77./20.)/(gaunt_factor*boltz_const*boltz_const);
+    epsilon_const *= pow(avg_atomic_charge,-17./20.)/(avg_charge_squared*pow(1+avg_atomic_charge,2));
+    epsilon_const *= pow(avg_atomic_charge + avg_ion_mass/electron_mass,77./20.);
+    kt_const = electron_mass*(avg_atomic_charge + avg_ion_mass/electron_mass)/(1.+avg_atomic_charge);
+    electron_density_const = avg_atomic_charge/(avg_atomic_charge + avg_ion_mass/electron_mass);
+}
+
 inline double Calculate_White_Dwarf_Radius(double m){
     // TODO: update to solve WD equation of state numerically
     return solar_radius*(0.0225/wd_mol_mass)*sqrt(1.0-pow(m/mass_limit,4./3.))/cbrt(m/mass_limit);
@@ -83,16 +121,12 @@ inline double Calculate_Free_Fall_Velocity(double m, double r_wd, double h_s){
 inline double Calculate_Free_Fall_Velocity(double m, double r_wd, double h_s, double r_m){
     return sqrt(2*grav_const*m*(1./(r_wd+h_s) - 1./r_m));
 }
-inline double Calculate_Shock_Temperature(double v_ff){
-    return (3./16.)*col_mol_mass*hydrg_mass*v_ff*v_ff/boltz_const;
-}
 inline double Calculate_Shock_Density(double m_dot, double vel){
     return m_dot/vel;
 }
-inline double Calculate_Epsilon(double b_field, double temp, double m_dot, double vel, double shock_height){
-    double density = Calculate_Shock_Density(m_dot, vel);
-    double n_e = density/(hydrg_mass*((col_mol_mass/electron_ion_ratio) + electron_molar_mass));
-    return 9.1e-3*pow(b_field/10e6,2.85)*pow(temp/1e8,2.)*pow(n_e/1e16,-1.85)*pow(shock_height/1e7,-0.85);
+inline double Calculate_Epsilon(double v_freefall){
+    double density = Calculate_Shock_Density(specific_accretion, v_freefall);
+    return epsilon_const*pow(accretion_area,-17./40.)*pow(b_field, 57./20.)*pow(density,-37./20.)*pow(v_freefall,37./20.);
 }
 inline double Calculate_B_Free_Shock_Height(double v_freefall, double m_dot){
     double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
@@ -224,17 +258,16 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
         if(is_ip){
             free_fall_velocity = Calculate_Free_Fall_Velocity(mass, wd_radius, shock_height, mag_radius);
         }
-        shock_temperature = Calculate_Shock_Temperature(free_fall_velocity);
-        epsilon_shock = Calculate_Epsilon(b_field, shock_temperature, specific_accretion, free_fall_velocity, shock_height);
+        epsilon_shock = Calculate_Epsilon(free_fall_velocity);
         itters++;
     }
     norm_velocity = {initial_veloicty};
     norm_height = {initial_height};
 
-    double kT = erg_to_kev*(3./16.)*hydrg_mass*col_mol_mass*free_fall_velocity*free_fall_velocity;
+    double kT = erg_to_kev*(3./16.)*kt_const*free_fall_velocity*free_fall_velocity;
 
     while(kT > 0.){
-        vel_eval.push_back((1.0-sqrt(1.0-4.*kT/(erg_to_kev*hydrg_mass*col_mol_mass*free_fall_velocity*free_fall_velocity)))/2);
+        vel_eval.push_back((1.0-sqrt(1.0-4.*kT/(erg_to_kev*kt_const*free_fall_velocity*free_fall_velocity)))/2);
         kT -= 1.;
     }
 
@@ -249,9 +282,9 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
         velocity[i] = vel_eval[i]*free_fall_velocity;
         altitude[i] = pos_eval[i]*shock_height;
         density[i] = specific_accretion/velocity[i];
-        pressure[i] = specific_accretion*(free_fall_velocity - velocity[i]);
-        temperature[i] = (pressure[i]/density[i])*col_mol_mass*hydrg_mass/boltz_const;
-        electron_dens[i] = density[i]*electron_ion_ratio/(hydrg_mass*col_mol_mass);
+        pressure[i] = specific_accretion*free_fall_velocity*(1 - vel_eval[i]);
+        temperature[i] = kt_const*free_fall_velocity*free_fall_velocity*vel_eval[i]*(1-vel_eval[i])/boltz_const;
+        electron_dens[i] = electron_density_const*density[i]/electron_mass;
     }
 }
 
@@ -301,7 +334,7 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
             segment_height = 0.5*(abs(altitude[i]-altitude[i-1]) + abs(altitude[i]-altitude[i+1]));
         }
         for(int j=0; j<n; j++){
-            flux_from_layer[j] *= apec_norm*segment_height*pow(electron_dens[i]*1e-7,2)/electron_ion_ratio;
+            flux_from_layer[j] *= apec_norm*segment_height*pow(electron_dens[i]*1e-7,2)/avg_atomic_charge;
         }
 
         // apply reflect to each slice
