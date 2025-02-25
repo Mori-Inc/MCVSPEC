@@ -75,8 +75,8 @@ inline vector<double> electron_dens;
 inline vector<double> offset_altitude;
 
 inline void Set_Abundances(double metalicity){
-    abundances[0] = metalicity*FunctionUtility::getAbundance(atomic_charge[0]);
-    abundances[1] = metalicity*FunctionUtility::getAbundance(atomic_charge[1]);
+    abundances[0] = FunctionUtility::getAbundance(atomic_charge[0]);
+    abundances[1] = FunctionUtility::getAbundance(atomic_charge[1]);
     double norm = abundances[0]+abundances[1];
     for(int i = 2; i < 14; i++){
         abundances[i] = metalicity*FunctionUtility::getAbundance(atomic_charge[i]);
