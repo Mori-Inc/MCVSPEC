@@ -9,11 +9,12 @@ void Deqspec(const RealArray& energy, const RealArray& params, int spectrum_num,
     reflection_sel = params[0]; // how to apply reflection 0 = off, 1 = on, apply at each layer, 2 = on, apply once to whole spectrum
     mag_ratio = params[1]; // magnetospheric to wd radius ratio
     fractional_area = params[2]; //fractional accretion area
-    luminosity = params[3]*1e33; // luminosity [ergs/s]
+    luminosity = params[3]; // luminosity [ergs/s]
     mass = params[4]*solar_mass; // WD mass [grams]
     col_abund = params[5]; // accretion column abundance [solar abundances]
     wd_abund = params[6]; // wd surface abundance [solar abundances]
     cos_incl = params[7]; // cos inclination angle
+    source_distance = params[8]*pc_to_cm; // source distnace [cm]
 
     Set_Abundances(col_abund);
     wd_radius = Calculate_White_Dwarf_Radius(mass);
