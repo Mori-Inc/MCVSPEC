@@ -28,11 +28,10 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     free_fall_velocity = Calculate_Free_Fall_Velocity(mass, wd_radius, shock_height);
     shock_height = Calculate_B_Free_Shock_Height(free_fall_velocity, specific_accretion);
     epsilon_shock = Calculate_Epsilon(free_fall_velocity);
-    cout << "m_dot = " << specific_accretion << endl;
-    cout << "h_s = " << shock_height << endl;
-    cout << "epsilon_s = " << epsilon_shock << endl;
 
-    Shock_Height_Shooting(0.005, 100, false);
+    Shock_Height_Shooting(absolute_err, 100, false);
     MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
-    std::cout << "h/R_wd = " << shock_height/wd_radius << std::endl;
+    cout << "h/R_wd = " << shock_height/wd_radius << endl;
+    cout << "mdot = " << specific_accretion << " g/cm2/s" << endl;
+    cout << "T_shock = " << temperature[0]*boltz_const_kev << " keV" << endl;
 }

@@ -57,7 +57,7 @@ const double atomic_mass[14] = {1.007975,4.002602,12.0106,14.006855,15.9994,20.1
 
 const double wd_mol_mass = 2.;
 const double mass_limit = 5.816*solar_mass/(pow(wd_mol_mass,2.0));
-const double initial_veloicty = 0.25; // velocity at WD surface, normalized to upstream velocity at shock
+const double initial_veloicty = 1/shock_ratio; // velocity at WD surface, normalized to upstream velocity at shock
 const double initial_height = 1.;
 const double absolute_err = 1e-8;
 const double relative_err = 1e-6;
@@ -97,16 +97,17 @@ inline void Set_Abundances(double metalicity){
         avg_charge_squared += (abundances[i]/norm)*atomic_charge[i]*atomic_charge[i];
     }
     avg_ion_mass *= amu_to_g;
-    bremss_const = sqrt(2*pi/3)*gaunt_factor*4*planck_const*planck_const*pow(fine_structure_constant,3);
+    bremss_const = sqrt(2.*pi/3.)*gaunt_factor*4*planck_const*planck_const*pow(fine_structure_constant,3);
     bremss_const /= 3*pow(electron_mass, 3)*pi*pi;
     bremss_const *= avg_charge_squared*avg_atomic_charge/sqrt(avg_atomic_charge+1);
-    bremss_const *= sqrt(pow(avg_atomic_charge + avg_ion_mass/electron_mass,3));
+    bremss_const /= sqrt(pow(avg_atomic_charge + avg_ion_mass/electron_mass,3));
     epsilon_const = (7.62e-2/gaunt_factor)*pow(10.,0.025)*(pow(shock_ratio-1.,2)/pow(shock_ratio,5.85))*(pow(electron_mass, 3.85)/pow(boltz_const, 2));
     epsilon_const *= (avg_atomic_charge/avg_charge_squared)*pow(avg_atomic_charge/(1.+avg_atomic_charge),2);
     epsilon_const *= pow((avg_atomic_charge + avg_ion_mass/electron_mass)/avg_atomic_charge, 3.85);
     kt_const = electron_mass*(avg_atomic_charge + avg_ion_mass/electron_mass)/(1.+avg_atomic_charge);
     electron_density_const = avg_atomic_charge/(avg_atomic_charge + avg_ion_mass/electron_mass);
 }
+
 
 inline double Calculate_White_Dwarf_Radius(double m){
     // TODO: update to solve WD equation of state numerically
@@ -257,7 +258,8 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
     while(itters < max_itter && error > tolerance){
         norm_velocity = {initial_veloicty};
         norm_height = {initial_height};
-        Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 0.0, &vel_eval, &pos_eval, absolute_err, relative_err, max_itter);
+        Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 1e-2*absolute_err, &vel_eval, &pos_eval,
+            absolute_err, relative_err, max_itter);
         slope = Normalized_Position_Derivative(norm_velocity.back(), norm_height.back(), &epsilon_shock);
         error = abs(norm_height.back() - slope*norm_velocity.back());
 
@@ -272,12 +274,12 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
     norm_velocity = {initial_veloicty};
     norm_height = {initial_height};
     double kT = erg_to_kev*((shock_ratio-1)/(shock_ratio*shock_ratio))*kt_const*free_fall_velocity*free_fall_velocity;
-    cout << "kT_max = " << kT << endl;
     while(kT > 0.){
         vel_eval.push_back((1.0-sqrt(1.0-4.*kT/(erg_to_kev*kt_const*free_fall_velocity*free_fall_velocity)))/2);
         kT -= 1.;
     }
-    Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 0.0, &vel_eval, &pos_eval, absolute_err, relative_err, max_itter);
+    Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 1e-2*absolute_err, &vel_eval, &pos_eval,
+        absolute_err, relative_err, max_itter);
     velocity.resize(vel_eval.size());
     altitude.resize(vel_eval.size());
     density.resize(vel_eval.size());
@@ -339,7 +341,6 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
         else{
             segment_height = 0.5*abs(altitude[i+1]-altitude[i-1]);
         }
-        cout << "V = " << accretion_area*segment_height*1e-15 << " km^3 " << "n^2 = " << electron_dens[i]*electron_dens[i]*1e30 << " e-/km^3 " << " 4pid^2 = " << (4*pi*source_distance*source_distance)*1e-10 << " km^2" << endl;
         for(int j=0; j<n; j++){
             flux_from_layer[j] *= (accretion_area*segment_height*electron_dens[i]*electron_dens[i]*1e-14)/avg_atomic_charge;
             flux_from_layer[j] /= (4*pi*source_distance*source_distance);
