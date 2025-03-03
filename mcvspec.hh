@@ -25,15 +25,15 @@ using std::cout;
 using std::endl;
 
 // physical constants
-const double pi = 3.14159265358979323846264338327950; // pi
-const double electron_mass = 9.109383713928e-28;
-const double proton_mass = 1.67262192595e-24;
-const double solar_mass = 1.989100e+33; // solar mass in grams
-const double solar_radius = 6.9599e10; // solar radius in cm
-const double grav_const = 6.672590e-8; // Newton's gravitational constant in cgs units
-const double boltz_const = 1.380658e-16; // Boltzmann constant in cgs
-const double boltz_const_kev = 8.617333262e-8;
-const double planck_const = 6.62607015e-27;
+const double pi = 3.14159265358979323846264338327950;
+const double electron_mass = 9.109383713928e-28; // grams
+const double proton_mass = 1.67262192595e-24; // grams
+const double solar_mass = 1.989100e+33; // grams
+const double solar_radius = 6.9599e10; // grams
+const double grav_const = 6.672590e-8; // dyn cm^2 g^-2
+const double boltz_const = 1.380658e-16; // erg/K
+const double boltz_const_kev = 8.617333262e-8; // keV/K
+const double planck_const = 6.62607015e-27; // erg s
 const double fine_structure_constant = 7.2973525643e-3;
 // conversion factors
 const double erg_to_kev = 6.241509074461e8;
