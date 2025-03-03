@@ -12,17 +12,11 @@
 
 #include "tableau.hh"
 
-using std::string;
-using std::function;
-using std::valarray;
-using std::vector;
-using std::find;
-using std::abs;
-using std::max;
-using std::min;
+using std::string, std::function, std::valarray, std::vector;
+using std::find, std::fill, std::begin, std::end;
+using std::abs, std::max, std::min;
 using std::pow;
-using std::cout;
-using std::endl;
+using std::cout, std::endl;
 
 // physical constants
 const double pi = 3.14159265358979323846264338327950;
@@ -140,31 +134,44 @@ inline double Calculate_B_Free_Shock_Height(double v_freefall, double m_dot){
     return pow(v_freefall,3.)*integral/(2.*bremss_const*m_dot);
 }
 
-inline double Normalized_Position_Derivative(double vel, double pos, void* eps_s){
+inline valarray<double> Normalized_Position_Derivative(double vel, valarray<double> pos, void* eps_s){
     double epsilon_s = *(double *)eps_s;
     double prefactor = pow(free_fall_velocity,3)/(2.*shock_height*bremss_const*specific_accretion);
     double cyclotron = 1/(1+epsilon_s*pow(4.,alpha+beta)*pow(3.,-alpha)*pow(1-vel,alpha)*pow(vel,beta));
-    return prefactor*vel*vel*(5.0-8.0*vel)/sqrt(vel*(1-vel))*cyclotron;
+    return {prefactor*vel*vel*(5.0-8.0*vel)/sqrt(vel*(1-vel))*cyclotron};
 }
 
-inline void Dormand_Prince(function<double(double, double, void*)> func, void* args, vector<double>* t, vector<double>* y, double t_bound, vector<double>* t_eval, vector<double>* y_eval, double abs_err, double rel_err, int max_itter){
-    double k[n_stages+1];
-    k[0] = func((*t)[0], (*y)[0],args);
-    double q[order-1];
+inline double norm(valarray<double> x){
+    return sqrt((x*x).sum()/x.size());
+}
+
+inline valarray<double> element_max(valarray<double> x, valarray<double> y){
+    valarray<double> max_arr(x.size());
+    for(int i = 0; i<x.size(); i++){
+        max_arr[i] = max(x[i],y[i]);
+    }
+    return max_arr;
+}
+
+inline void Dormand_Prince(function<valarray<double>(double, valarray<double>, void*)> func, void* args, vector<double>* t, vector<valarray<double>>* y, double t_bound, vector<double>* t_eval, vector<valarray<double>>* y_eval, double abs_err, double rel_err, int max_itter){
+    int n_dim = y[0].size();
+    valarray<double> k[n_stages+1];
+    fill(begin(k), end(k), valarray<double>(0.,n_dim));
+    valarray<double> q[order-1];
+    fill(begin(q), end(q), valarray<double>(0.,n_dim));
     y_eval->resize(t_eval->size());
 
     double dir = (0. < (t_bound-(*t)[0])) - ((t_bound-(*t)[0]) < 0.); // direction of integration
-
-    double tol = abs_err + rel_err*abs((*y)[0]);
-    double f_0 = k[0];
-    double h_0 = 1e-2*abs((*y)[0])/abs(f_0);
-    double f_1 = func((*t)[0]+dir*h_0, (*y)[0]+dir*h_0*f_0, args);
-    double delta = abs(f_1-f_0)/(tol*h_0);
-    double h_1 = pow(1e-2/max(delta,abs(f_0/tol)),0.2);
-
+    k[0] = func((*t)[0], (*y)[0],args);
+    valarray<double> tol = abs_err + rel_err*abs((*y)[0]);
+    double h_0 = 1e-2*norm((*y)[0])/norm(k[0]);
+    valarray<double> f_1 = func((*t)[0]+dir*h_0, (*y)[0]+dir*h_0*k[0], args);
+    double delta = norm((f_1-k[0])/tol)/h_0;
+    double h_1 = pow(1e-2/max(delta,norm(k[0]/tol)),1./order);
     double h = min(1e2*h_0,h_1);
 
-    double y_new, t_new, err, factor, dy, sigma;
+    valarray<double> y_new(n_dim), dy(n_dim), err(n_dim);
+    double t_new, err_norm, factor, sigma;
     bool step_failed = false;
 
     while(dir*(t_bound-t->back()) > 0 && t->size() < max_itter){
@@ -186,24 +193,24 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
         }
         y_new = y->back() + dir*h*y_new;
         k[n_stages] = func(t_new, y_new, args);
-        tol = abs_err + rel_err*max(abs(y->back()), abs(y_new));
-        err = h*abs(err+e[n_stages]*k[n_stages])/tol;
+        tol = abs_err + rel_err*element_max(abs(y->back()), abs(y_new));
+        err_norm = norm((err+e[n_stages]*k[n_stages])*h/tol);
 
-        if(err < 1.){
-            if (err == 0){
+        if(err_norm < 1.){
+            if (err_norm == 0){
                 factor = 10.;
             }
             else if(step_failed){
-                factor = min(0.9*pow(err,-0.2), 1.);
+                factor = min(0.9*pow(err_norm,-1./order), 1.);
             }
             else{
-                factor = min(0.9*pow(err,-0.2), 10.);
+                factor = min(0.9*pow(err_norm,-1./order), 5.);
             }
             step_failed = false;
         }
-        else if(err >= 1.){
+        else if(err_norm >= 1.){
             step_failed = true;
-            h *= max(0.9*pow(err,-0.2), 0.2);
+            h *= max(0.9*pow(err_norm,-1./order), 0.2);
             continue;
         }
         else{
@@ -242,7 +249,7 @@ inline void Dormand_Prince(function<double(double, double, void*)> func, void* a
     }
 
     if (t->size() == max_itter){
-        cout << "Warning steps exceded max_itter, completion is not guaranteed. final (t,y) = (" << t->back() << ", " << y->back() << ')' << endl;
+        cout << "Warning steps exceded max_itter, completion is not guaranteed. final (t,y) = (" << t->back() << ", " << y->back()[0] << ')' << endl;
     }
 }
 
@@ -250,20 +257,20 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
     double error = 1e100;
     int itters = 0;
     vector<double> norm_velocity;
-    vector<double> norm_height;
+    vector<valarray<double>> norm_height;
     vector<double> vel_eval;
-    vector<double> pos_eval;
+    vector<valarray<double>> pos_eval;
     double slope;
 
     while(itters < max_itter && error > tolerance){
         norm_velocity = {initial_veloicty};
-        norm_height = {initial_height};
+        norm_height = {{initial_height}};
         Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 1e-2*absolute_err, &vel_eval, &pos_eval,
             absolute_err, relative_err, max_itter);
-        slope = Normalized_Position_Derivative(norm_velocity.back(), norm_height.back(), &epsilon_shock);
-        error = abs(norm_height.back() - slope*norm_velocity.back());
+        slope = Normalized_Position_Derivative(norm_velocity.back(), norm_height.back(), &epsilon_shock)[0];
+        error = abs(norm_height.back()[0] - slope*norm_velocity.back());
 
-        shock_height *= 1-norm_height.back();
+        shock_height *= 1-norm_height.back()[0];
         free_fall_velocity = Calculate_Free_Fall_Velocity(mass, wd_radius, shock_height);
         if(is_ip){
             free_fall_velocity = Calculate_Free_Fall_Velocity(mass, wd_radius, shock_height, mag_radius);
@@ -272,7 +279,7 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
         itters++;
     }
     norm_velocity = {initial_veloicty};
-    norm_height = {initial_height};
+    norm_height = {{initial_height}};
     double kT = erg_to_kev*((shock_ratio-1)/(shock_ratio*shock_ratio))*kt_const*free_fall_velocity*free_fall_velocity;
     while(kT > 0.){
         vel_eval.push_back((1.0-sqrt(1.0-4.*kT/(erg_to_kev*kt_const*free_fall_velocity*free_fall_velocity)))/2);
@@ -288,7 +295,7 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
     electron_dens.resize(vel_eval.size());
     for (int i = 0; i < vel_eval.size(); i++){
         velocity[i] = vel_eval[i]*free_fall_velocity;
-        altitude[i] = pos_eval[i]*shock_height;
+        altitude[i] = pos_eval[i][0]*shock_height;
         density[i] = specific_accretion/velocity[i];
         pressure[i] = specific_accretion*free_fall_velocity*(1 - vel_eval[i]);
         temperature[i] = kt_const*free_fall_velocity*free_fall_velocity*vel_eval[i]*(1-vel_eval[i])/boltz_const;
