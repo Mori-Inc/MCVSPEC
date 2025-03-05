@@ -10,50 +10,17 @@
 #include <funcWrappers.h>
 #include <XSFunctions/Utilities/FunctionUtility.h>
 
+#include "constants.hh"
 #include "integration.hh"
+#include "equation_of_state.hh"
 
 using std::string, std::valarray, std::vector;
 using std::abs;
 using std::pow;
+using std::cout, std::endl;
 
-// physical constants
-const double pi = 3.14159265358979323846264338327950;
-const double electron_mass = 9.109383713928e-28; // grams
-const double proton_mass = 1.67262192595e-24; // grams
-const double solar_mass = 1.989100e+33; // grams
-const double solar_radius = 6.9599e10; // grams
-const double grav_const = 6.672590e-8; // dyn cm^2 g^-2
-const double boltz_const = 1.380658e-16; // erg/K
-const double boltz_const_kev = 8.617333262e-8; // keV/K
-const double planck_const = 6.62607015e-27; // erg s
-const double fine_structure_constant = 7.2973525643e-3;
-// conversion factors
-const double erg_to_kev = 6.241509074461e8;
-const double amu_to_g =  1.6605390689252e-24; // mass of amu in grams
-const double pc_to_cm = 3.0856775814913673e18;
-// constants of the model
-const double shock_ratio = 4.;
-const double alpha = 2.0; // Thermodynamic Constant
-const double beta = 3.85; // Thermodynamic Constant
-const double gaunt_factor = 1.2;
-inline double bremss_const = sqrt(2*pi/3)*4*planck_const*planck_const*pow(fine_structure_constant,3)*gaunt_factor/
-                             (3*pow(electron_mass,3)*pi*pi*sqrt(2)*pow(proton_mass/electron_mass + 1., 1.5)); // See Rybicki and Lightman
-inline double epsilon_const = 1;
-inline double kt_const = 3./16.;
-inline double electron_density_const = 1;
-inline double avg_atomic_charge;
-inline double abundances[14] = {1.,0,0,0,0,0,0,0,0,0,0,0,0,0};
-const int atomic_charge[14] = {1,2,6,7,8,10,12,13,14,16,18,20,26,28}; // charges of elements in abundances array
-const double atomic_mass[14] = {1.007975,4.002602,12.0106,14.006855,15.9994,20.17976,24.3055,
-                                26.98153843,28.085,32.0675,39.8775,40.0784,55.8452,58.69344};
-
-const double wd_mol_mass = 2.;
-const double mass_limit = 5.816*solar_mass/(pow(wd_mol_mass,2.0));
 const double initial_veloicty = 1/shock_ratio; // velocity at WD surface, normalized to upstream velocity at shock
 const double initial_height = 1.;
-const double absolute_err = 1e-8;
-const double relative_err = 1e-6;
-const double max_itter = 10000;
 
 // variables for user input
 inline double mass, b_field, p_spin, luminosity, col_abund, wd_abund, mag_ratio, cos_incl, source_distance;
@@ -71,6 +38,14 @@ inline vector<double> altitude;
 inline vector<double> velocity;
 inline vector<double> electron_dens;
 inline vector<double> offset_altitude;
+
+
+inline double bremss_const; // See Rybicki and Lightman
+inline double epsilon_const;
+inline double kt_const;
+inline double electron_density_const;
+inline double avg_atomic_charge;
+inline double abundances[14] = {1.,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 inline void Set_Abundances(double metalicity){
     abundances[0] = FunctionUtility::getAbundance(atomic_charge[0]);
@@ -102,8 +77,7 @@ inline void Set_Abundances(double metalicity){
 
 
 inline double Calculate_White_Dwarf_Radius(double m){
-    // TODO: update to solve WD equation of state numerically
-    return solar_radius*(0.0225/wd_mol_mass)*sqrt(1.0-pow(m/mass_limit,4./3.))/cbrt(m/mass_limit);
+    return Radius_Shooting(m, 100000);
 }
 inline double Calculate_Accretion_Rate(double m, double luminosity, double r_wd){
     return luminosity*r_wd/(grav_const*m);
@@ -132,12 +106,9 @@ inline double Calculate_B_Free_Shock_Height(double v_freefall, double m_dot){
     return pow(v_freefall,3.)*integral/(2.*bremss_const*m_dot);
 }
 
-inline valarray<double> Normalized_Position_Derivative(double vel, valarray<double> pos, void* eps_s){
-    double epsilon_s = *(double *)eps_s;
-    double prefactor = pow(free_fall_velocity,3)/(2.*shock_height*bremss_const*specific_accretion);
-    double cyclotron = 1/(1+epsilon_s*pow(4.,alpha+beta)*pow(3.,-alpha)*pow(1-vel,alpha)*pow(vel,beta));
-    return {prefactor*vel*vel*(5.0-8.0*vel)/sqrt(vel*(1-vel))*cyclotron};
-}
+valarray<double> Normalized_Position_Derivative(double vel, valarray<double> pos, void* eps_s);
+
+inline Integrator accretion_column(Normalized_Position_Derivative, 1);
 
 inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
     double error = 1e100;
@@ -149,10 +120,9 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
     double slope;
 
     while(itters < max_itter && error > tolerance){
-        norm_velocity = {initial_veloicty};
-        norm_height = {{initial_height}};
-        Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 1e-2*absolute_err, &vel_eval, &pos_eval,
-            absolute_err, relative_err, max_itter);
+        accretion_column.Integrate(&epsilon_shock, initial_veloicty, 1e-2*absolute_err, {initial_height});
+        norm_velocity = accretion_column.t;
+        norm_height = accretion_column.y;
         slope = Normalized_Position_Derivative(norm_velocity.back(), norm_height.back(), &epsilon_shock)[0];
         error = abs(norm_height.back()[0] - slope*norm_velocity.back());
 
@@ -164,21 +134,19 @@ inline void Shock_Height_Shooting(double tolerance, int max_itter, bool is_ip){
         epsilon_shock = Calculate_Epsilon(free_fall_velocity);
         itters++;
     }
-    norm_velocity = {initial_veloicty};
-    norm_height = {{initial_height}};
     double kT = erg_to_kev*((shock_ratio-1)/(shock_ratio*shock_ratio))*kt_const*free_fall_velocity*free_fall_velocity;
     while(kT > 0.){
         vel_eval.push_back((1.0-sqrt(1.0-4.*kT/(erg_to_kev*kt_const*free_fall_velocity*free_fall_velocity)))/2);
         kT -= 1.;
     }
-    Dormand_Prince(Normalized_Position_Derivative, &epsilon_shock, &norm_velocity, &norm_height, 1e-2*absolute_err, &vel_eval, &pos_eval,
-        absolute_err, relative_err, max_itter);
+    accretion_column.Integrate(&epsilon_shock, initial_veloicty, 1e-2*absolute_err, {initial_height}, vel_eval);
     velocity.resize(vel_eval.size());
     altitude.resize(vel_eval.size());
     density.resize(vel_eval.size());
     pressure.resize(vel_eval.size());
     temperature.resize(vel_eval.size());
     electron_dens.resize(vel_eval.size());
+    pos_eval = accretion_column.y;
     for (int i = 0; i < vel_eval.size(); i++){
         velocity[i] = vel_eval[i]*free_fall_velocity;
         altitude[i] = pos_eval[i][0]*shock_height;

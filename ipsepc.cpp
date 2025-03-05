@@ -9,7 +9,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     reflection_sel = params[0]; // how to apply reflection 0 = off, 1 = on, apply at each layer, 2 = on, apply once to whole spectrum
     p_spin = params[1]; // spin period [s]; assumes spin equilibrium
     fractional_area = params[2]; //fractional accretion area
-    luminosity = params[3]; // luminosity [ergs/s]
+    luminosity = params[3]*1e33; // luminosity [ergs/s]
     mass = params[4]*solar_mass; // WD mass [grams]
     col_abund = params[5]; // accretion column abundance [solar abundances]
     wd_abund = params[6]; // wd surface abundance [solar abundances]
@@ -30,7 +30,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     shock_height = Calculate_B_Free_Shock_Height(free_fall_velocity, specific_accretion);
     epsilon_shock = Calculate_Epsilon(free_fall_velocity);
 
-    Shock_Height_Shooting(0.005, 100, true);
+    Shock_Height_Shooting(absolute_err, 100, true);
     MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
     std::cout << "h/R_wd = " << shock_height/wd_radius << std::endl;
 }

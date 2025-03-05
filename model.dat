@@ -2,7 +2,7 @@ polarspec   9   0.  1.e20   C_Polarspec add  0
 $reflectOn  " "             0
 B           "MG"            1.      0.      0.      1e3     1e3     1e-2
 f           " "             1e-3    0.      0.      0.1     1.      1e-5
-L           "erg/s"         1e33    1e20    1e20    1e40    1e40    1e30
+L           "1e33"          1       0.      0.      1e10    1e10    1e-2
 M           "Msun"          1.      0.      0.      1.4     1.4     1e-3
 ABUND       " "             1.      0.      0.      5.      5.      1e-3
 ABUND_WD    " "             1.      0.      0.      5.      5.      1e-3
@@ -14,7 +14,7 @@ deqspec     9   0.  1.e20   C_Deqspec   add 0
 $reflectOn  " "             0
 Rm/R_wd     " "             10      1.1     1.1    1e3      1e3     1e-2
 f           " "             1e-3    0.      0.     1.       1.      1e-5
-L           "erg/s"         1e33    1e20    1e20    1e40    1e40    1e30
+L           "1e33"          1       0.      0.      1e10    1e10    1e-2
 M           "Msun"          1.      0.      0.     1.4      1.4     1e-3
 ABUND       " "             1.      0.      0.     5.       5.      1e-3
 ABUND_WD    " "             1.      0.      0.     5.       5.      1e-3
@@ -26,7 +26,7 @@ ipspec      9   0.  1.e20   C_IPspec    add  0
 $reflectOn  " "             1
 Pspin       "s"             600     1.      20.     1e4     5e4     1e-1
 f           " "             1e-3    0.      0.      1.      1.      1e-5
-L           "erg/s"         1e33    1e20    1e20    1e40    1e40    1e30
+L           "1e33"          1       0.      0.      1e10    1e10    1e-2
 M           "Msun"          1.      0.      0.      1.4     1.4     1e-3
 ABUND       " "             1.      0.      0.      5.      5.      1e-3
 ABUND_WD    " "             1.      0.      0.      5.      5.      1e-3
