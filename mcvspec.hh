@@ -23,7 +23,7 @@ const double initial_veloicty = 1/shock_ratio; // velocity at WD surface, normal
 const double initial_height = 1.;
 
 // variables for user input
-inline double mass, b_field, p_spin, luminosity, col_abund, wd_abund, mag_ratio, cos_incl, source_distance;
+inline double mass, b_field, p_spin, luminosity, col_abund, mag_ratio, cos_incl, source_distance;
 inline int reflection_sel;
 
 inline double fractional_area, accretion_area, accretion_rate, specific_accretion;
@@ -171,8 +171,8 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
 
     refl_parameters[0] = 1-sqrt(1.0-1.0/pow(1+altitude.back()/wd_radius,2));
     refl_parameters[1] = 0.;
-    refl_parameters[2] = wd_abund;
-    refl_parameters[3] = wd_abund;
+    refl_parameters[2] = col_abund;
+    refl_parameters[3] = col_abund;
     refl_parameters[4] = cos_incl;
 
     for(int i=0; i<altitude.size(); i++){

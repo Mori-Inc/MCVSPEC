@@ -12,7 +12,6 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     luminosity = params[3]*1e33; // luminosity [ergs/s]
     mass = params[4]*solar_mass; // WD mass [grams]
     col_abund = params[5]; // accretion column abundance [solar abundances]
-    wd_abund = params[6]; // wd surface abundance [solar abundances]
     cos_incl = params[7]; // cos inclination angle
     source_distance = params[8]*pc_to_cm; // source distnace [cm]
 
