@@ -25,9 +25,10 @@ class Cataclysmic_Variable{
 
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,int); // polars
-        Cataclysmic_Variable(double,double,double,double,double,double,double,int,double); // ips
+        Cataclysmic_Variable(double,double,double,double,double,double,int,double); // ips
         void Set_Abundances(double);
         void Set_Accretion_Rate(double);
+        void Set_Inverse_Mag_Radius(double);
         static valarray<double> Flow_Equation(double vel, valarray<double> pos, void* my_class_instance);
         void Shock_Height_Shooting(int);
         void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string);
@@ -39,23 +40,6 @@ class Cataclysmic_Variable{
         void Radius_Shooting(int);
         void Set_Pre_Shock_Speed(int);
         void Set_Cooling_Ratio();
-};
-
-class Single_Temperature_CV:Cataclysmic_Variable{
-
-    Single_Temperature_CV(double,double,double,double);
-    Single_Temperature_CV(double,double,double,double,double);
-    static valarray<double> Flow_Equation(double vel, valarray<double> pos, void* eps_s);
-    Integrator accretion_column;
-};
-
-class Two_Temperature_CV:Cataclysmic_Variable{
-
-    Two_Temperature_CV(double,double,double,double);
-    Two_Temperature_CV(double,double,double,double,double);
-    static valarray<double> Flow_Equation(double vel, valarray<double> pos, void* eps_s);
-    Integrator accretion_column;
-
 };
 
 #endif

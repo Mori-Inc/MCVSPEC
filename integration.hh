@@ -10,7 +10,7 @@ using std::function, std::valarray, std::vector;
 
 const double absolute_err = 1e-8;
 const double relative_err = 1e-6;
-const double max_itter = 10000;
+const double max_itter = 100000;
 
 double norm(valarray<double>); // computes norm of array
 valarray<double> element_max(valarray<double>, valarray<double>); // returns max of to arrays element wise (i.e. return[i] is the max of (array_a[i], array_b[i]))

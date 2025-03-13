@@ -1,4 +1,4 @@
-#ifndef MCVSPEC_H
+/*#ifndef MCVSPEC_H
 #define MCVSPEC_H
 
 #include <cmath>
@@ -226,3 +226,4 @@ inline void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, Re
 }
 
 #endif
+*/
