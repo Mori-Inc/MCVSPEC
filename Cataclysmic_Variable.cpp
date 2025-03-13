@@ -134,16 +134,6 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
     double pre_shock_speed = cv_instance->pre_shock_speed;
     double shock_height = cv_instance->shock_height;
     double accretion_rate = cv_instance->accretion_rate;
-/*
-    cout << cooling_ratio << endl;
-    cout << pressure_ratio << endl;
-    cout << avg_atomic_charge << endl;
-    cout << bremss_constant << endl;
-    cout << exchange_constant << endl;
-    cout << pre_shock_speed << endl;
-    cout << shock_height << endl;
-    cout << accretion_rate << endl;
-*/
 
     double pressure = pos_pres[1];
     double energy_loss = bremss_constant*sqrt(pos_pres[1]/pow(vel,3))*(1 + cooling_ratio*(pow(shock_ratio,alpha+beta)/pow((shock_ratio-1),alpha))
