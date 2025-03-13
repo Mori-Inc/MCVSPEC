@@ -27,7 +27,7 @@ inline double mass, b_field, p_spin, luminosity, col_abund, mag_ratio, cos_incl,
 inline int reflection_sel;
 
 inline double fractional_area, accretion_area, accretion_rate, specific_accretion;
-inline double shock_height, velocity_at_shock, shock_temperature, shock_electron_dens, b_free_shock_height;;
+inline double shock_height, velocity_at_shock;
 inline double free_fall_velocity, wd_radius, mag_radius;
 inline double epsilon_shock; // ratio of brems cooling time to cytclotron cooling time
 
@@ -45,7 +45,7 @@ inline double epsilon_const;
 inline double kt_const;
 inline double electron_density_const;
 inline double avg_atomic_charge;
-inline double abundances[14] = {1.,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline double abundances[14] = {1.,0,0,0,0,0,0,0,0,0,0,0,0,0}; // fractional abundance of elements in accretion column
 
 inline void Set_Abundances(double metalicity){
     abundances[0] = FunctionUtility::getAbundance(atomic_charge[0]);
@@ -59,9 +59,10 @@ inline void Set_Abundances(double metalicity){
     avg_atomic_charge = 0;
     double avg_charge_squared = 0;
     for(int i = 0; i < 14; i++){
-        avg_ion_mass += (abundances[i]/norm)*atomic_mass[i];
-        avg_atomic_charge += (abundances[i]/norm)*atomic_charge[i];
-        avg_charge_squared += (abundances[i]/norm)*atomic_charge[i]*atomic_charge[i];
+        abundances[i] /= norm;
+        avg_ion_mass += (abundances[i])*atomic_mass[i];
+        avg_atomic_charge += (abundances[i])*atomic_charge[i];
+        avg_charge_squared += (abundances[i])*atomic_charge[i]*atomic_charge[i];
     }
     avg_ion_mass *= amu_to_g;
     bremss_const = sqrt(2.*pi/3.)*gaunt_factor*4*planck_const*planck_const*pow(fine_structure_constant,3);

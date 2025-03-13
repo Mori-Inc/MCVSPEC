@@ -7,6 +7,7 @@
 const double pressure_constant = pi*pow(electron_mass,4)*pow(light_speed,5)/(3*pow(planck_const,3));
 const double density_constant = (8.*pi/3.)*wd_mol_mass*amu_to_g*pow(electron_mass*light_speed/planck_const,3);
 
+
 valarray<double> Chandrasekhar_White_Dwarf_Equation(double, valarray<double>, void*);
 
 inline double Radius_Shooting(double mass, int max_itter){

@@ -27,6 +27,7 @@ class Integrator{
     public:
         vector<double> t;
         vector<valarray<double>> y;
+        vector<valarray<double>> deriv;
     private:
         equation func;
         double abs_err, rel_err;
@@ -38,8 +39,7 @@ class Integrator{
 
     public:
         Integrator(function<valarray<double>(double, valarray<double>, void*)>, const int);
-        Integrator(function<valarray<double>(double, valarray<double>, void*)>, void*, const int);
-        Integrator(function<valarray<double>(double, valarray<double>, void*)>, void*, const int, const double, const double);
+        Integrator(function<valarray<double>(double, valarray<double>, void*)>, const int, const double, const double);
         void Integrate(void*, const double, const double, const valarray<double>);
         void Integrate(void*, const double, const double, const valarray<double>, const vector<double>);
         void Integrate(void*, const double, const double, const valarray<double>, const valarray<double>);

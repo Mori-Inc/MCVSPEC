@@ -1,5 +1,4 @@
 #include "integration.hh"
-
 using std::find, std::fill, std::begin, std::end;
 using std::abs, std::max, std::min;
 using std::pow;
@@ -21,14 +20,10 @@ Integrator::Integrator(function<valarray<double>(double, valarray<double>, void*
     abs_err = absolute_err;
     rel_err = relative_err;
 }
-Integrator::Integrator(function<valarray<double>(double, valarray<double>, void*)> function, void* pars, const int n_dims){
-    func = {function, pars};
-    n_dim = n_dims;
-    abs_err = absolute_err;
-    rel_err = relative_err;
-}
-Integrator::Integrator(function<valarray<double>(double, valarray<double>, void*)> function, void* pars, const int n_dims, const double absolute_err, const double relative_err){
-    func = {function, pars};
+
+Integrator::Integrator(function<valarray<double>(double, valarray<double>, void*)> function, const int n_dims, const double absolute_err, const double relative_err){
+    double pars = 1;
+    func = {function, &pars};
     n_dim = n_dims;
     abs_err = absolute_err;
     rel_err = relative_err;
@@ -102,6 +97,7 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
         y.push_back(y_new);
         t.push_back(t_new);
         k[0] = k[n_stages];
+        deriv.push_back(k[0]);
     }
 }
 
