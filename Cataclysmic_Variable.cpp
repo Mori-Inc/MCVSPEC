@@ -5,10 +5,11 @@
 #include <XSFunctions/Utilities/FunctionUtility.h>
 
 using std::copy;
-using std::cout, std::endl;
+using std::cout;
+using std::endl;
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
-    mass(m), b_field(b), metalicity(metals), incl_angle(theta), distance(dist), refl(reflection),pressure_ratio(1.),
+    mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
     accretion_column(Flow_Equation, 2)
 {
     Radius_Shooting(100000);
@@ -22,11 +23,10 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, do
 }
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection, double r_m):
-    mass(m), metalicity(metals), incl_angle(theta), distance(dist),refl(reflection),pressure_ratio(1.),
+    mass(m), inverse_mag_radius(1/r_m), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
     accretion_column(Flow_Equation, 2)
 {
     Radius_Shooting(100000);
-    inverse_mag_radius = 1/r_m;
     Set_Accretion_Rate(luminosity);
     b_field = sqrt(32.*accretion_rate)*pow(grav_const*mass, 1./4.)*pow(r_m,7./4.)*pow(radius,-3);
     accretion_area = fractional_area*4.*pi*radius*radius;

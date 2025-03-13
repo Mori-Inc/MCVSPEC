@@ -10,10 +10,9 @@
 class Cataclysmic_Variable{
     protected:
         // input white dwarf properties
-        double mass, radius, b_field, inverse_mag_radius, incl_angle, distance;
-        int refl;
+        double mass, b_field, radius, inverse_mag_radius, distance;
         // input column properties
-        double accretion_rate, accretion_area, metalicity, shock_height, pre_shock_speed, pressure_ratio;
+        double accretion_rate, accretion_area, metalicity, shock_height, pre_shock_speed, pressure_ratio, incl_angle;
         valarray<double> abundances, charge; // fractional abundance of elements in accretion column
         // derived column properties
         double cooling_ratio, bremss_constant, exchange_constant, avg_ion_mass, avg_atomic_charge;
@@ -21,6 +20,7 @@ class Cataclysmic_Variable{
         // thermal profile
         valarray<double> altitude, electron_temperature, ion_temperature, electron_density, ion_density;
         // utilities
+        int refl;
         Integrator accretion_column;
 
     public:

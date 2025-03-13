@@ -1,6 +1,11 @@
 #include "integration.hh"
-using std::find, std::fill, std::begin, std::end;
-using std::abs, std::max, std::min;
+using std::find;
+using std::fill;
+using std::begin;
+using std::end;
+using std::abs;
+using std::max;
+using std::min;
 using std::pow;
 
 double norm(valarray<double> x){

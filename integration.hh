@@ -6,7 +6,9 @@
 #include <valarray>
 #include <vector>
 
-using std::function, std::valarray, std::vector;
+using std::function;
+using std::valarray;
+using std::vector;
 
 const double absolute_err = 1e-8;
 const double relative_err = 1e-6;
