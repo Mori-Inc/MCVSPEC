@@ -1,0 +1,11 @@
+.*
+!.gitignore
+Makefile
+*.dylib
+lpack*.cxx
+lpack*.o
+pkgIndex.tcl
+*.o
+*FunctionMap.cxx
+*FunctionMap.h
+*FunctionMap.o

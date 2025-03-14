@@ -1,6 +1,6 @@
 # X-ray Spectral Models for Magnetic CV's
 
-This is MCVSPEC, our spectral model for modelling X-ray emissions from magnetic cataclysmic variables (Bridges et al. in prep).
+This is MCVSPEC, a spectral model for X-ray emissions from magnetic cataclysmic variables (Bridges et al. in prep).
 
 MCVSPEC has three versions. The common input parameters are:
 | Variable       | Units                 | Description                                                           |
@@ -9,13 +9,13 @@ MCVSPEC has three versions. The common input parameters are:
 | `M`            | Solar masses (M☉)     | Mass of the white dwarf (WD)                                           |
 | `f`            | Dimensionless (0 to 1) | Fractional accretion area of the WD                                    |
 | `L`            | 10^33 ergs/s           | Luminosity of the WD                                                   |
-| `Z_wd`         | Relative to solar      | WD surface abundance                                  |
 | `Z`            | Relative to solar      | Accretion column abundance                            |
 | `cos i`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the reflecting surface              |
+| `distance`     | parsecs                | distance to source (used only for flux normalization)              |
 
 Depending on source type and spin equilibrium, there's an additional parameter used to estimate magnetospheric radius.
 
-POLARSPEC: model for polars. Accepts B (magnetic field in 10^6 G)
+POLARSPEC: model for polars. Accepts B (magnetic field in MG)
 
 IPSPEC: model for IP's, assuming spin equilibrium. Accepts P_spin (spin period in s)
 
