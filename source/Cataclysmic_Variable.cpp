@@ -186,7 +186,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     }
 }
 
-void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
+/*void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
     int n = flux.size();
     int m = altitude.size()-1;
     double segment_height = 0;
@@ -247,7 +247,7 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
     if(refl == 2){
     CXX_reflect(energy, refl_parameters, spectrum_num, flux, flux_error, init_string);
     }
-}
+}*/
 
 void Cataclysmic_Variable::Print_Properties(){
     cout << "===================================================" << endl;
