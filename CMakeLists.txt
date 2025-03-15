@@ -3,7 +3,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(PYBIND11_FINDPYTHON ON)
 
-find_package(Python 3.13 COMPONENTS Interpreter Development REQUIRED)
+find_package(Python 3.12 EXACT COMPONENTS Interpreter Development REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
 project(mcvspec VERSION 1.0.0)
@@ -11,7 +11,9 @@ project(mcvspec VERSION 1.0.0)
 #                           include/Cataclysmic_Variable.hh)
 #
 #pybind11_add_module(mcvspec source/Cataclysmic_Variable.cpp source/integration.cpp)
-pybind11_add_module(mcvspec pymcvspec/bindings.cpp)
+pybind11_add_module(mcvspec pymcvspec/bindings.cpp
+                            source/Cataclysmic_Variable.cpp
+                            source/integration.cpp)
 
 # gather info about HEASOFT env, reproduce logic of build naming
 set(HEADAS "$ENV{HEADAS}/")

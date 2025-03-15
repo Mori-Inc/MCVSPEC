@@ -8,12 +8,16 @@ using std::copy;
 using std::cout;
 using std::endl;
 
+Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double fractional_area, double theta, double dist, int reflection):
+    mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
+    accretion_column(Flow_Equation, 2)
+{}
+
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
     accretion_column(Flow_Equation, 2)
 {
     Radius_Shooting(100000);
-    inverse_mag_radius = 0;
     Set_Accretion_Rate(luminosity);
     accretion_area = fractional_area*4.*pi*radius*radius;
     accretion_rate /= accretion_area;
@@ -70,9 +74,6 @@ void Cataclysmic_Variable::Set_Abundances(double metalicity){
     }
     abundances = abundances/abundances.sum();
     Set_Cooling_Constants();
-
-    kt_const = electron_mass*(avg_atomic_charge + avg_ion_mass/electron_mass)/(1.+avg_atomic_charge);
-    electron_density_const = avg_atomic_charge/(avg_atomic_charge + avg_ion_mass/electron_mass);
 }
 
 void Cataclysmic_Variable::Set_Accretion_Rate(double luminosity){
@@ -186,7 +187,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     }
 }
 
-/*void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
+void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
     int n = flux.size();
     int m = altitude.size()-1;
     double segment_height = 0;
@@ -247,7 +248,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     if(refl == 2){
     CXX_reflect(energy, refl_parameters, spectrum_num, flux, flux_error, init_string);
     }
-}*/
+}
 
 void Cataclysmic_Variable::Print_Properties(){
     cout << "===================================================" << endl;
