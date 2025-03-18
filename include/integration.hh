@@ -6,7 +6,6 @@
 #include <valarray>
 #include <vector>
 
-using std::function;
 using std::valarray;
 using std::vector;
 
@@ -18,7 +17,7 @@ double norm(valarray<double>); // computes norm of array
 valarray<double> element_max(valarray<double>, valarray<double>); // returns max of to arrays element wise (i.e. return[i] is the max of (array_a[i], array_b[i]))
 
 struct equation{
-    function<valarray<double>(double, valarray<double>, void*)> func;
+    valarray<double> (*func)(double, valarray<double>, void*);
     void* pars;
     valarray<double> operator()(double t, valarray<double> y) const {
         return func(t,y,pars);
@@ -40,8 +39,8 @@ class Integrator{
         double h;
 
     public:
-        Integrator(function<valarray<double>(double, valarray<double>, void*)>, const int);
-        Integrator(function<valarray<double>(double, valarray<double>, void*)>, const int, const double, const double);
+        Integrator(valarray<double> (*func)(double, valarray<double>, void*), const int);
+        Integrator(valarray<double> (*func)(double, valarray<double>, void*), const int, const double, const double);
         void Integrate(void*, const double, const double, const valarray<double>);
         void Integrate(void*, const double, const double, const valarray<double>, const vector<double>);
         void Integrate(void*, const double, const double, const valarray<double>, const valarray<double>);

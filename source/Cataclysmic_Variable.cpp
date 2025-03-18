@@ -109,12 +109,12 @@ void Cataclysmic_Variable::Radius_Shooting(int max_itter){
     vector<double> eta;
     valarray<double> bounds;
 
-    while(abs(mass*(solved_mass/mass - 1.)) > absolute_err && itters < max_itter){
+    while(abs((solved_mass/mass - 1.)) > relative_err && itters < max_itter){
         bounds = {1e-12 + 1./y_0, 1e3};
         white_dwarf.Integrate(&y_0, 1e-32, 1e5, {1.,0.}, bounds);
         eta = white_dwarf.t;
         solved_mass = (-4*pi/(density_constant*density_constant))*pow((2*pressure_constant/(pi*grav_const)),3./2.)*(eta.back()*eta.back())*white_dwarf.y.back()[1];
-        y_0 *= cbrt(mass/solved_mass);
+        y_0 *= mass/solved_mass;
         itters++;
     }
     bounds = {1e-10 + 1./y_0, 1e3};
