@@ -26,6 +26,13 @@ Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, vo
     rel_err = relative_err;
 }
 
+Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), void* pars, const int n_dims){
+    func = {function, pars};
+    n_dim = n_dims;
+    abs_err = absolute_err;
+    rel_err = relative_err;
+}
+
 Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), const int n_dims, const double absolute_err, const double relative_err){
     double pars = 1;
     func = {function, &pars};
@@ -85,6 +92,7 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
     }
 
     double dir = (0. < (t_end-t[0])) - ((t_end-t[0]) < 0.);
+    double t_terminal = t_end;
     k[0] = func(t[0], y[0]);
     Set_Initial_Step(dir, t[0], y[0]);
     valarray<double> y_new(n_dim);
@@ -94,9 +102,15 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
         h = Step(dir, t.back(), y.back(), &t_new, &y_new);
 
         for(int i = 0; i < n_dim; i++){
-            if(bound_dir[i]*(y_bound[i]-y_new[i]) < 0.){
+            if(bound_dir[i]*(y_bound[i]-y_new[i]) < absolute_err){
                 before_bound = false;
             }
+        }
+
+        t_terminal = t_new + ((y_bound-y_new)/k[n_stages]).min();
+
+        if(dir*(t_terminal-t.back()) > 0){
+            h = min(h, dir*(t_terminal-t.back()));
         }
 
         y.push_back(y_new);

@@ -1,16 +1,19 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(PYBIND11_FINDPYTHON ON)
 
-find_package(Python 3.12 EXACT COMPONENTS Interpreter Development REQUIRED)
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+get_filename_component(VENV_PATH "${Python3_EXECUTABLE}" PATH)
+get_filename_component(VENV_PATH "${VENV_PATH}" PATH)
+
+string(FIND ${Python3_VERSION} "." PY_PATCH_LOC REVERSE)
+string(SUBSTRING ${Python3_VERSION} 0  ${PY_PATCH_LOC} PY_VERSION_DIR)
+
+list(APPEND CMAKE_PREFIX_PATH "${VENV_PATH}/lib/python${PY_VERSION_DIR}/site-packages/pybind11/share/cmake/pybind11")
 find_package(pybind11 CONFIG REQUIRED)
 
 project(mcvspec VERSION 1.0.0)
-#add_library(mcvspec STATIC source/Cataclysmic_Variable.cpp
-#                           include/Cataclysmic_Variable.hh)
-#
-#pybind11_add_module(mcvspec source/Cataclysmic_Variable.cpp source/integration.cpp)
+
 pybind11_add_module(mcvspec pymcvspec/bindings.cpp
                             source/Cataclysmic_Variable.cpp
                             source/integration.cpp)
@@ -40,3 +43,26 @@ target_include_directories(mcvspec PUBLIC
 target_link_libraries(mcvspec PRIVATE "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/lib/libXSFunctions.dylib")
 
 target_compile_definitions(mcvspec PRIVATE)
+
+# compile xspec model
+set(XSPEC_MODEL_DIR "${CMAKE_BINARY_DIR}/xspec")
+file(MAKE_DIRECTORY "${XSPEC_MODEL_DIR}")
+
+set(SOURCE_FILES ${CMAKE_SOURCE_DIR}/source/Cataclysmic_Variable.cpp;
+                 ${CMAKE_SOURCE_DIR}/source/integration.cpp)
+set(MODEL_FILES ${CMAKE_SOURCE_DIR}/model_funcs/polarspec.cpp;
+                ${CMAKE_SOURCE_DIR}/model_funcs/ipsepc.cpp;
+                ${CMAKE_SOURCE_DIR}/model_funcs/deqspec.cpp;
+                ${CMAKE_SOURCE_DIR}/model_funcs/mcvspec.dat)
+set(HEADER_FILES ${CMAKE_SOURCE_DIR}/include/Cataclysmic_Variable.hh;
+                 ${CMAKE_SOURCE_DIR}/include/integration.hh;
+                 ${CMAKE_SOURCE_DIR}/include/constants.hh;
+                 ${CMAKE_SOURCE_DIR}/include/tableau.hh)
+
+foreach(FILE IN LISTS SOURCE_FILES MODEL_FILES HEADER_FILES)
+    get_filename_component(FNAME "${FILE}" NAME)
+    file(CREATE_LINK "${FILE}" "${XSPEC_MODEL_DIR}/${FNAME}" SYMBOLIC)
+endforeach()
+
+execute_process (COMMAND bash -c "initpackage mcvspec ${XSPEC_MODEL_DIR}/mcvspec.dat ${XSPEC_MODEL_DIR}")
+execute_process (COMMAND bash -c "hmake" WORKING_DIRECTORY "${XSPEC_MODEL_DIR}")

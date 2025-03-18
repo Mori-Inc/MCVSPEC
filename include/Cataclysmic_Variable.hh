@@ -30,7 +30,7 @@ class Cataclysmic_Variable{
         virtual void Set_Abundances(double);
         void Set_Accretion_Rate(double);
         void Set_Inverse_Mag_Radius(double);
-        static valarray<double> Flow_Equation(double vel, valarray<double> pos, void* my_class_instance);
+        valarray<double> Flow_Equation(double vel, valarray<double> pos);
         void Shock_Height_Shooting(int);
         virtual void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string);
         void Print_Properties();

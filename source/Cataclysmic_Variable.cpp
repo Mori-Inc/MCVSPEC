@@ -8,14 +8,18 @@ using std::copy;
 using std::cout;
 using std::endl;
 
+valarray<double> Flow_Equation_Wrapper(double vel, valarray<double> pos_pres, void* cv_instance){
+    return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(vel, pos_pres);
+}
+
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double fractional_area, double theta, double dist, int reflection):
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
-    accretion_column(Flow_Equation, 2)
+    accretion_column(Flow_Equation_Wrapper, this, 2)
 {}
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
-    accretion_column(Flow_Equation, 2)
+    accretion_column(Flow_Equation_Wrapper, this, 2)
 {
     Radius_Shooting(100000);
     Set_Accretion_Rate(luminosity);
@@ -28,7 +32,7 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, do
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection, double r_m):
     mass(m), inverse_mag_radius(1/r_m), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
-    accretion_column(Flow_Equation, 2)
+    accretion_column(Flow_Equation_Wrapper, this, 2)
 {
     Radius_Shooting(100000);
     Set_Accretion_Rate(luminosity);
@@ -64,6 +68,7 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){
     exchange_constant = sqrt(2/pow(pi,3))*pow(fine_structure_constant*planck_const*light_speed,2)*coulomb_logarithm*sqrt(pow(thermal_constant, 5))
                         /pow(electron_mass,3);
 }
+
 void Cataclysmic_Variable::Set_Abundances(double metalicity){
     abundances.resize(atomic_charge.size());
     abundances[0] = FunctionUtility::getAbundance(atomic_charge[0]);
@@ -106,36 +111,30 @@ void Cataclysmic_Variable::Radius_Shooting(int max_itter){
     const double pressure_constant = pi*pow(electron_mass,4)*pow(light_speed,5)/(3*pow(planck_const,3));
     const double density_constant = (8.*pi/3.)*wd_mol_mass*amu_to_g*pow(electron_mass*light_speed/planck_const,3);
     Integrator white_dwarf(Chandrasekhar_White_Dwarf_Equation, 2);
+    double eta0 = 1e-32;
     vector<double> eta;
     valarray<double> bounds;
+    valarray<double> start(2);
 
-    while(abs((solved_mass/mass - 1.)) > relative_err && itters < max_itter){
-        bounds = {1e-12 + 1./y_0, 1e3};
-        white_dwarf.Integrate(&y_0, 1e-32, 1e5, {1.,0.}, bounds);
+    while(abs(solved_mass/mass - 1.) > relative_err && itters < max_itter){
+        bounds = {1./y_0, 1e3};
+        start[0] = 1 - eta0*eta0*sqrt(pow(1.0-1./(y_0*y_0), 3))/2;
+        start[1] = 1 - eta0*sqrt(pow(1.0-1./(y_0*y_0), 3));
+        white_dwarf.Integrate(&y_0, eta0, 1e5, start, bounds);
         eta = white_dwarf.t;
         solved_mass = (-4*pi/(density_constant*density_constant))*pow((2*pressure_constant/(pi*grav_const)),3./2.)*(eta.back()*eta.back())*white_dwarf.y.back()[1];
-        y_0 *= mass/solved_mass;
+        y_0 /= (eta.back()*white_dwarf.y.back()[1]*y_0/2)*(mass/solved_mass - 1) + 1;
         itters++;
     }
-    bounds = {1e-10 + 1./y_0, 1e3};
-    white_dwarf.Integrate(&y_0, 1e-32, 1e5, {1.,0.}, bounds);
+    bounds = {1./y_0, 1e3};
+    start[0] = 1 - eta0*eta0*sqrt(pow(1.0-1./(y_0*y_0), 3))/2;
+    start[1] = 1 - eta0*sqrt(pow(1.0-1./(y_0*y_0), 3));
+    white_dwarf.Integrate(&y_0, eta0, 1e5, start, bounds);
     eta = white_dwarf.t;
     radius = sqrt(2*pressure_constant/(pi*grav_const*density_constant*density_constant))*(eta.back()/y_0);
 }
 
-valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres, void* my_class_instance){
-    Cataclysmic_Variable* cv_instance = (Cataclysmic_Variable*)my_class_instance;
-    double cooling_ratio = cv_instance->cooling_ratio;
-    double pressure_ratio = cv_instance->pressure_ratio;
-    double avg_atomic_charge = cv_instance->avg_atomic_charge;
-    valarray<double> abundances = cv_instance->abundances;
-    valarray<double> charge = cv_instance->charge;
-    double bremss_constant = cv_instance->bremss_constant;
-    double exchange_constant = cv_instance->exchange_constant;
-    double pre_shock_speed = cv_instance->pre_shock_speed;
-    double shock_height = cv_instance->shock_height;
-    double accretion_rate = cv_instance->accretion_rate;
-
+valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres){
     double pressure = pos_pres[1];
     double energy_loss = bremss_constant*sqrt(pos_pres[1]/pow(vel,3))*(1 + cooling_ratio*(pow(shock_ratio,alpha+beta)/pow((shock_ratio-1),alpha))
                                                                            *(pow(((pressure_ratio+1)/pressure_ratio),alpha))*pow(pressure,alpha)*pow(vel,beta));
@@ -143,7 +142,6 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
                              *(abundances*charge*charge*electron_mass/(amu_to_g*atomic_mass*sqrt(pow(pressure + (1-vel-pressure)*avg_atomic_charge*electron_mass/(amu_to_g*atomic_mass),3)))).sum();
     double dpos_dvel = (pow(pre_shock_speed,3)/(shock_height*accretion_rate))*(5. - 8.*vel)/(2*energy_loss);
     double dpress_dvel = ((2.0-8.*vel)/3. - ((5.0-8.*vel)/3.)*(energy_exchange/(pre_shock_speed*pre_shock_speed*energy_loss)))/vel;
-
     return {dpos_dvel,dpress_dvel};
 }
 
@@ -152,7 +150,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     int itters = 0;
     while(itters < max_itter && error > absolute_err*1e3){
         accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))});
-        slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back(), this)[0];
+        slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back())[0];
         error = accretion_column.y.back()[0] - accretion_column.t.back()*slope;
         shock_height *= 1-error;
         error = abs(error);

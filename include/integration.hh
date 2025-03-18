@@ -40,6 +40,7 @@ class Integrator{
 
     public:
         Integrator(valarray<double> (*func)(double, valarray<double>, void*), const int);
+        Integrator(valarray<double> (*func)(double, valarray<double>, void*), void*, const int);
         Integrator(valarray<double> (*func)(double, valarray<double>, void*), const int, const double, const double);
         void Integrate(void*, const double, const double, const valarray<double>);
         void Integrate(void*, const double, const double, const valarray<double>, const vector<double>);
