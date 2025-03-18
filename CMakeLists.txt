@@ -42,8 +42,6 @@ target_include_directories(mcvspec PUBLIC
 )
 target_link_libraries(mcvspec PRIVATE "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/lib/libXSFunctions.dylib")
 
-target_compile_definitions(mcvspec PRIVATE)
-
 # compile xspec model
 set(XSPEC_MODEL_DIR "${CMAKE_BINARY_DIR}/xspec")
 file(MAKE_DIRECTORY "${XSPEC_MODEL_DIR}")
@@ -64,5 +62,19 @@ foreach(FILE IN LISTS SOURCE_FILES MODEL_FILES HEADER_FILES)
     file(CREATE_LINK "${FILE}" "${XSPEC_MODEL_DIR}/${FNAME}" SYMBOLIC)
 endforeach()
 
+# clean up xspec dir if still has old files
+if(EXISTS "${XSPEC_MODEL_DIR}/lpack_mcvspec.cxx")
+    file(REMOVE "${XSPEC_MODEL_DIR}/lpack_mcvspec.cxx")
+endif()
+
 execute_process (COMMAND bash -c "initpackage mcvspec ${XSPEC_MODEL_DIR}/mcvspec.dat ${XSPEC_MODEL_DIR}")
-execute_process (COMMAND bash -c "hmake" WORKING_DIRECTORY "${XSPEC_MODEL_DIR}")
+#execute_process (COMMAND bash -c "hmake" WORKING_DIRECTORY "${XSPEC_MODEL_DIR}")
+
+add_custom_command(
+    OUTPUT "${XSPEC_MODEL_DIR}/hmake.log"
+    COMMAND bash -c "hmake > hmake.log"
+    WORKING_DIRECTORY ${XSPEC_MODEL_DIR}
+    COMMENT "Building XSPEC Model"
+)
+add_custom_target(mcvspec_xspec ALL DEPENDS "${XSPEC_MODEL_DIR}/hmake.log" VERBATIM)
+target_compile_definitions(mcvspec PRIVATE)
