@@ -1,22 +1,13 @@
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-get_filename_component(VENV_PATH "${Python3_EXECUTABLE}" PATH)
-get_filename_component(VENV_PATH "${VENV_PATH}" PATH)
-
-string(FIND ${Python3_VERSION} "." PY_PATCH_LOC REVERSE)
-string(SUBSTRING ${Python3_VERSION} 0  ${PY_PATCH_LOC} PY_VERSION_DIR)
-
-list(APPEND CMAKE_PREFIX_PATH "${VENV_PATH}/lib/python${PY_VERSION_DIR}/site-packages/pybind11/share/cmake/pybind11")
-find_package(pybind11 CONFIG REQUIRED)
+set(BUILD_PYBINDINGS True CACHE BOOL "Build pyMCVSPEC")
 
 project(mcvspec VERSION 1.0.0)
 
-pybind11_add_module(mcvspec pymcvspec/bindings.cpp
-                            source/Cataclysmic_Variable.cpp
-                            source/integration.cpp)
+if(NOT DEFINED ENV{HEADAS})
+    message(FATAL_ERROR "HEADAS must be defined and point to your installation of HEASoft")
+endif()
 
 # gather info about HEASOFT env, reproduce logic of build naming
 set(HEADAS "$ENV{HEADAS}/")
@@ -29,28 +20,38 @@ execute_process (COMMAND bash -c
     OUTPUT_VARIABLE HEA_SYSTEM_NAME)
 string(STRIP "${HEA_SYSTEM_NAME}" HEA_SYSTEM_NAME)
 
-# MCVSPEC Headers
-target_include_directories(mcvspec PUBLIC "${PROJECT_SOURCE_DIR}/include")
-
-# HEASOFT Headers
-target_include_directories(mcvspec PUBLIC
-    "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include"
-    "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include/XSFunctions"
-    "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include/XSFunctions/Utilities"
-    "${HEASOFT_DIR}/heacore/${HEA_SYSTEM_NAME}/include"
-    "${HEASOFT_DIR}/tcltk/${HEA_SYSTEM_NAME}/include"
-)
-target_link_libraries(mcvspec PRIVATE "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/lib/libXSFunctions.dylib")
-
-# prepare for install
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX
     "${CMAKE_BINARY_DIR}" CACHE PATH "MCVSPEC install prefix" FORCE)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
+if(BUILD_PYBINDINGS)
+    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+    find_package(pybind11 CONFIG REQUIRED)
+
+    pybind11_add_module(mcvspec pymcvspec/bindings.cpp
+                            source/Cataclysmic_Variable.cpp
+                            source/integration.cpp)
+
+    # MCVSPEC Headers
+    target_include_directories(mcvspec PUBLIC "${PROJECT_SOURCE_DIR}/include")
+
+    # HEASOFT Headers
+    target_include_directories(mcvspec PUBLIC
+        "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include"
+        "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include/XSFunctions"
+        "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include/XSFunctions/Utilities"
+        "${HEASOFT_DIR}/heacore/${HEA_SYSTEM_NAME}/include"
+        "${HEASOFT_DIR}/tcltk/${HEA_SYSTEM_NAME}/include"
+    )
+    target_link_libraries(mcvspec PRIVATE "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/lib/libXSFunctions.dylib")
+    set(PYMCVSPEC_DIR "${CMAKE_INSTALL_PREFIX}/pymcvspec")
+    install(TARGETS mcvspec DESTINATION ${PYMCVSPEC_DIR})
+    target_compile_definitions(mcvspec PRIVATE)
+endif()
+
 # compile xspec model
 set(XSPEC_MODEL_DIR "${CMAKE_INSTALL_PREFIX}/xspec")
-set(PYMCVSPEC_DIR "${CMAKE_INSTALL_PREFIX}/pymcvspec")
 file(MAKE_DIRECTORY "${XSPEC_MODEL_DIR}")
 
 set(SOURCE_FILES ${CMAKE_SOURCE_DIR}/source/Cataclysmic_Variable.cpp;
@@ -75,7 +76,6 @@ if(EXISTS "${XSPEC_MODEL_DIR}/lpack_mcvspec.cxx")
 endif()
 
 execute_process (COMMAND bash -c "initpackage mcvspec ${XSPEC_MODEL_DIR}/mcvspec.dat ${XSPEC_MODEL_DIR}")
-#execute_process (COMMAND bash -c "hmake" WORKING_DIRECTORY "${XSPEC_MODEL_DIR}")
 
 add_custom_command(
     OUTPUT "${XSPEC_MODEL_DIR}/hmake.log"
@@ -84,5 +84,3 @@ add_custom_command(
     COMMENT "Building XSPEC Model"
 )
 add_custom_target(mcvspec_xspec ALL DEPENDS "${XSPEC_MODEL_DIR}/hmake.log" VERBATIM)
-target_compile_definitions(mcvspec PRIVATE)
-install(TARGETS mcvspec DESTINATION ${PYMCVSPEC_DIR})
