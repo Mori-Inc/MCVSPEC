@@ -42,8 +42,15 @@ target_include_directories(mcvspec PUBLIC
 )
 target_link_libraries(mcvspec PRIVATE "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/lib/libXSFunctions.dylib")
 
+# prepare for install
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX
+    "${CMAKE_BINARY_DIR}" CACHE PATH "MCVSPEC install prefix" FORCE)
+endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+
 # compile xspec model
-set(XSPEC_MODEL_DIR "${CMAKE_BINARY_DIR}/xspec")
+set(XSPEC_MODEL_DIR "${CMAKE_INSTALL_PREFIX}/xspec")
+set(PYMCVSPEC_DIR "${CMAKE_INSTALL_PREFIX}/pymcvspec")
 file(MAKE_DIRECTORY "${XSPEC_MODEL_DIR}")
 
 set(SOURCE_FILES ${CMAKE_SOURCE_DIR}/source/Cataclysmic_Variable.cpp;
@@ -78,3 +85,4 @@ add_custom_command(
 )
 add_custom_target(mcvspec_xspec ALL DEPENDS "${XSPEC_MODEL_DIR}/hmake.log" VERBATIM)
 target_compile_definitions(mcvspec PRIVATE)
+install(TARGETS mcvspec DESTINATION ${PYMCVSPEC_DIR})

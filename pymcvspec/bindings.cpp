@@ -20,7 +20,20 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             accretion_rate /= accretion_area;
             Set_Abundances(metalicity);
             Set_Pre_Shock_Speed(5);
-            Set_Cooling_Ratio();;
+            Set_Cooling_Ratio();
+        }
+        Py_Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection, double r_m):
+            Cataclysmic_Variable(m,r_m,metals,fractional_area,theta,dist,reflection)
+        {
+            inverse_mag_radius = 1/r_m;
+            Radius_Shooting(100000);
+            Set_Accretion_Rate(luminosity);
+            b_field = sqrt(32.*accretion_rate)*pow(grav_const*mass, 1./4.)*pow(r_m,7./4.)*pow(radius,-3);
+            accretion_area = fractional_area*4.*pi*radius*radius;
+            accretion_rate /= accretion_area;
+            Set_Abundances(metalicity);
+            Set_Pre_Shock_Speed(5);
+            Set_Cooling_Ratio();
         }
         void Set_Abundances(const double m) override{
             abundances.resize(atomic_charge.size());
@@ -33,51 +46,50 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string) override{
             std::cout << "Spectrum creation is not yet implented in python" << std::endl;
         }
-        py::array_t<double> Get_Altitude(){
-            py::array_t<double> array(altitude.size());
+        py::array_t<double> Valarray_to_Numpy(valarray<double>* arr){
+            py::array_t<double> array(arr->size());
             py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-            for(int i = 0; i < altitude.size(); i++){
-                np_array(i) = altitude[i];
+            for(int i = 0; i < arr->size(); i++){
+                np_array(i) = (*arr)[i];
             }
             return array;
+        }
+        py::array_t<double> Get_Altitude(){
+            return Valarray_to_Numpy(&altitude);
         }
         py::array_t<double> Get_Electron_Temperature(){
-            py::array_t<double> array(electron_temperature.size());
-            py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-            for(int i = 0; i < electron_temperature.size(); i++){
-                np_array(i) = electron_temperature[i];
-            }
-            return array;
+            return Valarray_to_Numpy(&electron_temperature);
         }
         py::array_t<double> Get_Ion_Temperature(){
-            py::array_t<double> array(ion_temperature.size());
-            py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-            for(int i = 0; i < ion_temperature.size(); i++){
-                np_array(i) = ion_temperature[i];
-            }
-            return array;
+            return Valarray_to_Numpy(&ion_temperature);
         }
         py::array_t<double> Get_Electron_Density(){
-            py::array_t<double> array(electron_density.size());
-            py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-            for(int i = 0; i < electron_density.size(); i++){
-                np_array(i) = electron_density[i];
-            }
-            return array;
+            return Valarray_to_Numpy(&electron_density);
         }
         py::array_t<double> Get_Ion_Density(){
-            py::array_t<double> array(ion_density.size());
-            py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-            for(int i = 0; i < ion_density.size(); i++){
-                np_array(i) = ion_density[i];
-            }
-            return array;
+            return Valarray_to_Numpy(&ion_density);
         }
 };
 
 PYBIND11_MODULE(mcvspec, module) {
     py::class_<Py_Cataclysmic_Variable>(module, "Polar")
-        .def(py::init<double,double,double,double,double,double,double,int>())
+        .def(py::init<double,double,double,double,double,double,double,int>(),
+            py::arg("mass") = 0.7*solar_mass, py::arg("b_field") = 1e7,
+            py::arg("metalicity") = 1., py::arg("luminosity") = 1e33,
+            py::arg("area_frac") = 1e-4, py::arg("cos_incl_angle") = 0.5,
+            py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
+        .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
+        .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
+        .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
+        .def("ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
+        .def("electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
+        .def("ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density);
+    py::class_<Py_Cataclysmic_Variable>(module, "Intermediate_Polar")
+        .def(py::init<double,double,double,double,double,double,int,double>(),
+            py::arg("mass") = 0.7*solar_mass, py::arg("metalicity") = 1.,
+            py::arg("luminosity") = 1e33, py::arg("area_frac") = 1e-4,
+            py::arg("cos_incl_angle") = 0.5, py::arg("src_distance") = 200*pc_to_cm,
+            py::arg("refl_on") = 1, py::arg("mag_radius") = 2*solar_radius)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)

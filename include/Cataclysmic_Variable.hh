@@ -3,6 +3,7 @@
 
 #include "constants.hh"
 #include "integration.hh"
+#include <valarray>
 #include <xsTypes.h>
 #include <funcWrappers.h>
 #include <XSFunctions/Utilities/FunctionUtility.h>
