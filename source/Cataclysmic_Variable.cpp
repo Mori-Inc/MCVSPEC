@@ -65,7 +65,7 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){
     cooling_ratio_const = 8.07e-2*avg_atomic_charge*pow(electron_mass, 3.85)*pow(shock_ratio-1, 2)/pow(shock_ratio, 5.85)*pow(pressure_ratio/(pressure_ratio+1),2)
                           /(gaunt_factor*avg_charge_squared*boltz_const*boltz_const*pow(accretion_rate, 1.85)*pow(thermal_constant, 3.85));
 
-    exchange_constant = sqrt(2/pow(pi,3))*pow(fine_structure_constant*planck_const*light_speed,2)*coulomb_logarithm*sqrt(pow(thermal_constant, 5))
+    exchange_constant = sqrt(2/pow(pi,3))*pow(fine_structure_constant*planck_const*light_speed,2)*sqrt(pow(thermal_constant, 5))
                         /pow(electron_mass,3);
 }
 
@@ -136,9 +136,12 @@ void Cataclysmic_Variable::Radius_Shooting(int max_itter){
 
 valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres){
     double pressure = pos_pres[1];
+    double edens = thermal_constant*accretion_rate/(pre_shock_speed*electron_mass*vel);
+    double temperature = accretion_rate*pre_shock_speed*pressure/(boltz_const*edens);
+    double coulomb_logarithm = 15.9 + log(temperature*1e-8) - sqrt(log(edens*1e-16));
     double energy_loss = bremss_constant*sqrt(pos_pres[1]/pow(vel,3))*(1 + cooling_ratio*(pow(shock_ratio,alpha+beta)/pow((shock_ratio-1),alpha))
                                                                            *(pow(((pressure_ratio+1)/pressure_ratio),alpha))*pow(pressure,alpha)*pow(vel,beta));
-    double energy_exchange = exchange_constant*(1-vel-((avg_atomic_charge+1)/avg_atomic_charge)*pressure)/sqrt(pow(vel,5))
+    double energy_exchange = exchange_constant*coulomb_logarithm*(1-vel-((avg_atomic_charge+1)/avg_atomic_charge)*pressure)/sqrt(pow(vel,5))
                              *(abundances*charge*charge*electron_mass/(amu_to_g*atomic_mass*sqrt(pow(pressure + (1-vel-pressure)*avg_atomic_charge*electron_mass/(amu_to_g*atomic_mass),3)))).sum();
     double dpos_dvel = (pow(pre_shock_speed,3)/(shock_height*accretion_rate))*(5. - 8.*vel)/(2*energy_loss);
     double dpress_dvel = ((2.0-8.*vel)/3. - ((5.0-8.*vel)/3.)*(energy_exchange/(pre_shock_speed*pre_shock_speed*energy_loss)))/vel;

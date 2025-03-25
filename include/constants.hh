@@ -29,6 +29,5 @@ const double wd_mol_mass = 2.; // white dwarf molar mass
 const double shock_ratio = 4.;
 const double alpha = 2.0; // cyclotron cooling rate pressure exponent
 const double beta = 3.85; // cyclotron cooling rate density exponent
-const double coulomb_logarithm = 15; // TODO: compute from column properties
 
 #endif
