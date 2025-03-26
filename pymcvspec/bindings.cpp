@@ -69,10 +69,25 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         py::array_t<double> Get_Ion_Density(){
             return Valarray_to_Numpy(&ion_density);
         }
+        py::array_t<double> Get_Total_Pressure(){
+            return Valarray_to_Numpy(&total_pressure);
+        }
+        py::array_t<double> Get_Electron_Pressure(){
+            return Valarray_to_Numpy(&electron_pressure);
+        }
+        double Get_Radius(){
+            return radius;
+        }
+        double Get_Accretion_Rate(){
+            return accretion_rate;
+        }
+        double Get_Shock_Height(){
+            return shock_height;
+        }
 };
 
 PYBIND11_MODULE(mcvspec, module) {
-    py::class_<Py_Cataclysmic_Variable>(module, "Polar")
+    py::class_<Py_Cataclysmic_Variable>(module, "Polar", py::module_local())
         .def(py::init<double,double,double,double,double,double,double,int>(),
             py::arg("mass") = 0.7*solar_mass, py::arg("b_field") = 1e7,
             py::arg("metalicity") = 1., py::arg("luminosity") = 1e33,
@@ -83,7 +98,12 @@ PYBIND11_MODULE(mcvspec, module) {
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
         .def("ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
         .def("electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
-        .def("ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density);
+        .def("ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
+        .def("electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
+        .def("total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
+        .def("radius", &Py_Cataclysmic_Variable::Get_Radius)
+        .def("m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
+        .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height);
     py::class_<Py_Cataclysmic_Variable>(module, "Intermediate_Polar")
         .def(py::init<double,double,double,double,double,double,int,double>(),
             py::arg("mass") = 0.7*solar_mass, py::arg("metalicity") = 1.,
@@ -95,5 +115,10 @@ PYBIND11_MODULE(mcvspec, module) {
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
         .def("ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
         .def("electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
-        .def("ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density);
+        .def("ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
+        .def("electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
+        .def("total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
+        .def("radius", &Py_Cataclysmic_Variable::Get_Radius)
+        .def("m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
+        .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height);
 }

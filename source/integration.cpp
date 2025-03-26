@@ -18,6 +18,9 @@ valarray<double> element_max(valarray<double> x, valarray<double> y){
     }
     return max_arr;
 }
+
+Integrator::Integrator(){}
+
 Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), const int n_dims){
     double pars = 1;
     func = {function, &pars};

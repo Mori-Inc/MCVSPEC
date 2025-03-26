@@ -39,6 +39,7 @@ class Integrator{
         double h;
 
     public:
+        Integrator();
         Integrator(valarray<double> (*func)(double, valarray<double>, void*), const int);
         Integrator(valarray<double> (*func)(double, valarray<double>, void*), void*, const int);
         Integrator(valarray<double> (*func)(double, valarray<double>, void*), const int, const double, const double);
