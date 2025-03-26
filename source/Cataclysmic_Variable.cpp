@@ -3,14 +3,13 @@
 #include "integration.hh"
 #include <iostream>
 #include <XSFunctions/Utilities/FunctionUtility.h>
-#include <new>
 
 using std::copy;
 using std::cout;
 using std::endl;
 
-valarray<double> Flow_Equation_Wrapper(double vel, valarray<double> pos_pres, void* cv_instance){
-    return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(vel, pos_pres);
+valarray<double> Flow_Equation_Wrapper(double t, valarray<double> y, void* cv_instance){
+    return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(t, y);
 }
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double fractional_area, double theta, double dist, int reflection):
@@ -22,7 +21,6 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, do
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
     accretion_column(Flow_Equation_Wrapper, this, 3)
 {
-    accretion_column = Integrator(Flow_Equation_Wrapper, this, 3);
     Radius_Shooting(100000);
     Set_Accretion_Rate(luminosity);
     accretion_area = fractional_area*4.*pi*radius*radius;
@@ -140,9 +138,9 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
     double position = pos_pres_epres[0];
     double pressure = pos_pres_epres[1];
     double elec_pressure = pos_pres_epres[2];
-    double edens = thermal_constant*accretion_rate/(pre_shock_speed*electron_mass*vel);
-    double temperature = accretion_rate*pre_shock_speed*elec_pressure/(boltz_const*edens);
-    double coulomb_logarithm = 15.9 + log(temperature*1e-8) - 0.5*log(edens*1e-16);
+    double n_e = thermal_constant*accretion_rate/(pre_shock_speed*electron_mass*vel);
+    double temp = accretion_rate*pre_shock_speed*elec_pressure/(boltz_const*n_e);
+    double coulomb_logarithm = 15.9 + log(temp*1e-8) - 0.5*log(n_e*1e-16);
 
     double energy_loss = bremss_constant*sqrt(elec_pressure/pow(vel,3))*(1 + cooling_ratio*(pow(shock_ratio,alpha+beta)/pow((shock_ratio-1),alpha))
                                                                            *(pow(((pressure_ratio+1)/pressure_ratio),alpha))*pow(elec_pressure,alpha)*pow(vel,beta));
