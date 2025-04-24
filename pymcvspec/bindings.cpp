@@ -43,6 +43,9 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             abundances = abundances/abundances.sum();
             Set_Cooling_Constants();
         }
+        void Set_Pressure_Ratio(double sigma_s){
+            pressure_ratio = sigma_s;
+        }
         void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string) override{
             std::cout << "Spectrum creation is not yet implented in python" << std::endl;
         }
@@ -94,6 +97,7 @@ PYBIND11_MODULE(mcvspec, module) {
             py::arg("area_frac") = 1e-4, py::arg("cos_incl_angle") = 0.5,
             py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
+        .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
         .def("ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
@@ -111,6 +115,7 @@ PYBIND11_MODULE(mcvspec, module) {
             py::arg("cos_incl_angle") = 0.5, py::arg("src_distance") = 200*pc_to_cm,
             py::arg("refl_on") = 1, py::arg("mag_radius") = 2*solar_radius)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
+        .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
         .def("ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)

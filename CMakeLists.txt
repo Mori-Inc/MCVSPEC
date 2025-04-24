@@ -72,7 +72,7 @@ endforeach()
 
 # clean up xspec dir if still has old files
 if(EXISTS "${XSPEC_MODEL_DIR}/lpack_mcvspec.cxx")
-    file(REMOVE_RECURSE "${XSPEC_MODEL_DIR}")
+    file(REMOVE "${XSPEC_MODEL_DIR}/lpack_mcvspec.cxx")
 endif()
 
 execute_process (COMMAND bash -c "initpackage mcvspec ${XSPEC_MODEL_DIR}/mcvspec.dat ${XSPEC_MODEL_DIR}")
