@@ -19,7 +19,7 @@ class Cataclysmic_Variable{
         double cooling_ratio, bremss_constant, exchange_constant, avg_ion_mass, avg_atomic_charge;
         double thermal_constant, cooling_ratio_const;
         // thermal profile
-        valarray<double> altitude, electron_temperature, ion_temperature, electron_density, ion_density, electron_pressure, total_pressure;
+        valarray<double> velocity, altitude, electron_temperature, ion_temperature, electron_density, ion_density, electron_pressure, total_pressure;
         // utilities
         int refl;
         Integrator accretion_column;

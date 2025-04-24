@@ -169,35 +169,55 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         Set_Cooling_Ratio();
         itters++;
     }
-    vector<double> vel_eval;
-    double kT = erg_to_kev*(electron_mass/thermal_constant)*(pre_shock_speed*pre_shock_speed)*accretion_column.t[0]*accretion_column.y[0][2];
-    while(kT > 0.){
-        vel_eval.push_back((1.0-sqrt(1.0-4.*kT*thermal_constant*(pressure_ratio+1)/(erg_to_kev*electron_mass*pressure_ratio*pre_shock_speed*pre_shock_speed)))/2);
-        kT -= 1.;
+
+    int j=accretion_column.t.size()-1;
+    while((erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[j]*accretion_column.y[j][2] < 1.){
+        j--;
+    }
+    double delta_vel = ((1./shock_ratio) - accretion_column.t[j+1])/(299.);
+    vector<double> vel_eval(300);
+    for(int i=0; i<300; i++){
+        vel_eval[i] = 1./shock_ratio - i*delta_vel;
     }
     accretion_column.Integrate(this, 1./shock_ratio, vel_eval.back()*0.5, {1., ((shock_ratio-1)/shock_ratio), ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))}, vel_eval);
 
-    altitude.resize(accretion_column.t.size());
-    electron_temperature.resize(accretion_column.t.size());
-    ion_temperature.resize(accretion_column.t.size());
-    electron_density.resize(accretion_column.t.size());
-    ion_density.resize(accretion_column.t.size());
-    electron_pressure.resize(accretion_column.t.size());
-    total_pressure.resize(accretion_column.t.size());
-    double vel, alt, pres, epres; // normalzied velocity, altitude, and electron pressure
-    for(int i = 0; i < accretion_column.t.size(); i++){
-        vel = accretion_column.t[i];
-        alt = accretion_column.y[i][0];
-        pres = accretion_column.y[i][1];
-        epres = accretion_column.y[i][2];
+    vector<valarray<double>> profile;
+    double kT,kT_last;
+    profile.push_back({accretion_column.t[299], accretion_column.y[299][0],accretion_column.y[299][1],accretion_column.y[299][2]});
+    kT_last = erg_to_kev*(electron_mass*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[299]*accretion_column.y[299][2];
+    for(int i=298; i>=0; i--){
+        kT = erg_to_kev*(electron_mass*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[i]*accretion_column.y[i][2];
+        if(abs(kT-kT_last)>1.){
+            profile.push_back({accretion_column.t[i], accretion_column.y[i][0],accretion_column.y[i][1],accretion_column.y[i][2]});
+            kT_last = kT;
+        }
+    }
 
+    velocity.resize(profile.size());
+    altitude.resize(profile.size());
+    electron_temperature.resize(profile.size());
+    ion_temperature.resize(profile.size());
+    electron_density.resize(profile.size());
+    ion_density.resize(profile.size());
+    electron_pressure.resize(profile.size());
+    total_pressure.resize(profile.size());
+    double vel, alt, pres, epres; // normalzied velocity, altitude, and electron pressure
+    int i = 0;
+    for(valarray<double> fluid_element:profile){
+        vel = fluid_element[0];
+        alt = fluid_element[1];
+        pres = fluid_element[2];
+        epres = fluid_element[3];
+
+        velocity[i] = pre_shock_speed*vel;
         altitude[i] = shock_height*alt;
-        electron_temperature[i] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*epres/thermal_constant;
-        ion_temperature[i] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*avg_atomic_charge*vel*(pres-epres)/thermal_constant;
+        total_pressure[i] = accretion_rate*pre_shock_speed*pres;
+        electron_pressure[i] = accretion_rate*pre_shock_speed*epres;
         electron_density[i] = (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/vel;
         ion_density[i] = electron_density[i]/avg_atomic_charge;
-        electron_pressure[i] = epres*accretion_rate*pre_shock_speed;
-        total_pressure[i] = pres*accretion_rate*pre_shock_speed;
+        electron_temperature[i] = electron_pressure[i]/electron_density[i];
+        ion_temperature[i] = (total_pressure[i]-electron_pressure[i])/ion_density[i];
+        i++;
     }
 }
 
