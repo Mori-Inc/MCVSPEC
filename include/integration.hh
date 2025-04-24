@@ -28,8 +28,6 @@ class Integrator{
     public:
         vector<double> t;
         vector<valarray<double>> y;
-        vector<valarray<double>> deriv;
-
         valarray<double> t_eval;
         valarray<valarray<double>> y_eval;
     private:
@@ -40,6 +38,7 @@ class Integrator{
         valarray<double> q[order-1];
         valarray<double> tol;
         double h;
+        valarray<double> y_bound;
 
     public:
         Integrator();
@@ -50,6 +49,7 @@ class Integrator{
         void Integrate(void*, const double, const double, const valarray<double>, const vector<double>);
         void Integrate(void*, const double, const double, const valarray<double>, const valarray<double>);
     private:
+        void Integrate(void*, const double, const double, const valarray<double>, bool, bool);
         double Step(double, const double, const valarray<double>, double*, valarray<double>*);
         void Set_Initial_Step(const double, const double, const valarray<double>);
         void Dense_Output(const double, const double, const valarray<double>, const double);
