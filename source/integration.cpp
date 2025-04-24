@@ -125,8 +125,8 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
 
 void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const vector<double> t_evals){
     func.pars = parameters;
-    t = t_evals;
-    y.resize(t_evals.size());
+    t_eval = valarray<double>(t_evals.data(), t_evals.size());
+    y_eval.resize(t_eval.size());
 
     fill(begin(k), end(k), valarray<double>(0.,n_dim));
     fill(begin(q), end(q), valarray<double>(0.,n_dim));
@@ -146,6 +146,8 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
         h = h_new;
         y_old = y_new;
         t_old = t_new;
+        y.push_back(y_new);
+        t.push_back(t_new);
         k[0] = k[n_stages];
     }
 }
@@ -209,7 +211,7 @@ void Integrator::Dense_Output(const double dir, const double t_old, const valarr
             q[i] += k[j]*p[j][i];
         }
     }
-    for(double t_interp:t){
+    for(double t_interp:t_eval){
         if((dir*(t_new-t_interp)<0)|(dir*(t_interp-t_old)<0)){
             continue;
         }
@@ -219,7 +221,7 @@ void Integrator::Dense_Output(const double dir, const double t_old, const valarr
             dy += q[i]*pow(sigma,i+1);
         }
         dy *= dir*h;
-        int ind = find(t.begin(), t.end(), t_interp) - t.begin();
-        y[ind] = y_old + dy;
+        int ind = find(begin(t_eval), end(t_eval), t_interp) - begin(t_eval);
+        y_eval[ind] = y_old + dy;
     }
 }

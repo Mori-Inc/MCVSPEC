@@ -29,6 +29,9 @@ class Integrator{
         vector<double> t;
         vector<valarray<double>> y;
         vector<valarray<double>> deriv;
+
+        valarray<double> t_eval;
+        valarray<valarray<double>> y_eval;
     private:
         equation func;
         double abs_err, rel_err;
