@@ -253,7 +253,10 @@ void Cataclysmic_Variable::Print_Properties(){
     cout << "===================================================" << endl;
     cout << "                   McV Properties                  " << endl;
     cout << "===================================================" << endl;
+    cout << " mass: " << mass/solar_mass << " M_solar" << endl;
     cout << " radius: " << radius/solar_radius << " R_solar" << endl;
+    cout << " B field: " << b_field/1e6 <<  " MG" << endl;
+    cout << " accretion rate: " << accretion_rate << " g/cm2/s" << endl;
     cout << " shock height " << shock_height/radius << " (h/R_wd)" << endl;
     cout << " shock temperature " <<  electron_temperature[0] << " keV" << endl;
     cout << " cooling ratio " << cooling_ratio << endl;
