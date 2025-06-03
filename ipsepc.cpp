@@ -15,7 +15,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double cos_incl = params[6]; // cos inclination angle
     double source_distance = params[7]*pc_to_cm; // source distnace [cm]
 
-    double mag_radius = cbrt(4*pi*pi*grav_const*mass*p_spin*p_spin);
+    double mag_radius = cbrt(grav_const*mass*p_spin*p_spin/(4*pi*pi));
     Cataclysmic_Variable intermediate_polar(mass, col_abund, luminosity, fractional_area, cos_incl, source_distance, reflection_sel, mag_radius);
     intermediate_polar.Shock_Height_Shooting(1000);
     intermediate_polar.MCVspec_Spectrum(energy, spectrum_num, flux, init_string);

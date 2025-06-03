@@ -28,7 +28,7 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double lumin
 {
     Radius_Shooting(100000);
     Set_Accretion_Rate(luminosity);
-    b_field = sqrt(32.*accretion_rate)*pow(grav_const*mass, 1./4.)*pow(r_m,7./4.)*pow(radius,-3);
+    b_field = sqrt(2*accretion_rate*pow(r_m,7)*sqrt(2*grav_const*mass))/(radius*radius*radius);
     accretion_area = fractional_area*4.*pi*radius*radius;
     accretion_rate /= accretion_area;
     Set_Abundances(metalicity);
@@ -38,7 +38,7 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double lumin
 
 void Cataclysmic_Variable::Set_Inverse_Mag_Radius(double mag_ratio){
     inverse_mag_radius = 1./(mag_ratio*radius);
-    b_field = sqrt(32.*accretion_area*accretion_rate)*pow(grav_const*mass, 1./4.)*pow(1./inverse_mag_radius,7./4.)*pow(radius,-3);
+    b_field = sqrt(2*accretion_rate*pow(mag_ratio*radius,7)*sqrt(2*grav_const*mass))/(radius*radius*radius);
     Set_Pre_Shock_Speed(5);
     Set_Cooling_Ratio();
 }
