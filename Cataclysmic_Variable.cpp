@@ -1,12 +1,19 @@
 #include "Cataclysmic_Variable.hh"
 #include "constants.hh"
 #include "integration.hh"
+#include <cstdio>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
 #include <XSFunctions/Utilities/FunctionUtility.h>
 
 using std::copy;
 using std::cout;
 using std::endl;
+using std::ifstream;
+using std::string;
+using std::stringstream;
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
@@ -99,27 +106,22 @@ valarray<double> Cataclysmic_Variable::Chandrasekhar_White_Dwarf_Equation(double
 }
 
 void Cataclysmic_Variable::Radius_Shooting(int max_itter){
-    int itters = 0;
-    double y_0 = 2;
-    double solved_mass = 2*solar_mass;
-    const double pressure_constant = pi*pow(electron_mass,4)*pow(light_speed,5)/(3*pow(planck_const,3));
-    const double density_constant = (8.*pi/3.)*wd_mol_mass*amu_to_g*pow(electron_mass*light_speed/planck_const,3);
-    Integrator white_dwarf(Chandrasekhar_White_Dwarf_Equation, 2);
-    vector<double> eta;
-    valarray<double> bounds;
+    ifstream file("chandrasekhar.txt");
+    string line, radius_string, mass_string;
+    double in_mass=0, in_radius=0, old_mass=0, old_radius=0;
 
-    while(abs((solved_mass/mass - 1.)) > relative_err && itters < max_itter){
-        bounds = {1e-12 + 1./y_0, 1e3};
-        white_dwarf.Integrate(&y_0, 1e-32, 1e5, {1.,0.}, bounds);
-        eta = white_dwarf.t;
-        solved_mass = (-4*pi/(density_constant*density_constant))*pow((2*pressure_constant/(pi*grav_const)),3./2.)*(eta.back()*eta.back())*white_dwarf.y.back()[1];
-        y_0 *= mass/solved_mass;
-        itters++;
-    }
-    bounds = {1e-10 + 1./y_0, 1e3};
-    white_dwarf.Integrate(&y_0, 1e-32, 1e5, {1.,0.}, bounds);
-    eta = white_dwarf.t;
-    radius = sqrt(2*pressure_constant/(pi*grav_const*density_constant*density_constant))*(eta.back()/y_0);
+    do{
+        old_mass = in_mass;
+        old_radius = in_radius;
+        getline(file, line);
+        stringstream stream(line);
+        getline(stream, mass_string, ',');
+        getline(stream, radius_string, ',');
+        in_mass = stod(mass_string);
+        in_radius = stod(radius_string);
+    }while(mass > old_mass);
+
+    radius = ((in_radius-old_radius)/(in_mass-old_mass))*mass + old_radius - ((in_radius-old_radius)/(in_mass-old_mass))*old_mass;
 }
 
 valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres, void* my_class_instance){
@@ -159,31 +161,44 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         Set_Cooling_Ratio();
         itters++;
     }
-    vector<double> vel_eval;
-    double kT = erg_to_kev*(electron_mass/thermal_constant)*(pre_shock_speed*pre_shock_speed)*accretion_column.t[0]*accretion_column.y[0][1];
-    while(kT > 0.){
-        vel_eval.push_back((1.0-sqrt(1.0-4.*kT*thermal_constant*(pressure_ratio+1)/(erg_to_kev*electron_mass*pressure_ratio*pre_shock_speed*pre_shock_speed)))/2);
-        kT -= 1.;
-    }
-    accretion_column.Integrate(this, 1./shock_ratio, vel_eval.back()*0.5, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))}, vel_eval);
+
+    accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))}, 0.01);
 
     altitude.resize(accretion_column.t.size());
     electron_temperature.resize(accretion_column.t.size());
     ion_temperature.resize(accretion_column.t.size());
     electron_density.resize(accretion_column.t.size());
     ion_density.resize(accretion_column.t.size());
-    double vel, alt, pres; // normalzied velocity, altitude, and electron pressure
-    for(int i = 0; i < accretion_column.t.size(); i++){
+    double vel, alt, pres, e_temp; // normalzied velocity, altitude, and electron pressure
+    int n_points=0;
+    altitude[0] = shock_height*accretion_column.y[0][0];
+    electron_temperature[0] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*accretion_column.t[0]*accretion_column.y[0][1]/thermal_constant;
+    ion_temperature[0] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*avg_atomic_charge*vel*(1.0-accretion_column.t[0]-accretion_column.y[0][1])/thermal_constant;
+    electron_density[0] = (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/accretion_column.t[0];
+    ion_density[0] = electron_density[0]/avg_atomic_charge;
+
+    for(int i = i; i < accretion_column.t.size(); i++){
         vel = accretion_column.t[i];
         alt = accretion_column.y[i][0];
         pres = accretion_column.y[i][1];
+
+        e_temp = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
+        if(abs(e_temp)-electron_temperature[n_points] < 1 || electron_temperature[n_points]<1){
+            continue;
+        }
 
         altitude[i] = shock_height*alt;
         electron_temperature[i] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
         ion_temperature[i] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*avg_atomic_charge*vel*(1.0-vel-pres)/thermal_constant;
         electron_density[i] = (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/vel;
         ion_density[i] = electron_density[i]/avg_atomic_charge;
+        n_points++;
     }
+    altitude.resize(n_points);
+    electron_temperature.resize(n_points);
+    ion_temperature.resize(n_points);
+    electron_density.resize(n_points);
+    ion_density.resize(n_points);
 }
 
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){

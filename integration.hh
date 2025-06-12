@@ -43,6 +43,7 @@ class Integrator{
         Integrator(function<valarray<double>(double, valarray<double>, void*)>, const int);
         Integrator(function<valarray<double>(double, valarray<double>, void*)>, const int, const double, const double);
         void Integrate(void*, const double, const double, const valarray<double>);
+        void Integrate(void*, const double, const double, const valarray<double>, const double);
         void Integrate(void*, const double, const double, const valarray<double>, const vector<double>);
         void Integrate(void*, const double, const double, const valarray<double>, const valarray<double>);
     private:

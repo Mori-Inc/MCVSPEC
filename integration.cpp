@@ -68,6 +68,32 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
     }
 }
 
+void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, double h_max){
+    func.pars = parameters;
+    fill(begin(k), end(k), valarray<double>(0.,n_dim));
+    fill(begin(q), end(q), valarray<double>(0.,n_dim));
+    t.resize(1);
+    y.resize(1);
+    t[0] = t_start;
+    y[0] = y_start;
+
+    double dir = (0. < (t_end-t[0])) - ((t_end-t[0]) < 0.);
+    k[0] = func(t[0], y[0]);
+    Set_Initial_Step(dir, t[0], y[0]);
+
+    valarray<double> y_new(n_dim);
+    double t_new;
+
+    while(dir*(t_end-t.back()) > 0 && t.size() < max_itter){
+        h = min(h,dir*(t_end-t.back()));
+        h = min(h_max, h);
+        h = Step(dir, t.back(), y.back(), &t_new, &y_new);
+        y.push_back(y_new);
+        t.push_back(t_new);
+        k[0] = k[n_stages];
+    }
+}
+
 void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const valarray<double> y_bound){
     func.pars = parameters;
 
