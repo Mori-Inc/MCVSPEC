@@ -183,7 +183,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         pres = accretion_column.y[i][1];
 
         e_temp = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
-        if(abs(e_temp)-electron_temperature[n_points] < 1 || electron_temperature[n_points]<1){
+        if(abs(e_temp-electron_temperature[n_points]) < 1 || electron_temperature[n_points]<1){
             continue;
         }
 
@@ -194,6 +194,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         ion_density[i] = electron_density[i]/avg_atomic_charge;
         n_points++;
     }
+    cout << n_points << endl;
     altitude.resize(n_points);
     electron_temperature.resize(n_points);
     ion_temperature.resize(n_points);
