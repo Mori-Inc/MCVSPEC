@@ -35,7 +35,7 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double lumin
 {
     Radius_Shooting(100000);
     Set_Accretion_Rate(luminosity);
-    b_field = sqrt(2*accretion_rate*pow(r_m,7)*sqrt(2*grav_const*mass))/(radius*radius*radius);
+    b_field = sqrt(accretion_rate*sqrt(grav_const*mass*pow(r_m,7)))/(2*radius*radius*radius);
     accretion_area = fractional_area*4.*pi*radius*radius;
     accretion_rate /= accretion_area;
     Set_Abundances(metalicity);
@@ -45,7 +45,7 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double lumin
 
 void Cataclysmic_Variable::Set_Inverse_Mag_Radius(double mag_ratio){
     inverse_mag_radius = 1./(mag_ratio*radius);
-    b_field = sqrt(2*accretion_rate*pow(mag_ratio*radius,7)*sqrt(2*grav_const*mass))/(radius*radius*radius);
+    b_field = sqrt(accretion_rate*sqrt(grav_const*mass*pow(mag_ratio*radius,7)))/(2*radius*radius*radius);
     Set_Pre_Shock_Speed(5);
     Set_Cooling_Ratio();
 }
@@ -194,12 +194,6 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         ion_density[i] = electron_density[i]/avg_atomic_charge;
         n_points++;
     }
-    cout << n_points << endl;
-    altitude.resize(n_points);
-    electron_temperature.resize(n_points);
-    ion_temperature.resize(n_points);
-    electron_density.resize(n_points);
-    ion_density.resize(n_points);
 }
 
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
@@ -219,6 +213,9 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
     refl_parameters[4] = incl_angle;
 
     for(int i=0; i<altitude.size(); i++){
+        if(electron_temperature[i] < 0.5){
+            continue;
+        }
         for(int j=0; j<n; j++){
             flux[j] += flux_from_layer[j];
             flux_from_layer[j] = 0;
@@ -272,6 +269,9 @@ void Cataclysmic_Variable::Print_Properties(){
     cout << " mass: " << mass/solar_mass << " M_solar" << endl;
     cout << " radius: " << radius/solar_radius << " R_solar" << endl;
     cout << " B field: " << b_field/1e6 <<  " MG" << endl;
+    if(inverse_mag_radius > 0){
+        cout << " R_m/R_wd: " << 1./(radius*inverse_mag_radius) << endl;
+    }
     cout << " accretion rate: " << accretion_rate << " g/cm2/s" << endl;
     cout << " shock height " << shock_height/radius << " (h/R_wd)" << endl;
     cout << " shock temperature " <<  electron_temperature[0] << " keV" << endl;
