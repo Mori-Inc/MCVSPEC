@@ -155,6 +155,9 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))});
         slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back(), this)[0];
         error = accretion_column.y.back()[0] - accretion_column.t.back()*slope;
+        if(error > 1){
+            error = 0.99;
+        }
         shock_height *= 1-error;
         error = abs(error);
         pre_shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius));
