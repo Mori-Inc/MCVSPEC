@@ -6,8 +6,10 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <vector>
 #include <XSFunctions/Utilities/FunctionUtility.h>
 
+using std::vector;
 using std::copy;
 using std::cout;
 using std::endl;
@@ -102,16 +104,16 @@ void Cataclysmic_Variable::Set_Accretion_Rate(double luminosity){
     }
 }
 
-void Cataclysmic_Variable::Set_Pre_Shock_Speed(int num_itters){ 
-    double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103 
+void Cataclysmic_Variable::Set_Pre_Shock_Speed(int num_itters){
+    double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
     pre_shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
-    shock_height = pow(pre_shock_speed,3.)*integral*sqrt((avg_atomic_charge+1)/avg_atomic_charge)/(2.*bremss_constant*accretion_rate); 
-    if(radius+shock_height >= 1/inverse_mag_radius){ 
+    shock_height = pow(pre_shock_speed,3.)*integral*sqrt((avg_atomic_charge+1)/avg_atomic_charge)/(2.*bremss_constant*accretion_rate);
+    if(radius+shock_height >= 1/inverse_mag_radius){
         shock_height = 0.75*(1/inverse_mag_radius - radius);
         if(warning_message_toggle==true){
             cout << " WARNING: WD Radius + shock height exceeds Mag Radius, setting h_s = 0.75*(R_m-R) " << endl;
-        }   
-    } 
+        }
+    }
     if(cv_checkpoint_toggle==true){
         cout << " Pre_Shock_Speed Checkpoint -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
     }
@@ -181,16 +183,16 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     while(itters < max_itter && error > absolute_err*1e3){
         accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))});
         slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back(), this)[0];
-        error = accretion_column.y.back()[0] - accretion_column.t.back()*slope; 
-        error = fmax(-1.,error); 
-        error = fmin(0.5,error); 
+        error = accretion_column.y.back()[0] - accretion_column.t.back()*slope;
+        error = fmax(-1.,error);
+        error = fmin(0.5,error);
         shock_height *= 1-error;
         error = abs(error);
-        if(radius+shock_height > 1/inverse_mag_radius){ 
+        if(radius+shock_height > 1/inverse_mag_radius){
             shock_height = 0.9*(1/inverse_mag_radius - radius);
             if(warning_message_toggle==true){
                 cout << " WARNING: WD Radius + shock height exceeds Mag Radius, setting h_s = 0.9*(R_m-R) " << endl;
-            } 
+            }
         }
         pre_shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius));
         Set_Cooling_Ratio();
@@ -202,42 +204,48 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
             cout << " WARNING: Shock_Height_Shooting hit max iterations" << endl;
         }
     }
-    
+
     if(cv_checkpoint_toggle==true){
         cout << " Shock_Height_Shooting Checkpoint 1 -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
     }
 
     accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))}, 0.01);
 
-    altitude.resize(accretion_column.t.size());
-    electron_temperature.resize(accretion_column.t.size());
-    ion_temperature.resize(accretion_column.t.size());
-    electron_density.resize(accretion_column.t.size());
-    ion_density.resize(accretion_column.t.size());
-    double vel, alt, pres, e_temp; // normalzied velocity, altitude, and electron pressure
-    int n_points=0;
-    altitude[0] = shock_height*accretion_column.y[0][0];
-    electron_temperature[0] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*accretion_column.t[0]*accretion_column.y[0][1]/thermal_constant;
-    ion_temperature[0] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*avg_atomic_charge*vel*(1.0-accretion_column.t[0]-accretion_column.y[0][1])/thermal_constant;
-    electron_density[0] = (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/accretion_column.t[0];
-    ion_density[0] = electron_density[0]/avg_atomic_charge;
+    vector<double> altitude_grid(1, accretion_column.t[0]*shock_height);
+    vector<double> electron_temperature_grid(1, erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*accretion_column.t[0]*accretion_column.y[0][1]/thermal_constant);
+    vector<double> ion_temperature_grid(1, erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*avg_atomic_charge*accretion_column.t[0]*(1.0-accretion_column.t[0]-accretion_column.y[0][1])/thermal_constant);
+    vector<double> electron_density_grid(1, (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/accretion_column.t[0]);
+    vector<double> ion_density_grid(1, electron_density_grid[0]/avg_atomic_charge);
 
-    for(int i = 1; i < accretion_column.t.size(); i++){
+    double vel, alt, pres, e_temp; // normalzied velocity, altitude, and electron pressure
+
+    for(uint i=1; i<accretion_column.t.size(); i++){
         vel = accretion_column.t[i];
         alt = accretion_column.y[i][0];
         pres = accretion_column.y[i][1];
-
         e_temp = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
-        if(abs(e_temp-electron_temperature[n_points]) < 1 || electron_temperature[n_points]<1){
+        if(abs(e_temp-electron_temperature_grid.back()) < 1 || e_temp<1){
             continue;
         }
+        altitude_grid.push_back(shock_height*alt);
+        electron_temperature_grid.push_back(erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant);
+        ion_temperature_grid.push_back(erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*avg_atomic_charge*vel*(1.0-vel-pres)/thermal_constant);
+        electron_density_grid.push_back((accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/vel);
+        ion_density_grid.push_back(electron_density[i]/avg_atomic_charge);
+    }
 
-        altitude[i] = shock_height*alt;
-        electron_temperature[i] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
-        ion_temperature[i] = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*avg_atomic_charge*vel*(1.0-vel-pres)/thermal_constant;
-        electron_density[i] = (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/vel;
-        ion_density[i] = electron_density[i]/avg_atomic_charge;
-        n_points++;
+    altitude.resize(altitude_grid.size());
+    electron_temperature.resize(altitude_grid.size());
+    ion_temperature.resize(altitude_grid.size());
+    electron_density.resize(altitude_grid.size());
+    ion_density.resize(altitude_grid.size());
+
+    for(int i = 0; i < altitude_grid.size(); i++){
+        altitude[i] = altitude_grid[i];
+        electron_temperature[i] = electron_temperature[i];
+        ion_temperature[i] = ion_temperature[i];
+        electron_density[i] = electron_density[i];
+        ion_density[i] = ion_density[i];
     }
 
     if(cv_checkpoint_toggle==true){
