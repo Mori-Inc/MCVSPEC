@@ -15,6 +15,9 @@ using std::ifstream;
 using std::string;
 using std::stringstream;
 
+bool cv_checkpoint_toggle = false;
+bool cv_loop_checkpoint_toggle = false;
+
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
     accretion_column(Flow_Equation, 2)
@@ -48,6 +51,9 @@ void Cataclysmic_Variable::Set_Inverse_Mag_Radius(double mag_ratio){
     b_field = sqrt(accretion_rate*sqrt(grav_const*mass*pow(mag_ratio*radius,7)))/(2*radius*radius*radius);
     Set_Pre_Shock_Speed(5);
     Set_Cooling_Ratio();
+    if(cv_checkpoint_toggle==true){
+        cout << " Inverse_Mag_Radius Checkpoint -- 1/R_m: " << inverse_mag_radius << ", B: " << b_field << endl;
+    }
 }
 
 void Cataclysmic_Variable::Set_Cooling_Constants(){
@@ -66,6 +72,9 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){
 
     exchange_constant = sqrt(2/pow(pi,3))*pow(fine_structure_constant*planck_const*light_speed,2)*coulomb_logarithm*sqrt(pow(thermal_constant, 5))
                         /pow(electron_mass,3);
+    if(cv_checkpoint_toggle==true){
+        cout << " Cooling_Constants Checkpoint " << endl;
+    }
 }
 void Cataclysmic_Variable::Set_Abundances(double metalicity){
     abundances.resize(atomic_charge.size());
@@ -80,24 +89,48 @@ void Cataclysmic_Variable::Set_Abundances(double metalicity){
 
     kt_const = electron_mass*(avg_atomic_charge + avg_ion_mass/electron_mass)/(1.+avg_atomic_charge);
     electron_density_const = avg_atomic_charge/(avg_atomic_charge + avg_ion_mass/electron_mass);
+    if(cv_checkpoint_toggle==true){
+        cout << " Abundances Checkpoint " << endl;
+    }
 }
 
 void Cataclysmic_Variable::Set_Accretion_Rate(double luminosity){
     accretion_rate = luminosity/(grav_const*mass*((1./radius) - inverse_mag_radius));
+    if(cv_checkpoint_toggle==true){
+        cout << " Accretion_Rate Checkpoint -- M_dot: " << accretion_rate << endl;
+    }
 }
 
 void Cataclysmic_Variable::Set_Pre_Shock_Speed(int num_itters){
     double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
+    if(((1./radius) - inverse_mag_radius) < 0){
+        cout << " WARNING: WD Radius exceeds Mag Radius " << endl;
+    }
     pre_shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
     shock_height = pow(pre_shock_speed,3.)*integral*sqrt((avg_atomic_charge+1)/avg_atomic_charge)/(2.*bremss_constant*accretion_rate);
+    if(cv_checkpoint_toggle==true){
+            cout << " Pre_Shock_Speed Checkpoint 1 -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
+        }
     for(int i = 0; i < num_itters; i++){
+        if(((1./(radius+shock_height)) - inverse_mag_radius)){
+            cout << " WARNING: WD Radius + shock height exceeds Mag Radius " << endl;
+        }
         pre_shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius));
         shock_height = pow(pre_shock_speed,3.)*integral*sqrt((avg_atomic_charge+1)/avg_atomic_charge)/(2.*bremss_constant*accretion_rate);
+        if(cv_loop_checkpoint_toggle==true){
+            cout << " Pre_Shock_Speed Loop Checkpoint -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
+        }
+    }
+    if(cv_checkpoint_toggle==true){
+        cout << " Pre_Shock_Speed Checkpoint 2 -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
     }
 }
 
 void Cataclysmic_Variable::Set_Cooling_Ratio(){
     cooling_ratio = cooling_ratio_const*pow(pre_shock_speed,5.85)*pow(accretion_area, -0.425)*pow(b_field, 2.85);
+    if(cv_checkpoint_toggle==true){
+        cout << " Cooling_Ratio Checkpoint -- cooling ratio: " << cooling_ratio << endl;
+    }
 }
 
 valarray<double> Cataclysmic_Variable::Chandrasekhar_White_Dwarf_Equation(double eta, valarray<double> phi_psi, void* y0){
@@ -122,6 +155,9 @@ void Cataclysmic_Variable::Radius_Shooting(int max_itter){
     }while(mass > old_mass);
 
     radius = ((in_radius-old_radius)/(in_mass-old_mass))*mass + old_radius - ((in_radius-old_radius)/(in_mass-old_mass))*old_mass;
+    if(cv_checkpoint_toggle==true){
+        cout << " Radius_Shooting Checkpoint -- R_WD: " << radius << endl;
+    }
 }
 
 valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres, void* my_class_instance){
@@ -163,6 +199,16 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         pre_shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius));
         Set_Cooling_Ratio();
         itters++;
+        if(cv_loop_checkpoint_toggle==true){
+            cout << " Shock_Height_Shooting Loop Checkpoint -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
+        }
+        if(itters == max_itter){
+            cout << " WARNING: Shock_Height_Shooting hit max iterations" << endl;
+        }
+    }
+    
+    if(cv_checkpoint_toggle==true){
+        cout << " Shock_Height_Shooting Checkpoint 1 -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
     }
 
     accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))}, 0.01);
@@ -196,6 +242,10 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         electron_density[i] = (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/vel;
         ion_density[i] = electron_density[i]/avg_atomic_charge;
         n_points++;
+    }
+
+    if(cv_checkpoint_toggle==true){
+        cout << " Shock_Height_Shooting Checkpoint 2 -- vel: " << vel << ", alt: " << alt << ", pres: " << pres << endl;
     }
 }
 
@@ -253,6 +303,9 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
             refl_parameters[0] = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
             CXX_reflect(energy, refl_parameters, spectrum_num, flux_from_layer, flux_error, init_string);
         }
+        if(cv_loop_checkpoint_toggle==true){
+            cout << " MCVspec_Spectrum Loop Checkpoint " << endl;
+        }
     }
 
     for(int j=0; j<n; j++){
@@ -262,6 +315,10 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
 
     if(refl == 2){
     CXX_reflect(energy, refl_parameters, spectrum_num, flux, flux_error, init_string);
+    }
+
+    if(cv_checkpoint_toggle==true){
+        cout << " MCVspec_Spectrum Checkpoint " << endl;
     }
 }
 
