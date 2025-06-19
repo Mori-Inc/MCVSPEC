@@ -17,6 +17,7 @@ using std::stringstream;
 
 bool cv_checkpoint_toggle = false;
 bool cv_loop_checkpoint_toggle = false;
+bool warning_message_toggle = true;
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
@@ -101,28 +102,18 @@ void Cataclysmic_Variable::Set_Accretion_Rate(double luminosity){
     }
 }
 
-void Cataclysmic_Variable::Set_Pre_Shock_Speed(int num_itters){
-    double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
-    if(((1./radius) - inverse_mag_radius) < 0){
-        cout << " WARNING: WD Radius exceeds Mag Radius " << endl;
-    }
+void Cataclysmic_Variable::Set_Pre_Shock_Speed(int num_itters){ 
+    double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103 
     pre_shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
-    shock_height = pow(pre_shock_speed,3.)*integral*sqrt((avg_atomic_charge+1)/avg_atomic_charge)/(2.*bremss_constant*accretion_rate);
+    shock_height = pow(pre_shock_speed,3.)*integral*sqrt((avg_atomic_charge+1)/avg_atomic_charge)/(2.*bremss_constant*accretion_rate); 
+    if(radius+shock_height >= 1/inverse_mag_radius){ 
+        shock_height = 0.75*(1/inverse_mag_radius - radius);
+        if(warning_message_toggle==true){
+            cout << " WARNING: WD Radius + shock height exceeds Mag Radius, setting h_s = 0.75*(R_m-R) " << endl;
+        }   
+    } 
     if(cv_checkpoint_toggle==true){
-            cout << " Pre_Shock_Speed Checkpoint 1 -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
-        }
-    for(int i = 0; i < num_itters; i++){
-        if(((1./(radius+shock_height)) - inverse_mag_radius)){
-            cout << " WARNING: WD Radius + shock height exceeds Mag Radius " << endl;
-        }
-        pre_shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius));
-        shock_height = pow(pre_shock_speed,3.)*integral*sqrt((avg_atomic_charge+1)/avg_atomic_charge)/(2.*bremss_constant*accretion_rate);
-        if(cv_loop_checkpoint_toggle==true){
-            cout << " Pre_Shock_Speed Loop Checkpoint -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
-        }
-    }
-    if(cv_checkpoint_toggle==true){
-        cout << " Pre_Shock_Speed Checkpoint 2 -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
+        cout << " Pre_Shock_Speed Checkpoint -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
     }
 }
 
@@ -190,19 +181,24 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     while(itters < max_itter && error > absolute_err*1e3){
         accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))});
         slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back(), this)[0];
-        error = accretion_column.y.back()[0] - accretion_column.t.back()*slope;
-        if(error > 1){
-            error = 0.99;
-        }
+        error = accretion_column.y.back()[0] - accretion_column.t.back()*slope; 
+        error = fmax(-1.,error); 
+        error = fmin(0.5,error); 
         shock_height *= 1-error;
         error = abs(error);
+        if(radius+shock_height > 1/inverse_mag_radius){ 
+            shock_height = 0.9*(1/inverse_mag_radius - radius);
+            if(warning_message_toggle==true){
+                cout << " WARNING: WD Radius + shock height exceeds Mag Radius, setting h_s = 0.9*(R_m-R) " << endl;
+            } 
+        }
         pre_shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius));
         Set_Cooling_Ratio();
         itters++;
         if(cv_loop_checkpoint_toggle==true){
             cout << " Shock_Height_Shooting Loop Checkpoint -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
         }
-        if(itters == max_itter){
+        if(itters == max_itter && warning_message_toggle==true){
             cout << " WARNING: Shock_Height_Shooting hit max iterations" << endl;
         }
     }
