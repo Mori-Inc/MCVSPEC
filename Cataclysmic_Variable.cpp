@@ -222,7 +222,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     electron_density[0] = (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/accretion_column.t[0];
     ion_density[0] = electron_density[0]/avg_atomic_charge;
 
-    for(int i = i; i < accretion_column.t.size(); i++){
+    for(int i = 1; i < accretion_column.t.size(); i++){
         vel = accretion_column.t[i];
         alt = accretion_column.y[i][0];
         pres = accretion_column.y[i][1];
