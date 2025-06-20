@@ -231,7 +231,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         electron_temperature_grid.push_back(erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant);
         ion_temperature_grid.push_back(erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*avg_atomic_charge*vel*(1.0-vel-pres)/thermal_constant);
         electron_density_grid.push_back((accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/vel);
-        ion_density_grid.push_back(electron_density[i]/avg_atomic_charge);
+        ion_density_grid.push_back(electron_density_grid.back()/avg_atomic_charge);
     }
 
     altitude.resize(altitude_grid.size());
@@ -242,10 +242,10 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
 
     for(int i = 0; i < altitude_grid.size(); i++){
         altitude[i] = altitude_grid[i];
-        electron_temperature[i] = electron_temperature[i];
-        ion_temperature[i] = ion_temperature[i];
-        electron_density[i] = electron_density[i];
-        ion_density[i] = ion_density[i];
+        electron_temperature[i] = electron_temperature_grid[i];
+        ion_temperature[i] = ion_temperature_grid[i];
+        electron_density[i] = electron_density_grid[i];
+        ion_density[i] = ion_density_grid[i];
     }
 
     if(cv_checkpoint_toggle==true){
