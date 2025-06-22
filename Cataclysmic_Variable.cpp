@@ -183,10 +183,26 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     while(itters < max_itter && error > absolute_err*1e3){
         accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))});
         slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back(), this)[0];
+        
         error = accretion_column.y.back()[0] - accretion_column.t.back()*slope;
-        error = fmax(-1.,error);
-        error = fmin(0.5,error);
-        shock_height *= 1-error;
+        if(itters < 200){
+            error = fmax(-1.,error);
+            error = fmin(0.5,error);
+        } else if(itters < 400){
+            error = fmax(-0.2,error);
+            error = fmin(0.1,error);
+        } else if(itters < 600){
+            error = fmax(-0.01,error);
+            error = fmin(0.01,error);
+        } else if(itters < 800){
+            error = fmax(-0.001,error);
+            error = fmin(0.001,error);
+        } else {
+            error = fmax(-0.0001,error);
+            error = fmin(0.0001,error);
+        }
+        shock_height *= 1-error;        
+
         error = abs(error);
         if(radius+shock_height > 1/inverse_mag_radius){
             shock_height = 0.9*(1/inverse_mag_radius - radius);
@@ -219,11 +235,22 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
 
     double vel, alt, pres, e_temp; // normalzied velocity, altitude, and electron pressure
 
+    if(cv_loop_checkpoint_toggle==true){
+        vel = accretion_column.t[0];
+        alt = accretion_column.y[0][0];
+        pres = accretion_column.y[0][1];
+        e_temp = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
+        cout << " Full Column Profile (Step " << 0 << ") -- norm_vel: " << vel << ", norm_alt: " << alt << ", norm_pres: " << pres << ", electron_temp: " << e_temp << endl;
+    }
+
     for(uint i=1; i<accretion_column.t.size(); i++){
         vel = accretion_column.t[i];
         alt = accretion_column.y[i][0];
         pres = accretion_column.y[i][1];
         e_temp = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
+        if(cv_loop_checkpoint_toggle==true){
+            cout << " Full Column Profile (Step " << i << ") -- norm_vel: " << vel << ", norm_alt: " << alt << ", norm_pres: " << pres << ", electron_temp: " << e_temp << endl;
+        }
         if(abs(e_temp-electron_temperature_grid.back()) < 1 || e_temp<1){
             continue;
         }
@@ -250,6 +277,12 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
 
     if(cv_checkpoint_toggle==true){
         cout << " Shock_Height_Shooting Checkpoint 2 -- vel: " << vel << ", alt: " << alt << ", pres: " << pres << endl;
+        cout << " Shock_Height_Shooting Summary: grid-size = " << altitude_grid.size() << ", pre-shock speed = " << pre_shock_speed <<  endl;
+        cout << " floor altitude = " << altitude[-1] << " (" << altitude[-1]/altitude[0] << ") shock altitude = " << altitude[0] << " (" << 1 <<")" << endl;
+        cout << " floor electron_temp = " << electron_temperature[-1] << " shock electron_temp = " << electron_temperature[0] << endl;
+        cout << " floor ion_temp = " << ion_temperature[-1] << " shock ion_temp = " << ion_temperature[0] << endl;
+        cout << " floor electron_density = " << electron_density[-1] << " shock electron_density = " << electron_density[0] << endl;
+        cout << " floor ion_density = " << ion_density[-1] << " shock ion_density = " << ion_density[0] << endl;
     }
 }
 
@@ -308,7 +341,9 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
             CXX_reflect(energy, refl_parameters, spectrum_num, flux_from_layer, flux_error, init_string);
         }
         if(cv_loop_checkpoint_toggle==true){
-            cout << " MCVspec_Spectrum Loop Checkpoint " << endl;
+            cout << " MCVspec_Spectrum Loop Checkpoint -- Layer " << i << endl;
+            cout << " apec parameters: electron_temperature = " << apec_parameters[0] << ", abundance = " << apec_parameters[1] << ", redshift = " << apec_parameters[2] << endl;
+            cout << " reflect parameters: altitude/R = " << altitude[i]/radius << ", refl_factor = " << refl_parameters[0] << ", redshift = " << refl_parameters[1] << ", abundance" << refl_parameters[2] << ", cos_i = " << refl_parameters[4] << endl;
         }
     }
 
