@@ -17,8 +17,8 @@ using std::ifstream;
 using std::string;
 using std::stringstream;
 
-bool cv_checkpoint_toggle = false;
-bool cv_loop_checkpoint_toggle = false;
+bool cv_checkpoint_toggle = true;
+bool cv_loop_checkpoint_toggle = true;
 bool warning_message_toggle = true;
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
