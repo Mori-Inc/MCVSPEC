@@ -17,8 +17,6 @@ using std::max;
 using std::min;
 using std::pow;
 
-bool integration_checkpoint_toggle = false;
-
 double norm(valarray<double> x){
     return sqrt((x*x).sum()/x.size());
 }
@@ -76,9 +74,6 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
         y.push_back(y_new);
         t.push_back(t_new);
         k[0] = k[n_stages];
-        if(integration_checkpoint_toggle==true){
-            cout << " Integration(1) Checkpoint -- vel: " << t.back() << ", alt: " << y.back()[0] << ", pres: " << y.back()[1] << endl;
-        }
     }
 }
 
@@ -105,9 +100,6 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
         y.push_back(y_new);
         t.push_back(t_new);
         k[0] = k[n_stages];
-        if(integration_checkpoint_toggle==true){
-            cout << " Integration(2) Checkpoint -- vel: " << t.back() << ", alt: " << y.back()[0] << ", pres: " << y.back()[1] << endl;
-        }
     }
 }
 
@@ -146,9 +138,6 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
         t.push_back(t_new);
         k[0] = k[n_stages];
         deriv.push_back(k[0]);
-        if(integration_checkpoint_toggle==true){
-            cout << " Integration(3) Checkpoint -- vel: " << t.back() << ", alt: " << y.back()[0] << ", pres: " << y.back()[1] << endl;
-        }
     }
 }
 
@@ -176,9 +165,6 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
         y_old = y_new;
         t_old = t_new;
         k[0] = k[n_stages];
-        if(integration_checkpoint_toggle==true){
-            cout << " Integration(4) Checkpoint -- vel: " << t_old << ", alt: " << y_old[0] << ", pres: " << y_old[1] << endl;
-        }
     }
 }
 

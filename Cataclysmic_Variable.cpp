@@ -17,10 +17,6 @@ using std::ifstream;
 using std::string;
 using std::stringstream;
 
-bool cv_checkpoint_toggle = false;
-bool cv_loop_checkpoint_toggle = false;
-bool warning_message_toggle = true;
-
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
     accretion_column(Flow_Equation, 2)
@@ -54,9 +50,6 @@ void Cataclysmic_Variable::Set_Inverse_Mag_Radius(double mag_ratio){
     b_field = sqrt(accretion_rate*sqrt(grav_const*mass*pow(mag_ratio*radius,7)))/(2*radius*radius*radius);
     Set_Pre_Shock_Speed(5);
     Set_Cooling_Ratio();
-    if(cv_checkpoint_toggle==true){
-        cout << " Inverse_Mag_Radius Checkpoint -- 1/R_m: " << inverse_mag_radius << ", B: " << b_field << endl;
-    }
 }
 
 void Cataclysmic_Variable::Set_Cooling_Constants(){
@@ -75,9 +68,6 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){
 
     exchange_constant = sqrt(2/pow(pi,3))*pow(fine_structure_constant*planck_const*light_speed,2)*coulomb_logarithm*sqrt(pow(thermal_constant, 5))
                         /pow(electron_mass,3);
-    if(cv_checkpoint_toggle==true){
-        cout << " Cooling_Constants Checkpoint " << endl;
-    }
 }
 void Cataclysmic_Variable::Set_Abundances(double metalicity){
     abundances.resize(atomic_charge.size());
@@ -92,16 +82,10 @@ void Cataclysmic_Variable::Set_Abundances(double metalicity){
 
     kt_const = electron_mass*(avg_atomic_charge + avg_ion_mass/electron_mass)/(1.+avg_atomic_charge);
     electron_density_const = avg_atomic_charge/(avg_atomic_charge + avg_ion_mass/electron_mass);
-    if(cv_checkpoint_toggle==true){
-        cout << " Abundances Checkpoint " << endl;
-    }
 }
 
 void Cataclysmic_Variable::Set_Accretion_Rate(double luminosity){
     accretion_rate = luminosity/(grav_const*mass*((1./radius) - inverse_mag_radius));
-    if(cv_checkpoint_toggle==true){
-        cout << " Accretion_Rate Checkpoint -- M_dot: " << accretion_rate << endl;
-    }
 }
 
 void Cataclysmic_Variable::Set_Pre_Shock_Speed(int num_itters){
@@ -110,20 +94,12 @@ void Cataclysmic_Variable::Set_Pre_Shock_Speed(int num_itters){
     shock_height = pow(pre_shock_speed,3.)*integral*sqrt((avg_atomic_charge+1)/avg_atomic_charge)/(2.*bremss_constant*accretion_rate);
     if(radius+shock_height >= 1/inverse_mag_radius){
         shock_height = 0.75*(1/inverse_mag_radius - radius);
-        if(warning_message_toggle==true){
-            cout << " WARNING: WD Radius + shock height exceeds Mag Radius, setting h_s = 0.75*(R_m-R) " << endl;
-        }
-    }
-    if(cv_checkpoint_toggle==true){
-        cout << " Pre_Shock_Speed Checkpoint -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
+        cout << " WARNING: WD Radius + shock height exceeds Mag Radius, setting h_s = 0.75*(R_m-R) " << endl;
     }
 }
 
 void Cataclysmic_Variable::Set_Cooling_Ratio(){
     cooling_ratio = cooling_ratio_const*pow(pre_shock_speed,5.85)*pow(accretion_area, -0.425)*pow(b_field, 2.85);
-    if(cv_checkpoint_toggle==true){
-        cout << " Cooling_Ratio Checkpoint -- cooling ratio: " << cooling_ratio << endl;
-    }
 }
 
 valarray<double> Cataclysmic_Variable::Chandrasekhar_White_Dwarf_Equation(double eta, valarray<double> phi_psi, void* y0){
@@ -148,9 +124,6 @@ void Cataclysmic_Variable::Radius_Shooting(int max_itter){
     }while(mass > old_mass);
 
     radius = ((in_radius-old_radius)/(in_mass-old_mass))*mass + old_radius - ((in_radius-old_radius)/(in_mass-old_mass))*old_mass;
-    if(cv_checkpoint_toggle==true){
-        cout << " Radius_Shooting Checkpoint -- R_WD: " << radius << endl;
-    }
 }
 
 valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres, void* my_class_instance){
@@ -206,23 +179,14 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         error = abs(error);
         if(radius+shock_height > 1/inverse_mag_radius){
             shock_height = 0.9*(1/inverse_mag_radius - radius);
-            if(warning_message_toggle==true){
                 cout << " WARNING: WD Radius + shock height exceeds Mag Radius, setting h_s = 0.9*(R_m-R) " << endl;
-            }
         }
         pre_shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius));
         Set_Cooling_Ratio();
         itters++;
-        if(cv_loop_checkpoint_toggle==true){
-            cout << " Shock_Height_Shooting Loop Checkpoint -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
-        }
-        if(itters == max_itter && warning_message_toggle==true){
+        if(itters == max_itter){
             cout << " WARNING: Shock_Height_Shooting hit max iterations" << endl;
         }
-    }
-
-    if(cv_checkpoint_toggle==true){
-        cout << " Shock_Height_Shooting Checkpoint 1 -- v_ff: " << pre_shock_speed << ", h_s: " << shock_height << endl;
     }
 
     accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))}, 0.01);
@@ -240,7 +204,6 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         alt = accretion_column.y[0][0];
         pres = accretion_column.y[0][1];
         e_temp = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
-        cout << " Full Column Profile (Step " << 0 << ") -- norm_vel: " << vel << ", norm_alt: " << alt << ", norm_pres: " << pres << ", electron_temp: " << e_temp << endl;
     }
 
     for(uint i=1; i<accretion_column.t.size(); i++){
@@ -248,9 +211,6 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         alt = accretion_column.y[i][0];
         pres = accretion_column.y[i][1];
         e_temp = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
-        if(cv_loop_checkpoint_toggle==true){
-            cout << " Full Column Profile (Step " << i << ") -- norm_vel: " << vel << ", norm_alt: " << alt << ", norm_pres: " << pres << ", electron_temp: " << e_temp << endl;
-        }
         if(abs(e_temp-electron_temperature_grid.back()) < 1 || e_temp<1){
             continue;
         }
@@ -273,16 +233,6 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         ion_temperature[i] = ion_temperature_grid[i];
         electron_density[i] = electron_density_grid[i];
         ion_density[i] = ion_density_grid[i];
-    }
-
-    if(cv_checkpoint_toggle==true){
-        cout << " Shock_Height_Shooting Checkpoint 2 -- vel: " << vel << ", alt: " << alt << ", pres: " << pres << endl;
-        cout << " Shock_Height_Shooting Summary: grid-size = " << altitude_grid.size() << ", pre-shock speed = " << pre_shock_speed <<  endl;
-        cout << " floor altitude = " << altitude[-1] << " (" << altitude[-1]/altitude[0] << ") shock altitude = " << altitude[0] << " (" << 1 <<")" << endl;
-        cout << " floor electron_temp = " << electron_temperature[-1] << " shock electron_temp = " << electron_temperature[0] << endl;
-        cout << " floor ion_temp = " << ion_temperature[-1] << " shock ion_temp = " << ion_temperature[0] << endl;
-        cout << " floor electron_density = " << electron_density[-1] << " shock electron_density = " << electron_density[0] << endl;
-        cout << " floor ion_density = " << ion_density[-1] << " shock ion_density = " << ion_density[0] << endl;
     }
 }
 
@@ -340,11 +290,6 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
             refl_parameters[0] = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
             CXX_reflect(energy, refl_parameters, spectrum_num, flux_from_layer, flux_error, init_string);
         }
-        if(cv_loop_checkpoint_toggle==true){
-            cout << " MCVspec_Spectrum Loop Checkpoint -- Layer " << i << endl;
-            cout << " apec parameters: electron_temperature = " << apec_parameters[0] << ", abundance = " << apec_parameters[1] << ", redshift = " << apec_parameters[2] << endl;
-            cout << " reflect parameters: altitude/R = " << altitude[i]/radius << ", refl_factor = " << refl_parameters[0] << ", redshift = " << refl_parameters[1] << ", abundance" << refl_parameters[2] << ", cos_i = " << refl_parameters[4] << endl;
-        }
     }
 
     for(int j=0; j<n; j++){
@@ -354,10 +299,6 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
 
     if(refl == 2){
     CXX_reflect(energy, refl_parameters, spectrum_num, flux, flux_error, init_string);
-    }
-
-    if(cv_checkpoint_toggle==true){
-        cout << " MCVspec_Spectrum Checkpoint " << endl;
     }
 }
 
