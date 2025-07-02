@@ -198,14 +198,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     vector<double> ion_density_grid(1, electron_density_grid[0]/avg_atomic_charge);
 
     double vel, alt, pres, e_temp; // normalzied velocity, altitude, and electron pressure
-
-    if(cv_loop_checkpoint_toggle==true){
-        vel = accretion_column.t[0];
-        alt = accretion_column.y[0][0];
-        pres = accretion_column.y[0][1];
-        e_temp = erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed*vel*pres/thermal_constant;
-    }
-
+    
     for(uint i=1; i<accretion_column.t.size(); i++){
         vel = accretion_column.t[i];
         alt = accretion_column.y[i][0];
