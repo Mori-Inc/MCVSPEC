@@ -1,12 +1,15 @@
 #include "Cataclysmic_Variable.hh"
 #include "constants.hh"
 #include "integration.hh"
+#include "mass_radius.hh"
+#include <cmath>
 #include <iostream>
 #include <XSFunctions/Utilities/FunctionUtility.h>
 
 using std::copy;
 using std::cout;
 using std::endl;
+using std::abs;
 
 valarray<double> Flow_Equation_Wrapper(double t, valarray<double> y, void* cv_instance){
     return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(t, y);
@@ -21,7 +24,7 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, do
     mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
     accretion_column(Flow_Equation_Wrapper, this, 3)
 {
-    Radius_Shooting(100000);
+    Set_Radius();
     Set_Accretion_Rate(luminosity);
     accretion_area = fractional_area*4.*pi*radius*radius;
     accretion_rate /= accretion_area;
@@ -34,7 +37,7 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double lumin
     mass(m), inverse_mag_radius(1/r_m), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), refl(reflection),
     accretion_column(Flow_Equation_Wrapper, this, 3)
 {
-    Radius_Shooting(100000);
+    Set_Radius();
     Set_Accretion_Rate(luminosity);
     b_field = sqrt(32.*accretion_rate)*pow(grav_const*mass, 1./4.)*pow(r_m,7./4.)*pow(radius,-3);
     accretion_area = fractional_area*4.*pi*radius*radius;
@@ -104,34 +107,22 @@ valarray<double> Cataclysmic_Variable::Chandrasekhar_White_Dwarf_Equation(double
     return {phi_psi[1],(-2./eta)*phi_psi[1] - sqrt(pow(phi_psi[0]*phi_psi[0] - 1./(y_0*y_0), 3))};
 }
 
-void Cataclysmic_Variable::Radius_Shooting(int max_itter){
-    int itters = 0;
-    double y_0 = 2;
-    double solved_mass = 2*solar_mass;
-    const double pressure_constant = pi*pow(electron_mass,4)*pow(light_speed,5)/(3*pow(planck_const,3));
-    const double density_constant = (8.*pi/3.)*wd_mol_mass*amu_to_g*pow(electron_mass*light_speed/planck_const,3);
-    Integrator white_dwarf(Chandrasekhar_White_Dwarf_Equation, 2);
-    double eta0 = 1e-32;
-    vector<double> eta;
-    valarray<double> bounds;
-    valarray<double> start(2);
-
-    while(abs(solved_mass/mass - 1.) > relative_err && itters < max_itter){
-        bounds = {1./y_0, 1e3};
-        start[0] = 1 - eta0*eta0*sqrt(pow(1.0-1./(y_0*y_0), 3))/2;
-        start[1] = 1 - eta0*sqrt(pow(1.0-1./(y_0*y_0), 3));
-        white_dwarf.Integrate(&y_0, eta0, 1e5, start, bounds);
-        eta = white_dwarf.t;
-        solved_mass = (-4*pi/(density_constant*density_constant))*pow((2*pressure_constant/(pi*grav_const)),3./2.)*(eta.back()*eta.back())*white_dwarf.y.back()[1];
-        y_0 /= (eta.back()*white_dwarf.y.back()[1]*y_0/2)*(mass/solved_mass - 1) + 1;
-        itters++;
+void Cataclysmic_Variable::Set_Radius(){
+    int left_ind = 0;
+    int i = mass_radius_length/2;
+    int right_ind = mass_radius_length-1;
+    while(right_ind-left_ind > 1){
+        i = left_ind + (right_ind-left_ind)/2;
+        if(mass>white_dwarf_mass[i]){
+            left_ind = i;
+        }
+        else{
+            right_ind = i;
+        }
     }
-    bounds = {1./y_0, 1e3};
-    start[0] = 1 - eta0*eta0*sqrt(pow(1.0-1./(y_0*y_0), 3))/2;
-    start[1] = 1 - eta0*sqrt(pow(1.0-1./(y_0*y_0), 3));
-    white_dwarf.Integrate(&y_0, eta0, 1e5, start, bounds);
-    eta = white_dwarf.t;
-    radius = sqrt(2*pressure_constant/(pi*grav_const*density_constant*density_constant))*(eta.back()/y_0);
+    double delta_r = white_dwarf_radius[right_ind]-white_dwarf_radius[left_ind];
+    double delta_m = white_dwarf_mass[right_ind]-white_dwarf_mass[left_ind];
+    radius = white_dwarf_radius[left_ind] + (delta_r/delta_m)*(mass-white_dwarf_mass[left_ind]);
 }
 
 valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres_epres){
@@ -147,6 +138,7 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
     double energy_exchange = exchange_constant*coulomb_logarithm*(pressure-((avg_atomic_charge+1)/avg_atomic_charge)*elec_pressure)/sqrt(pow(vel,5))
                              *(abundances*charge*charge*electron_mass/(amu_to_g*atomic_mass*sqrt(pow(elec_pressure + (pressure-elec_pressure)*avg_atomic_charge*electron_mass/(amu_to_g*atomic_mass),3)))).sum();
 
+    // FIXME: radius should be normalized to h_s I think?
     double gravity = (grav_const*mass/shock_height)/((radius+position)*(radius+position));
 
     double dpos_dvel = pre_shock_speed*pre_shock_speed*(5*pressure - 3*vel)/(3*gravity + 2*(shock_height*accretion_rate/pre_shock_speed)*energy_loss);
@@ -286,15 +278,16 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
 
 void Cataclysmic_Variable::Print_Properties(){
     cout << "===================================================" << endl;
-    cout << "                   McV Properties                  " << endl;
+    cout << "                   mCV Properties                  " << endl;
     cout << "===================================================" << endl;
-    cout << " radius: " << radius/solar_radius << " R_solar" << endl;
+    cout << " mass:              " << mass/solar_mass << " M_solar" << endl;
+    cout << " radius:            " << radius/solar_radius << " R_solar" << endl;
+    cout << " B_field:           " << b_field/1e6 << " MG" << endl;
     if(inverse_mag_radius != 0){
-        cout << " R_m/R: " << (1./inverse_mag_radius)/radius << endl;
+        cout << " R_m/R:             " << (1./inverse_mag_radius)/radius << endl;
     }
-    cout << " shock height " << shock_height/radius << " (h/R_wd)" << endl;
-    cout << " shock temperature " <<  electron_temperature[0] << " keV" << endl;
-    cout << " cooling ratio " << cooling_ratio << endl;
-
-
+    cout << " accretion rate:    " << accretion_rate << "g/cm2/s" << endl;
+    cout << " shock height:      " << shock_height/radius << " (h/R_wd)" << endl;
+    cout << " shock temperature: " <<  electron_temperature[0] << " keV" << endl;
+    cout << " cooling ratio:     " << cooling_ratio << endl;
 }

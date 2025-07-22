@@ -6,6 +6,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(mcvspec VERSION 1.0.0)
 
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+
+# Generate WD mass radius relationship header
+set(MR_TXT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/data/mass_radius.txt)
+set(MR_HEADER_PATH ${CMAKE_CURRENT_BINARY_DIR}/mass_radius.hh)
+
+add_custom_command(
+    OUTPUT ${MR_HEADER_PATH}
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/data/txt_to_header.py -i ${MR_TXT_PATH} -o ${MR_HEADER_PATH}
+    DEPENDS ${MR_TXT_PATH}
+    COMMENT "Generating header from ${MR_TXT_PATH}"
+)
+
+add_custom_target(embed_wd_mass_radius DEPENDS ${MR_HEADER_PATH})
+
 if(NOT DEFINED ENV{HEADAS})
     message(FATAL_ERROR "HEADAS must be defined and point to your installation of HEASoft")
 endif()
@@ -27,15 +42,16 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 
 if(BUILD_PYBINDINGS)
-    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
     find_package(pybind11 CONFIG REQUIRED)
 
     pybind11_add_module(mcvspec pymcvspec/bindings.cpp
                             source/Cataclysmic_Variable.cpp
                             source/integration.cpp)
 
+    add_dependencies(mcvspec embed_wd_mass_radius)
+
     # MCVSPEC Headers
-    target_include_directories(mcvspec PUBLIC "${PROJECT_SOURCE_DIR}/include")
+    target_include_directories(mcvspec PUBLIC "${PROJECT_SOURCE_DIR}/include" ${CMAKE_CURRENT_BINARY_DIR})
 
     # HEASOFT Headers
     target_include_directories(mcvspec PUBLIC
@@ -64,7 +80,8 @@ set(MODEL_FILES ${CMAKE_SOURCE_DIR}/model_funcs/polarspec.cpp;
 set(HEADER_FILES ${CMAKE_SOURCE_DIR}/include/Cataclysmic_Variable.hh;
                  ${CMAKE_SOURCE_DIR}/include/integration.hh;
                  ${CMAKE_SOURCE_DIR}/include/constants.hh;
-                 ${CMAKE_SOURCE_DIR}/include/tableau.hh)
+                 ${CMAKE_SOURCE_DIR}/include/tableau.hh;
+                 ${MR_HEADER_PATH})
 
 foreach(FILE IN LISTS SOURCE_FILES MODEL_FILES HEADER_FILES)
     get_filename_component(FNAME "${FILE}" NAME)

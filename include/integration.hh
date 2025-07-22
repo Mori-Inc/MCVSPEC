@@ -1,5 +1,4 @@
-#ifndef INTEGRATION_H
-#define INTEGRATION_H
+#pragma once
 
 #include "tableau.hh"
 #include <cmath>
@@ -54,5 +53,3 @@ class Integrator{
         void Set_Initial_Step(const double, const double, const valarray<double>);
         void Dense_Output(const double, const double, const valarray<double>, const double);
 };
-
-#endif

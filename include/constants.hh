@@ -1,5 +1,4 @@
-#ifndef MCVSPEC_CONST_H
-#define MCVSPEC_CONST_H
+#pragma once
 
 #include <valarray>
 using std::valarray;
@@ -15,6 +14,7 @@ const double grav_const = 6.672590e-8; // dyn cm^2 g^-2
 const double boltz_const = 1.380658e-16; // erg/K
 const double boltz_const_kev = 8.617333262e-8; // keV/K
 const double planck_const = 6.62607015e-27; // erg s
+const double hbar = planck_const/(2*pi);
 const double fine_structure_constant = 7.2973525643e-3;
 const valarray<int> atomic_charge = {1,2,6,7,8,10,12,13,14,16,18,20,26,28}; // charges of elements in abundances array
 const valarray<double> atomic_mass = {1.007975,4.002602,12.0106,14.006855,15.9994,20.17976,24.3055,
@@ -29,5 +29,3 @@ const double wd_mol_mass = 2.; // white dwarf molar mass
 const double shock_ratio = 4.;
 const double alpha = 2.0; // cyclotron cooling rate pressure exponent
 const double beta = 3.85; // cyclotron cooling rate density exponent
-
-#endif

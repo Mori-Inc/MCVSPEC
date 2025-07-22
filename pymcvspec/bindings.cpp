@@ -13,7 +13,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         Py_Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
             Cataclysmic_Variable(m,b,metals,fractional_area,theta,dist,reflection)
         {
-            Radius_Shooting(100000);
+            Set_Radius();
             inverse_mag_radius = 0;
             Set_Accretion_Rate(luminosity);
             accretion_area = fractional_area*4.*pi*radius*radius;
@@ -21,12 +21,14 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             Set_Abundances(metalicity);
             Set_Pre_Shock_Speed(5);
             Set_Cooling_Ratio();
+            cout << bremss_constant << endl;
+            cout << cooling_ratio << endl;
         }
         Py_Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection, double r_m):
             Cataclysmic_Variable(m,r_m,metals,fractional_area,theta,dist,reflection)
         {
             inverse_mag_radius = 1/r_m;
-            Radius_Shooting(100000);
+            Set_Radius();
             Set_Accretion_Rate(luminosity);
             b_field = sqrt(32.*accretion_rate)*pow(grav_const*mass, 1./4.)*pow(r_m,7./4.)*pow(radius,-3);
             accretion_area = fractional_area*4.*pi*radius*radius;
@@ -96,6 +98,7 @@ PYBIND11_MODULE(mcvspec, module) {
             py::arg("metalicity") = 1., py::arg("luminosity") = 1e33,
             py::arg("area_frac") = 1e-4, py::arg("cos_incl_angle") = 0.5,
             py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
+        .def("flow_eq", &Py_Cataclysmic_Variable::Flow_Equation)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)

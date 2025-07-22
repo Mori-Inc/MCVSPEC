@@ -10,3 +10,4 @@ pkgIndex.tcl
 *FunctionMap.h
 *FunctionMap.o
 build
+include/mass_radius.hh

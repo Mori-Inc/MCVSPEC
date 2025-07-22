@@ -1,5 +1,4 @@
-#ifndef CV_H
-#define CV_H
+#pragma once
 
 #include "constants.hh"
 #include "integration.hh"
@@ -39,9 +38,7 @@ class Cataclysmic_Variable{
     protected:
         void Set_Cooling_Constants();
         static valarray<double> Chandrasekhar_White_Dwarf_Equation(double, valarray<double>, void*);
-        void Radius_Shooting(int);
+        void Set_Radius();
         void Set_Pre_Shock_Speed(int);
         void Set_Cooling_Ratio();
 };
-
-#endif
