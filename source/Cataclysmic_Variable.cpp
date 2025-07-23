@@ -60,16 +60,16 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){
     avg_ion_mass = (abundances*atomic_mass).sum()*amu_to_g;
     avg_atomic_charge = (abundances*charge).sum();
     double avg_charge_squared = (abundances*charge*charge).sum();
-    thermal_constant = avg_atomic_charge/(avg_atomic_charge + avg_ion_mass/electron_mass);
+    thermal_constant = avg_atomic_charge/(avg_atomic_charge + avg_ion_mass/m_e);
 
-    bremss_constant = sqrt(32./(27.*pow(pi,3)))*planck_const*planck_const*pow(fine_structure_constant/electron_mass, 3)*gaunt_factor
+    bremss_constant = sqrt(32./(27.*pow(pi,3)))*planck_const*planck_const*pow(alpha/m_e, 3)*gaunt_factor
                       *sqrt(pow(thermal_constant,3))*avg_charge_squared/avg_atomic_charge;
 
-    cooling_ratio_const = 8.07e-2*avg_atomic_charge*pow(electron_mass, 3.85)*pow(shock_ratio-1, 2)/pow(shock_ratio, 5.85)*pow(pressure_ratio/(pressure_ratio+1),2)
-                          /(gaunt_factor*avg_charge_squared*boltz_const*boltz_const*pow(accretion_rate, 1.85)*pow(thermal_constant, 3.85));
+    cooling_ratio_const = 8.07e-2*avg_atomic_charge*pow(m_e, 3.85)*pow(4-1, 2)/pow(4, 5.85)*pow(pressure_ratio/(pressure_ratio+1),2)
+                          /(gaunt_factor*avg_charge_squared*k_b*k_b*pow(accretion_rate, 1.85)*pow(thermal_constant, 3.85));
 
-    exchange_constant = sqrt(2/pow(pi,3))*pow(fine_structure_constant*planck_const*light_speed,2)*sqrt(pow(thermal_constant, 5))
-                        /pow(electron_mass,3);
+    exchange_constant = sqrt(2/pow(pi,3))*pow(alpha*planck_const*c,2)*sqrt(pow(thermal_constant, 5))
+                        /pow(m_e,3);
 }
 
 void Cataclysmic_Variable::Set_Abundances(double metalicity){
@@ -129,14 +129,14 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
     double position = pos_pres_epres[0];
     double pressure = pos_pres_epres[1];
     double elec_pressure = pos_pres_epres[2];
-    double n_e = thermal_constant*accretion_rate/(pre_shock_speed*electron_mass*vel);
-    double temp = accretion_rate*pre_shock_speed*elec_pressure/(boltz_const*n_e);
+    double n_e = thermal_constant*accretion_rate/(pre_shock_speed*m_e*vel);
+    double temp = accretion_rate*pre_shock_speed*elec_pressure/(k_b*n_e);
     double coulomb_logarithm = 15.9 + log(temp*1e-8) - 0.5*log(n_e*1e-16);
 
-    double energy_loss = bremss_constant*sqrt(elec_pressure/pow(vel,3))*(1 + cooling_ratio*(pow(shock_ratio,alpha+beta)/pow((shock_ratio-1),alpha))
-                                                                           *(pow(((pressure_ratio+1)/pressure_ratio),alpha))*pow(elec_pressure,alpha)*pow(vel,beta));
+    double energy_loss = bremss_constant*sqrt(elec_pressure/pow(vel,3))*(1 + cooling_ratio*(pow(4,_alpha+_beta)/pow((4-1),_alpha))
+                                                                           *(pow(((pressure_ratio+1)/pressure_ratio),_alpha))*pow(elec_pressure,_alpha)*pow(vel,alpha));
     double energy_exchange = exchange_constant*coulomb_logarithm*(pressure-((avg_atomic_charge+1)/avg_atomic_charge)*elec_pressure)/sqrt(pow(vel,5))
-                             *(abundances*charge*charge*electron_mass/(amu_to_g*atomic_mass*sqrt(pow(elec_pressure + (pressure-elec_pressure)*avg_atomic_charge*electron_mass/(amu_to_g*atomic_mass),3)))).sum();
+                             *(abundances*charge*charge*m_e/(amu_to_g*atomic_mass*sqrt(pow(elec_pressure + (pressure-elec_pressure)*avg_atomic_charge*m_e/(amu_to_g*atomic_mass),3)))).sum();
 
     // FIXME: radius should be normalized to h_s I think?
     double gravity = (grav_const*mass/shock_height)/((radius+position)*(radius+position));
@@ -152,7 +152,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     double slope, error = 100.;
     int itters = 0;
     while(itters < max_itter && error > absolute_err*1e3){
-        accretion_column.Integrate(this, 1./shock_ratio, 1e-4, {1., ((shock_ratio-1)/shock_ratio), ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))});
+        accretion_column.Integrate(this, 1./4, 1e-4, {1., ((4-1)/4), ((4-1)/4)*(pressure_ratio/(pressure_ratio+1))});
         slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back())[0];
         error = accretion_column.y.back()[0] - accretion_column.t.back()*slope;
         shock_height *= 1-error;
@@ -163,22 +163,22 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
     }
 
     int j=accretion_column.t.size()-1;
-    while((erg_to_kev*electron_mass*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[j]*accretion_column.y[j][2] < 1.){
+    while((erg_to_kev*m_e*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[j]*accretion_column.y[j][2] < 1.){
         j--;
     }
-    double delta_vel = ((1./shock_ratio) - accretion_column.t[j+1])/(299.);
+    double delta_vel = ((1./4) - accretion_column.t[j+1])/(299.);
     vector<double> vel_eval(300);
     for(int i=0; i<300; i++){
-        vel_eval[i] = 1./shock_ratio - i*delta_vel;
+        vel_eval[i] = 1./4 - i*delta_vel;
     }
-    accretion_column.Integrate(this, 1./shock_ratio, vel_eval.back()*0.5, {1., ((shock_ratio-1)/shock_ratio), ((shock_ratio-1)/shock_ratio)*(pressure_ratio/(pressure_ratio+1))}, vel_eval);
+    accretion_column.Integrate(this, 1./4, vel_eval.back()*0.5, {1., ((4-1)/4), ((4-1)/4)*(pressure_ratio/(pressure_ratio+1))}, vel_eval);
 
     vector<valarray<double>> profile;
     double kT,kT_last;
     profile.push_back({accretion_column.t[299], accretion_column.y[299][0],accretion_column.y[299][1],accretion_column.y[299][2]});
-    kT_last = erg_to_kev*(electron_mass*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[299]*accretion_column.y[299][2];
+    kT_last = erg_to_kev*(m_e*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[299]*accretion_column.y[299][2];
     for(int i=298; i>=0; i--){
-        kT = erg_to_kev*(electron_mass*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[i]*accretion_column.y[i][2];
+        kT = erg_to_kev*(m_e*pre_shock_speed*pre_shock_speed/thermal_constant)*accretion_column.t[i]*accretion_column.y[i][2];
         if(abs(kT-kT_last)>1.){
             profile.push_back({accretion_column.t[i], accretion_column.y[i][0],accretion_column.y[i][1],accretion_column.y[i][2]});
             kT_last = kT;
@@ -205,7 +205,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(int max_itter){
         altitude[i] = shock_height*alt;
         total_pressure[i] = accretion_rate*pre_shock_speed*pres;
         electron_pressure[i] = accretion_rate*pre_shock_speed*epres;
-        electron_density[i] = (accretion_rate/pre_shock_speed)*(thermal_constant/electron_mass)/vel;
+        electron_density[i] = (accretion_rate/pre_shock_speed)*(thermal_constant/m_e)/vel;
         ion_density[i] = electron_density[i]/avg_atomic_charge;
         electron_temperature[i] = electron_pressure[i]/electron_density[i];
         ion_temperature[i] = (total_pressure[i]-electron_pressure[i])/ion_density[i];
@@ -280,8 +280,8 @@ void Cataclysmic_Variable::Print_Properties(){
     cout << "===================================================" << endl;
     cout << "                   mCV Properties                  " << endl;
     cout << "===================================================" << endl;
-    cout << " mass:              " << mass/solar_mass << " M_solar" << endl;
-    cout << " radius:            " << radius/solar_radius << " R_solar" << endl;
+    cout << " mass:              " << mass/m_sol << " M_solar" << endl;
+    cout << " radius:            " << radius/r_sol << " R_solar" << endl;
     cout << " B_field:           " << b_field/1e6 << " MG" << endl;
     if(inverse_mag_radius != 0){
         cout << " R_m/R:             " << (1./inverse_mag_radius)/radius << endl;

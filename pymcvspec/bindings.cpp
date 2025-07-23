@@ -94,7 +94,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
 PYBIND11_MODULE(mcvspec, module) {
     py::class_<Py_Cataclysmic_Variable>(module, "Polar", py::module_local())
         .def(py::init<double,double,double,double,double,double,double,int>(),
-            py::arg("mass") = 0.7*solar_mass, py::arg("b_field") = 1e7,
+            py::arg("mass") = 0.7*m_sol, py::arg("b_field") = 1e7,
             py::arg("metalicity") = 1., py::arg("luminosity") = 1e33,
             py::arg("area_frac") = 1e-4, py::arg("cos_incl_angle") = 0.5,
             py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
@@ -113,10 +113,10 @@ PYBIND11_MODULE(mcvspec, module) {
         .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height);
     py::class_<Py_Cataclysmic_Variable>(module, "Intermediate_Polar")
         .def(py::init<double,double,double,double,double,double,int,double>(),
-            py::arg("mass") = 0.7*solar_mass, py::arg("metalicity") = 1.,
+            py::arg("mass") = 0.7*m_sol, py::arg("metalicity") = 1.,
             py::arg("luminosity") = 1e33, py::arg("area_frac") = 1e-4,
             py::arg("cos_incl_angle") = 0.5, py::arg("src_distance") = 200*pc_to_cm,
-            py::arg("refl_on") = 1, py::arg("mag_radius") = 2*solar_radius)
+            py::arg("refl_on") = 1, py::arg("mag_radius") = 2*r_sol)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)

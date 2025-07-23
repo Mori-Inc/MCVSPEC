@@ -10,7 +10,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double p_spin = params[1]; // spin period [s]; assumes spin equilibrium
     double fractional_area = params[2]; //fractional accretion area
     double luminosity = params[3]*1e33; // luminosity [ergs/s]
-    double mass = params[4]*solar_mass; // WD mass [grams]
+    double mass = params[4]*m_sol; // WD mass [grams]
     double col_abund = params[5]; // accretion column abundance [solar abundances]
     double cos_incl = params[6]; // cos inclination angle
     double source_distance = params[7]*pc_to_cm; // source distnace [cm]

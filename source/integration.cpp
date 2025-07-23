@@ -8,6 +8,8 @@ using std::max;
 using std::min;
 using std::pow;
 
+using namespace tableau;
+
 double norm(valarray<double> x){
     return sqrt((x*x).sum()/x.size());
 }
