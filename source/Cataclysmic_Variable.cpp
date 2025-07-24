@@ -123,7 +123,7 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
 
     double mdot = pow((1+non_dim_radius)/(pos+non_dim_radius), area_exponent);
     double dens = mdot/vel;
-    double coulomb_log = coulomb_log_const + 0.5*log(e_press*e_press/(dens*dens*dens));
+    double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(e_press*e_press/(dens*dens*dens));
 
     double gravity = force_const*dens/((1+pos/non_dim_radius)*(1+pos/non_dim_radius));
     gravity *= (shock_height/(shock_speed*shock_speed));

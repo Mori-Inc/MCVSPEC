@@ -25,5 +25,3 @@ const double amu_to_g =  1.6605390689252e-24; // mass of amu in grams
 const double pc_to_cm = 3.0856775814913673e18;
 // constants of the model
 const double gaunt_factor = 1.2;
-const double _alpha = 2.0; // cyclotron cooling rate pressure exponent
-const double _beta = 3.85; // cyclotron cooling rate density exponent
