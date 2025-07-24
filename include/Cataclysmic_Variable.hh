@@ -11,12 +11,14 @@ class Cataclysmic_Variable{
     protected:
         // input white dwarf properties
         double mass, b_field, radius, inverse_mag_radius, distance;
+        double non_dim_radius;
         // input column properties
-        double accretion_rate, accretion_area, metalicity, shock_height, pre_shock_speed, pressure_ratio, incl_angle;
-        valarray<double> abundances, charge; // fractional abundance of elements in accretion column
+        double accretion_rate, accretion_area, metalicity, shock_height, shock_speed, pressure_ratio, incl_angle, area_exponent;
+        valarray<double> abundances; // fractional abundance of elements in accretion column
         // derived column properties
-        double cooling_ratio, bremss_constant, exchange_constant, avg_ion_mass, avg_atomic_charge;
-        double thermal_constant, cooling_ratio_const;
+        double avg_ion_mass, avg_atomic_charge;
+        double density_const, force_const, cooling_ratio_const, coulomb_log_const, exchange_const, bremss_const;
+        double cooling_ratio, shock_mdot;
         // thermal profile
         valarray<double> velocity, altitude, electron_temperature, ion_temperature, electron_density, ion_density, electron_pressure, total_pressure;
         // utilities
@@ -37,8 +39,7 @@ class Cataclysmic_Variable{
 
     protected:
         void Set_Cooling_Constants();
-        static valarray<double> Chandrasekhar_White_Dwarf_Equation(double, valarray<double>, void*);
         void Set_Radius();
-        void Set_Pre_Shock_Speed(int);
+        void Set_Shock_Speed(int);
         void Set_Cooling_Ratio();
 };

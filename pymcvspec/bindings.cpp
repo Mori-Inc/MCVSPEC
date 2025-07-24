@@ -19,7 +19,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             accretion_area = fractional_area*4.*pi*radius*radius;
             accretion_rate /= accretion_area;
             Set_Abundances(metalicity);
-            Set_Pre_Shock_Speed(5);
+            Set_Shock_Speed(5);
             Set_Cooling_Ratio();
             cout << bremss_constant << endl;
             cout << cooling_ratio << endl;
@@ -34,7 +34,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             accretion_area = fractional_area*4.*pi*radius*radius;
             accretion_rate /= accretion_area;
             Set_Abundances(metalicity);
-            Set_Pre_Shock_Speed(5);
+            Set_Shock_Speed(5);
             Set_Cooling_Ratio();
         }
         void Set_Abundances(const double m) override{

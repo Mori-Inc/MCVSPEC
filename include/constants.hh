@@ -16,7 +16,7 @@ const double k_b_keV = 8.617333262e-8; // keV/K
 const double planck_const = 6.62607015e-27; // erg s
 const double hbar = planck_const/(2*pi);
 const double alpha = 7.2973525643e-3;
-const valarray<int> atomic_charge = {1,2,6,7,8,10,12,13,14,16,18,20,26,28}; // charges of elements in abundances array
+const valarray<double> atomic_charge = {1,2,6,7,8,10,12,13,14,16,18,20,26,28}; // charges of elements in abundances array
 const valarray<double> atomic_mass = {1.007975,4.002602,12.0106,14.006855,15.9994,20.17976,24.3055,
                                 26.98153843,28.085,32.0675,39.8775,40.0784,55.8452,58.69344};
 // conversion factors
