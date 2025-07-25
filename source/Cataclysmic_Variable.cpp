@@ -326,7 +326,7 @@ void Cataclysmic_Variable::Print_Properties(){
     if(inverse_mag_radius != 0){
         cout << " R_m/R:             " << (1./inverse_mag_radius)/radius << endl;
     }
-    cout << " accretion rate:    " << shock_mdot << "-->" << accretion_rate/accretion_area << "g/cm2/s" << endl;
+    cout << " accretion rate:    " << shock_mdot << "-->" << accretion_rate/accretion_area << " g/cm2/s" << endl;
     cout << " shock height:      " << shock_height/radius << " (h/R_wd)" << endl;
     cout << " shock temperature: " << electron_temperature[0] << " keV" << endl;
     cout << " cooling ratio:     " << cooling_ratio << endl;
