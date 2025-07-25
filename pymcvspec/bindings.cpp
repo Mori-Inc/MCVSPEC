@@ -3,15 +3,13 @@
 #include <pybind11/numpy.h>
 #include "Cataclysmic_Variable.hh"
 #include <iostream>
-using std::cout;
-using std::endl;
 
 namespace py = pybind11;
 
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
-        Py_Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection):
-            Cataclysmic_Variable(m,b,metals,fractional_area,theta,dist,reflection)
+        Py_Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection):
+            Cataclysmic_Variable(m,b,metals,fractional_area,theta,n,dist,reflection)
         {
             Set_Radius();
             inverse_mag_radius = 0;
@@ -21,11 +19,9 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             Set_Abundances(metalicity);
             Set_Shock_Speed(5);
             Set_Cooling_Ratio();
-            cout << bremss_constant << endl;
-            cout << cooling_ratio << endl;
         }
-        Py_Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double dist, int reflection, double r_m):
-            Cataclysmic_Variable(m,r_m,metals,fractional_area,theta,dist,reflection)
+        Py_Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection, double r_m):
+            Cataclysmic_Variable(m,r_m,metals,fractional_area,theta,n,dist,reflection)
         {
             inverse_mag_radius = 1/r_m;
             Set_Radius();
@@ -93,11 +89,11 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
 
 PYBIND11_MODULE(mcvspec, module) {
     py::class_<Py_Cataclysmic_Variable>(module, "Polar", py::module_local())
-        .def(py::init<double,double,double,double,double,double,double,int>(),
+        .def(py::init<double,double,double,double,double,double,double,double,int>(),
             py::arg("mass") = 0.7*m_sol, py::arg("b_field") = 1e7,
             py::arg("metalicity") = 1., py::arg("luminosity") = 1e33,
             py::arg("area_frac") = 1e-4, py::arg("cos_incl_angle") = 0.5,
-            py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
+            py::arg("area_exp") = 0, py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("flow_eq", &Py_Cataclysmic_Variable::Flow_Equation)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
@@ -112,10 +108,10 @@ PYBIND11_MODULE(mcvspec, module) {
         .def("m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
         .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height);
     py::class_<Py_Cataclysmic_Variable>(module, "Intermediate_Polar")
-        .def(py::init<double,double,double,double,double,double,int,double>(),
+        .def(py::init<double,double,double,double,double,double,double,int,double>(),
             py::arg("mass") = 0.7*m_sol, py::arg("metalicity") = 1.,
             py::arg("luminosity") = 1e33, py::arg("area_frac") = 1e-4,
-            py::arg("cos_incl_angle") = 0.5, py::arg("src_distance") = 200*pc_to_cm,
+            py::arg("cos_incl_angle") = 0.5, py::arg("area_exp") = 0, py::arg("src_distance") = 200*pc_to_cm,
             py::arg("refl_on") = 1, py::arg("mag_radius") = 2*r_sol)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)

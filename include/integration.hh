@@ -11,8 +11,8 @@ using std::vector;
 using tableau::n_stages;
 using tableau::order;
 
-const double absolute_err = 1e-8;
-const double relative_err = 1e-6;
+const double absolute_err = 1e-10;
+const double relative_err = 1e-8;
 const double max_itter = 100000;
 
 double norm(valarray<double>); // computes norm of array

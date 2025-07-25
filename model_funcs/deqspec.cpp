@@ -14,11 +14,13 @@ void Deqspec(const RealArray& energy, const RealArray& params, int spectrum_num,
     double mass = params[4]*m_sol; // WD mass [grams]
     double col_abund = params[5]; // accretion column abundance [solar abundances]
     double cos_incl = params[6]; // cos inclination angle
-    double source_distance = params[7]*pc_to_cm; // source distnace [cm]
+    double area_exponent = params[7];
+    double source_distance = params[8]*pc_to_cm; // source distnace [cm]
 
-    Cataclysmic_Variable intermediate_polar(mass, col_abund, luminosity, fractional_area, cos_incl, source_distance, reflection_sel, 1e10);
+    Cataclysmic_Variable intermediate_polar(mass, col_abund, luminosity, fractional_area, cos_incl, area_exponent, source_distance, reflection_sel, 1e10);
     intermediate_polar.Set_Inverse_Mag_Radius(mag_ratio);
-    intermediate_polar.Shock_Height_Shooting(1000);
+    intermediate_polar.Shock_Height_Shooting();
+    intermediate_polar.Build_Column_Profile();
     intermediate_polar.MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
     intermediate_polar.Print_Properties();
 }
