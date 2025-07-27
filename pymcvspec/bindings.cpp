@@ -15,10 +15,8 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             inverse_mag_radius = 0;
             Set_Accretion_Rate(luminosity);
             accretion_area = fractional_area*4.*pi*radius*radius;
-            accretion_rate /= accretion_area;
             Set_Abundances(metalicity);
-            Set_Shock_Speed(5);
-            Set_Cooling_Ratio();
+            Guess_Shock_Height();
         }
         Py_Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection, double r_m):
             Cataclysmic_Variable(m,r_m,metals,fractional_area,theta,n,dist,reflection)
@@ -28,10 +26,8 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             Set_Accretion_Rate(luminosity);
             b_field = sqrt(32.*accretion_rate)*pow(grav_const*mass, 1./4.)*pow(r_m,7./4.)*pow(radius,-3);
             accretion_area = fractional_area*4.*pi*radius*radius;
-            accretion_rate /= accretion_area;
             Set_Abundances(metalicity);
-            Set_Shock_Speed(5);
-            Set_Cooling_Ratio();
+            Guess_Shock_Height();
         }
         void Set_Abundances(const double m) override{
             abundances.resize(atomic_charge.size());
@@ -96,6 +92,7 @@ PYBIND11_MODULE(mcvspec, module) {
             py::arg("area_exp") = 0, py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("flow_eq", &Py_Cataclysmic_Variable::Flow_Equation)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
+        .def("build_profile", &Py_Cataclysmic_Variable::Build_Column_Profile)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
@@ -114,6 +111,7 @@ PYBIND11_MODULE(mcvspec, module) {
             py::arg("cos_incl_angle") = 0.5, py::arg("area_exp") = 0, py::arg("src_distance") = 200*pc_to_cm,
             py::arg("refl_on") = 1, py::arg("mag_radius") = 2*r_sol)
         .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
+        .def("build_profile", &Py_Cataclysmic_Variable::Build_Column_Profile)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
