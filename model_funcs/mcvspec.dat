@@ -1,4 +1,4 @@
-polarspec   8   0.  1.e20   C_Polarspec add  0
+polarspec   9   0.  1.e20   C_Polarspec add  0
 $reflectOn  " "             0
 B           "MG"            1.      0.      0.      1e3     1e3     1e-2
 f           " "             1e-3    0.      0.      0.1     1.      1e-5
@@ -10,7 +10,7 @@ n           " "             0       0.      0.      5.      5.      1e-3
 distance    "pc"            100.    1.      5.      1e4     4e4     1e-2
 
 
-deqspec     8   0.  1.e20   C_Deqspec   add 0
+deqspec     9   0.  1.e20   C_Deqspec   add 0
 $reflectOn  " "             0
 Rm/R_wd     " "             10      1.1     1.1    1e3      1e3     1e-2
 f           " "             1e-3    0.      0.     1.       1.      1e-5
@@ -22,7 +22,7 @@ n           " "             0       0.      0.      5.      5.      1e-3
 distance    "pc"            100.    1.      5.     1e4      4e4     1e-2
 
 
-ipspec      8   0.  1.e20   C_IPspec    add  0
+ipspec      10   0.  1.e20   C_IPspec    add  0
 $reflectOn  " "             1
 Pspin       "s"             600     1.      20.     1e4     5e4     1e-1
 CoRotRatio  " "             1       0.      0.      20      20      1e-5
