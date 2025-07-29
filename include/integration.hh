@@ -40,7 +40,8 @@ class Integrator{
         valarray<double> q[order-1];
         valarray<double> tol;
         double h;
-        valarray<double> y_bound;
+        double y_boundary;
+        int boundary_index;
 
     public:
         Integrator();
@@ -49,7 +50,7 @@ class Integrator{
         Integrator(valarray<double> (*func)(double, valarray<double>, void*), const int, const double, const double);
         void Integrate(void*, const double, const double, const valarray<double>);
         void Integrate(void*, const double, const double, const valarray<double>, const vector<double>);
-        void Integrate(void*, const double, const double, const valarray<double>, const valarray<double>);
+        void Integrate(void*, const double, const double, const valarray<double>, const double, const int);
     private:
         void Integrate(void*, const double, const double, const valarray<double>, bool, bool);
         double Step(double, const double, const valarray<double>, double*, valarray<double>*);

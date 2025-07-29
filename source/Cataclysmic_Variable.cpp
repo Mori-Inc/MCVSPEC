@@ -138,6 +138,12 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
     return {dpos_dvel,dpress_dvel,depress_dvel};
 }
 
+double Cataclysmic_Variable::Get_Landing_Altitude(double cutoff_alt){
+    accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))}, cutoff_alt, 0);
+    double slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back())[0];
+    return accretion_column.y.back()[0] - slope*accretion_column.t.back();
+}
+
 double Cataclysmic_Variable::Get_Landing_Altitude(){
     accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
     double slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back())[0];
@@ -145,7 +151,7 @@ double Cataclysmic_Variable::Get_Landing_Altitude(){
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
-    double x_final = Get_Landing_Altitude();
+    double x_final = Get_Landing_Altitude(1/shock_height);
     double upp_bound = shock_height;
     double low_bound = 100;
     if (x_final < 0){
@@ -155,6 +161,75 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
             upp_bound = 0.9/inverse_mag_radius;
         }
     }
+    // we start with a coarse adjustment only integrating down to 1cm
+    while(upp_bound-low_bound > 10){
+        Update_Shock_Height((upp_bound+low_bound)/2);
+        x_final = Get_Landing_Altitude(1/shock_height);
+        if(x_final < 0){
+            low_bound = shock_height;
+        }
+        else{
+            upp_bound = shock_height;
+        }
+    }
+    // make sure bounds aren't now wrong
+    Update_Shock_Height((upp_bound+low_bound)/2);
+    x_final = Get_Landing_Altitude(0.1/shock_height);
+    if(x_final > 0){ // we have a better upper bound but need to double check lower bound
+        upp_bound = shock_height;
+        Update_Shock_Height(low_bound);
+        x_final = Get_Landing_Altitude(0.1/shock_height);
+        while(x_final > 0){
+            low_bound /= 2;
+            Update_Shock_Height(low_bound);
+            x_final = Get_Landing_Altitude(0.1/shock_height);
+        }
+    }
+    else{ // we have a better lower bound but need to double check the upper bound
+        low_bound = shock_height;
+        Update_Shock_Height(upp_bound);
+        x_final = Get_Landing_Altitude(0.1/shock_height);
+        while(x_final < 0){
+            upp_bound *= 2;
+            Update_Shock_Height(upp_bound);
+            x_final = Get_Landing_Altitude(0.1/shock_height);
+        }
+    }
+    // refine adjustment down to 0.1c,
+    while(upp_bound-low_bound > 1){
+        Update_Shock_Height((upp_bound+low_bound)/2);
+        x_final = Get_Landing_Altitude(0.1/shock_height);
+        if(x_final < 0){
+            low_bound = shock_height;
+        }
+        else{
+            upp_bound = shock_height;
+        }
+    }
+    // make sure bounds aren't now wrong
+    Update_Shock_Height((upp_bound+low_bound)/2);
+    x_final = Get_Landing_Altitude();
+    if(x_final > 0){ // we have a better upper bound but need to double check lower bound
+        upp_bound = shock_height;
+        Update_Shock_Height(low_bound);
+        x_final = Get_Landing_Altitude();
+        while(x_final > 0){
+            low_bound /= 2;
+            Update_Shock_Height(low_bound);
+            x_final = Get_Landing_Altitude();
+        }
+    }
+    else{ // we have a better lower bound but need to double check the upper bound
+        low_bound = shock_height;
+        Update_Shock_Height(upp_bound);
+        x_final = Get_Landing_Altitude();
+        while(x_final < 0){
+            upp_bound *= 2;
+            Update_Shock_Height(upp_bound);
+            x_final = Get_Landing_Altitude();
+        }
+    }
+
     while(abs(x_final) > 1e-8){
         Update_Shock_Height((upp_bound+low_bound)/2);
         x_final = Get_Landing_Altitude();

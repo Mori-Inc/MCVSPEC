@@ -17,6 +17,8 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             accretion_area = fractional_area*4.*pi*radius*radius;
             Set_Abundances(metalicity);
             Guess_Shock_Height();
+            Shock_Height_Shooting();
+            Build_Column_Profile();
         }
         Py_Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection, double r_m):
             Cataclysmic_Variable(m,r_m,metals,fractional_area,theta,n,dist,reflection)
@@ -28,6 +30,8 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             accretion_area = fractional_area*4.*pi*radius*radius;
             Set_Abundances(metalicity);
             Guess_Shock_Height();
+            Shock_Height_Shooting();
+            Build_Column_Profile();
         }
         void Set_Abundances(const double m) override{
             abundances.resize(atomic_charge.size());
@@ -83,16 +87,28 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         }
 };
 
+class Py_Polar : public Py_Cataclysmic_Variable{
+    public:
+        Py_Polar(double m, double b, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection):
+            Py_Cataclysmic_Variable(m,b,metals,luminosity,fractional_area,theta,n,dist,reflection)
+        {}
+};
+
+class Py_IPolar : public Py_Cataclysmic_Variable{
+    public:
+        Py_IPolar(double m, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection, double r_m):
+            Py_Cataclysmic_Variable(m,metals,luminosity,fractional_area,theta,n,dist,reflection,r_m)
+        {}
+};
+
 PYBIND11_MODULE(mcvspec, module) {
-    py::class_<Py_Cataclysmic_Variable>(module, "Polar", py::module_local())
+    py::class_<Py_Polar>(module, "Polar", py::module_local())
         .def(py::init<double,double,double,double,double,double,double,double,int>(),
             py::arg("mass") = 0.7*m_sol, py::arg("b_field") = 1e7,
             py::arg("metalicity") = 1., py::arg("luminosity") = 1e33,
             py::arg("area_frac") = 1e-4, py::arg("cos_incl_angle") = 0.5,
             py::arg("area_exp") = 0, py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("flow_eq", &Py_Cataclysmic_Variable::Flow_Equation)
-        .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
-        .def("build_profile", &Py_Cataclysmic_Variable::Build_Column_Profile)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
@@ -103,15 +119,14 @@ PYBIND11_MODULE(mcvspec, module) {
         .def("total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
         .def("radius", &Py_Cataclysmic_Variable::Get_Radius)
         .def("m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
-        .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height);
-    py::class_<Py_Cataclysmic_Variable>(module, "Intermediate_Polar")
+        .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
+        .def("print", &Py_Cataclysmic_Variable::Print_Properties);
+    py::class_<Py_IPolar>(module, "Intermediate_Polar",  py::module_local())
         .def(py::init<double,double,double,double,double,double,double,int,double>(),
             py::arg("mass") = 0.7*m_sol, py::arg("metalicity") = 1.,
             py::arg("luminosity") = 1e33, py::arg("area_frac") = 1e-4,
             py::arg("cos_incl_angle") = 0.5, py::arg("area_exp") = 0, py::arg("src_distance") = 200*pc_to_cm,
             py::arg("refl_on") = 1, py::arg("mag_radius") = 2*r_sol)
-        .def("execute", &Py_Cataclysmic_Variable::Shock_Height_Shooting)
-        .def("build_profile", &Py_Cataclysmic_Variable::Build_Column_Profile)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
@@ -122,5 +137,6 @@ PYBIND11_MODULE(mcvspec, module) {
         .def("total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
         .def("radius", &Py_Cataclysmic_Variable::Get_Radius)
         .def("m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
-        .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height);
+        .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
+        .def("print", &Py_Cataclysmic_Variable::Print_Properties);
 }

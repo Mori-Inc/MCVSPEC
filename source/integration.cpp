@@ -73,11 +73,9 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
 
     double t_terminal = t_end;
     bool before_bound = true;
-    valarray<double> bound_dir(n_dim);
+    double bound_dir;
     if(y_bounds){
-        for(int i=0; i<n_dim; i++){
-            bound_dir[i] = (y_bound[i]-y_start[i]>0)-(y_bound[i]-y_start[i]<0);
-        }
+        bound_dir = (y_boundary-y_start[boundary_index]>0)-(y_boundary-y_start[boundary_index]<0);
     }
 
     while(dir*(t_end-t.back()) > 0 && t.size() < max_itter){
@@ -88,11 +86,7 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
             Dense_Output(dir, t.back(), y.back(), t_new);
         }
         if(y_bounds){
-            before_bound = (bound_dir*(y_bound-y_new) > absolute_err).min();
-            t_terminal = t_new + ((y_bound-y_new)/k[n_stages]).min();
-            if(dir*(t_terminal-t.back()) > 0){
-                h = min(h, dir*(t_terminal-t.back()));
-            }
+            before_bound = bound_dir*(y_boundary-y_new[boundary_index]) > absolute_err;
         }
 
         y.push_back(y_new);
@@ -115,8 +109,9 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
     Integrate(parameters, t_start, t_end, y_start, true, false);
 }
 
-void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const valarray<double> y_bounds){
-    y_bound = y_bounds;
+void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const double y_bound, const int bound_ind){
+    y_boundary = y_bound;
+    boundary_index = bound_ind;
     Integrate(parameters, t_start, t_end, y_start, false, true);
 }
 
