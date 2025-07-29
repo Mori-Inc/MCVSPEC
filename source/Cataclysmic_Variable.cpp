@@ -161,7 +161,6 @@ double Cataclysmic_Variable::Get_Landing_Altitude(){
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
-    cout << "starting mass fit for m = " << mass/m_sol << endl;
     static double previous_shock_height;
     double upp_bound = shock_height;
     double low_bound = shock_height;

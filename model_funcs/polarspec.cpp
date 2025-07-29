@@ -1,5 +1,8 @@
 #include "Cataclysmic_Variable.hh"
 
+#include <chrono>
+using namespace std::chrono;
+
 extern "C"
 void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_num, RealArray& flux, RealArray& err, const string& init_string)
 {
@@ -16,9 +19,17 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     double area_exponent = params[7];
     double source_distance = params[8]*pc_to_cm; // source distnace [cm]
 
+    auto start = high_resolution_clock::now();
     Cataclysmic_Variable polar(mass, b_field, col_abund, luminosity, fractional_area, cos_incl, area_exponent, source_distance, reflection_sel);
+    std::cout << "Object Creation: " << duration_cast<microseconds>(high_resolution_clock::now()-start).count() << " ms" << std::endl;
+    start = high_resolution_clock::now();
     polar.Shock_Height_Shooting();
+    std::cout << "Solution Found:  " << duration_cast<microseconds>(high_resolution_clock::now()-start).count() << " ms" << std::endl;
+    start = high_resolution_clock::now();
     polar.Build_Column_Profile();
+    std::cout << "Profile Built:   " << duration_cast<microseconds>(high_resolution_clock::now()-start).count() << " ms" << std::endl;
+    start = high_resolution_clock::now();
     polar.MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
+    std::cout << "Spectrum Produced:  " << duration_cast<microseconds>(high_resolution_clock::now()-start).count() << " ms" << std::endl;
     polar.Print_Properties();
 }

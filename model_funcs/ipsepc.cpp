@@ -1,5 +1,8 @@
 #include "Cataclysmic_Variable.hh"
 
+#include <chrono>
+using namespace std::chrono;
+
 extern "C"
 void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, RealArray& flux, RealArray& err, const string& init_string)
 {
@@ -18,9 +21,18 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double source_distance = params[9]*pc_to_cm; // source distnace [cm]
 
     double mag_radius = r_m_ratio*cbrt(4*pi*pi*grav_const*mass*p_spin*p_spin);
+
+    auto start = high_resolution_clock::now();
     Cataclysmic_Variable intermediate_polar(mass, col_abund, luminosity, fractional_area, cos_incl, area_exponent, source_distance, reflection_sel, mag_radius);
+    std::cout << "Object Creation: " << duration_cast<microseconds>(high_resolution_clock::now()-start).count() << " ms" << std::endl;
+    start = high_resolution_clock::now();
     intermediate_polar.Shock_Height_Shooting();
+    std::cout << "Solution Found:  " << duration_cast<microseconds>(high_resolution_clock::now()-start).count() << " ms" << std::endl;
+    start = high_resolution_clock::now();
     intermediate_polar.Build_Column_Profile();
+    std::cout << "Profile Built:   " << duration_cast<microseconds>(high_resolution_clock::now()-start).count() << " ms" << std::endl;
+    start = high_resolution_clock::now();
     intermediate_polar.MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
+    std::cout << "Spectrum Produced:  " << duration_cast<microseconds>(high_resolution_clock::now()-start).count() << " ms" << std::endl;
     intermediate_polar.Print_Properties();
 }
