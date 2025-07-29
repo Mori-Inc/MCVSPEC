@@ -151,20 +151,29 @@ double Cataclysmic_Variable::Get_Landing_Altitude(){
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
-    double x_final = Get_Landing_Altitude(1/shock_height);
     double upp_bound = shock_height;
-    double low_bound = 100;
-    if (x_final < 0){
-        low_bound = shock_height;
-        upp_bound = 10*radius;
-        if(upp_bound*inverse_mag_radius > 0.9){
-            upp_bound = 0.9/inverse_mag_radius;
+    double low_bound = shock_height;
+    double x_final = Get_Landing_Altitude(1./shock_height);
+    if(x_final < 0){
+        while(x_final < 0){
+            upp_bound *= 2;
+            Update_Shock_Height(upp_bound);
+            x_final = Get_Landing_Altitude(1./shock_height);
         }
+        low_bound = upp_bound/2.;
+    }
+    else{
+        while(x_final > 0){
+            low_bound /= 2.;
+            Update_Shock_Height(low_bound);
+            x_final = Get_Landing_Altitude(1./shock_height);
+        }
+        upp_bound = low_bound*2.;
     }
     // we start with a coarse adjustment only integrating down to 1cm
     while(upp_bound-low_bound > 10){
         Update_Shock_Height((upp_bound+low_bound)/2);
-        x_final = Get_Landing_Altitude(1/shock_height);
+        x_final = Get_Landing_Altitude(1./shock_height);
         if(x_final < 0){
             low_bound = shock_height;
         }
