@@ -11,6 +11,8 @@ using std::endl;
 using std::abs;
 using std::ceil;
 
+static double previous_shock_height = 0;
+
 valarray<double> Flow_Equation_Wrapper(double t, valarray<double> y, void* cv_instance){
     return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(t, y);
 }
@@ -86,7 +88,6 @@ void Cataclysmic_Variable::Set_Accretion_Rate(double luminosity){
 }
 
 void Cataclysmic_Variable::Guess_Shock_Height(){
-    static double previous_shock_height = 0;
     if(previous_shock_height != 0){
         Update_Shock_Height(previous_shock_height);
     }
@@ -161,7 +162,6 @@ double Cataclysmic_Variable::Get_Landing_Altitude(){
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
-    static double previous_shock_height;
     double upp_bound = shock_height;
     double low_bound = shock_height;
     double x_final = Get_Landing_Altitude(1./shock_height);
@@ -329,16 +329,20 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
     int n = flux.size();
-    int m = altitude.size()-1;
     double segment_volume = 0;
     double segment_top, segment_bottom;
-    valarray<double> flux_from_layer(n);
+    double refl_amp, last_refl_amp, sum_refl=0, sum_weights=0;
+    valarray<double> apec_flux(n);
+    valarray<double> reflected_flux(n);
     valarray<double> flux_error(n);
     valarray<double> apec_parameters(3);
     valarray<double> refl_parameters(5);
 
+    // determine how many reflections we need
+    last_refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[0]/radius,2));
 
-    refl_parameters[0] = 1-sqrt(1.0-1.0/pow(1+altitude[m]/radius,2));
+
+    refl_parameters[0] = 1;
     refl_parameters[1] = 0.;
     refl_parameters[2] = metalicity;
     refl_parameters[3] = metalicity;
@@ -346,8 +350,8 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
 
     for(int i=0; i<altitude.size(); i++){
         for(int j=0; j<n; j++){
-            flux[j] += flux_from_layer[j];
-            flux_from_layer[j] = 0;
+            reflected_flux[j] += apec_flux[j];
+            apec_flux[j] = 0;
         }
 
         apec_parameters[0] = electron_temperature[i];
@@ -355,10 +359,10 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         apec_parameters[2] = 0.0;
 
         if (apec_parameters[0] > 64.0){
-            CXX_bremss(energy, apec_parameters, spectrum_num, flux_from_layer, flux_error, init_string);
+            CXX_bremss(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
         else{
-            CXX_apec(energy, apec_parameters, spectrum_num, flux_from_layer, flux_error, init_string);
+            CXX_apec(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
 
         // normalizes spectrum appropriately
@@ -375,23 +379,35 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
             segment_bottom = (altitude[i]+altitude[i+1])/2;
         }
         segment_volume = (accretion_area*radius/(area_exponent+1))*(pow(1+segment_top/radius,area_exponent+1)-pow(1+segment_bottom/radius,area_exponent+1));
-        flux_from_layer *= segment_volume*ion_density[i]*electron_density[i]*1e-14;
-        flux_from_layer /= 4*pi*distance*distance;
+        apec_flux *= segment_volume*ion_density[i]*electron_density[i]*1e-14;
+        apec_flux /= 4*pi*distance*distance;
 
-        // apply reflect to each slice
-        if (refl == 1){
-            refl_parameters[0] = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
-            CXX_reflect(energy, refl_parameters, spectrum_num, flux_from_layer, flux_error, init_string);
+        if(refl==1){
+            refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
+            if(abs(refl_amp-last_refl_amp)/last_refl_amp > altitude_diff){
+                refl_parameters[0] = sum_refl/sum_weights;
+                CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
+                for(int j=0; j<n; j++){
+                    flux[j] += reflected_flux[j];
+                    reflected_flux[j] = 0;
+                }
+                last_refl_amp = refl_amp;
+                sum_refl = refl_amp*ion_density[i]*electron_density[i]*sqrt(electron_temperature[i]);
+                sum_weights = ion_density[i]*electron_density[i]*sqrt(electron_temperature[i]);
+            }
+            else{
+                sum_refl += refl_amp*ion_density[i]*electron_density[i]*sqrt(electron_temperature[i]);
+                sum_weights += ion_density[i]*electron_density[i]*sqrt(electron_temperature[i]);
+            }
         }
     }
 
-    for(int j=0; j<n; j++){
-        flux[j] += flux_from_layer[j];
-        flux_from_layer[j] = 0;
+    if(refl==1){
+        refl_parameters[0] = sum_refl/sum_weights;
+        CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
     }
-
-    if(refl == 2){
-        CXX_reflect(energy, refl_parameters, spectrum_num, flux, flux_error, init_string);
+    for(int j=0; j<n; j++){
+        flux[j] += reflected_flux[j];
     }
 }
 
