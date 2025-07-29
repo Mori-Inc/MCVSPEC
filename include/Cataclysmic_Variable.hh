@@ -37,6 +37,7 @@ class Cataclysmic_Variable{
         void Build_Column_Profile();
         virtual void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string);
         void Print_Properties();
+        double Get_Shock_Height();
 
     protected:
         void Set_Cooling_Constants();

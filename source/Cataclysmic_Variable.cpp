@@ -43,6 +43,10 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double lumin
     Guess_Shock_Height();
 }
 
+double Cataclysmic_Variable::Get_Shock_Height(){
+    return shock_height;
+}
+
 void Cataclysmic_Variable::Set_Inverse_Mag_Radius(double mag_ratio){
     inverse_mag_radius = 1./(mag_ratio*radius);
     b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
@@ -82,9 +86,15 @@ void Cataclysmic_Variable::Set_Accretion_Rate(double luminosity){
 }
 
 void Cataclysmic_Variable::Guess_Shock_Height(){
-    double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
-    shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
-    Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*accretion_rate));
+    static double previous_shock_height = 0;
+    if(previous_shock_height != 0){
+        Update_Shock_Height(previous_shock_height);
+    }
+    else{
+        double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
+        shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
+        Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*accretion_rate));
+    }
 }
 
 void Cataclysmic_Variable::Update_Shock_Height(double h_s){
@@ -152,6 +162,7 @@ double Cataclysmic_Variable::Get_Landing_Altitude(){
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
     cout << "starting mass fit for m = " << mass/m_sol << endl;
+    static double previous_shock_height;
     double upp_bound = shock_height;
     double low_bound = shock_height;
     double x_final = Get_Landing_Altitude(1./shock_height);
@@ -252,6 +263,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
     }
     Update_Shock_Height((upp_bound+low_bound)/2);
     accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
+    previous_shock_height = (upp_bound+low_bound)/2;
 }
 
 void Cataclysmic_Variable::Build_Column_Profile(){
@@ -394,6 +406,7 @@ void Cataclysmic_Variable::Print_Properties(){
     if(inverse_mag_radius != 0){
         cout << " R_m/R:             " << (1./inverse_mag_radius)/radius << endl;
     }
+    cout << " accretion rate:    " << accretion_rate << " g/s" << endl;
     cout << " accretion rate:    " << shock_mdot << "-->" << accretion_rate/accretion_area << " g/cm2/s" << endl;
     cout << " shock height:      " << shock_height/radius << " (h/R_wd)" << endl;
     cout << " shock temperature: " << electron_temperature[0] << " keV" << endl;
