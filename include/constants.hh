@@ -25,4 +25,4 @@ const double amu_to_g =  1.6605390689252e-24; // mass of amu in grams
 const double pc_to_cm = 3.0856775814913673e18;
 // constants of the model
 const double gaunt_factor = 1.2;
-const double kT_grid_spacing = 1; // keV
+const double kT_grid_spacing = 0.5; // keV
