@@ -6,25 +6,30 @@ It solves the hydrodynamic equations for the flow of material in the post shock 
 The final X-Ray spectrum is produced from the sum of APEC models and their reflected components.
 
 MCVSPEC contains three models for different classes of mCVs. All 3 use the following input parameters are:
-| Variable       | Units                 | Description                                                           |
-|----------------|-----------------------|-----------------------------------------------------------------------|
-| `reflectOn`    | 0, 1, or 2             | Switch to determine if and how reflection from WD surface is modeled (0 = no reflection; 1 = use reflect once at shock height; 2 = varying heights along the column, which is more time-consuming)|
-| `M`            | Solar masses (M☉)     | Mass of the white dwarf (WD)                                           |
-| `f`            | Dimensionless (0 to 1) | Fractional accretion area of the WD                                    |
-| `L`            | 10^33 ergs/s           | Luminosity of the WD                                                   |
-| `Z`            | Relative to solar      | Accretion column abundance                            |
-| `cos i`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the reflecting surface              |
-| `distance`     | parsecs                | distance to source (used only for flux normalization)              |
+| Variable       | Units                  | Description                                                           |
+|----------------|------------------------|-----------------------------------------------------------------------|
+| `reflectOn`    | 0, 1                   | Toggle reflection                                                     |
+| `M`            | Solar masses (M☉)      | Mass of the white dwarf (WD)                                          |
+| `f`            | Dimensionless (0 to 1) | Fractional accretion area of the WD                                   |
+| `L`            | 10^33 ergs/s           | Luminosity of the WD                                                  |
+| `Z`            | Relative to solar      | Accretion column abundance                                            |
+| `cos i`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the reflecting surface             |
+| `areaScal`     | Dimensionless          | Column cross-sectional scaling exponent A~(1+x/R)^n                   |
+| `distance`     | parsecs                | distance to source (used only for flux normalization)                 |
 
 The magnetic field strength is determined differently for each class of mCV.
 
+| Model Name | Magnetic Variable | Units    | Description                                 |
+|------------|-------------------|----------|---------------------------------------------|
+| polarspec  | `B`               | MG       | Surface magnetic field of WD                |
+| ipspec     | `Pspin`           | s        | Spin period of WD                           |
+| deqspec    | `Rm/R_wd`         | unitless | Ratio of magnetospheric radius to WD radius |
 
-| Model Name | Magnetic Variable | Units    | Description | Object Description                     |
-|------------|-------------------|----------|-------------|--------------------------|
-| polarspec  | `B`               | MG       | Surface magnetic field of WD | polar                                  |
-| ipspec     | `Pspin`           | s        | Spin period of WD | intermediate polar in spin equilibirum |
-| deqspec    | `Rm/R_wd`         | unitless | Ratio of magnetospheric radius to WD radius | intermediate polar not in spin equilibirum |
+`polarspec` is  applicable to polars, it assumes that accretion flow begins at the lagrange point
 
+`ipsepc` is our spin-equilibrium model for intermediate polars, it computes the magnetospheric radius from the spin period (and accretion rate) by setting the ram pressure equal to the magnetic pressure. It has one additional parameter: `CoRotRatio`, which is the ratio of the magnetoshperic radius to the co-rotation radius for additional flexibility.
+
+`deqspec` is our non spin-equilibrium model for intermediate polars, one can directly input the magnetoshperic radius (as a multiple of the WD radius)
 
 ## Dependencies
 * [HEASOFT](https://heasarc.gsfc.nasa.gov/docs/software/lheasoft/)
