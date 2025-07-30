@@ -26,22 +26,20 @@ class Cataclysmic_Variable{
         Integrator accretion_column;
 
     public:
-        Cataclysmic_Variable(double,double,double,double,double,double,double,int); // base constructor
-        Cataclysmic_Variable(double,double,double,double,double,double,double,double,int); // polars
-        Cataclysmic_Variable(double,double,double,double,double,double,double,int,double); // ips
+        Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);
         virtual void Set_Abundances(double);
-        void Set_Accretion_Rate(double);
-        void Set_Inverse_Mag_Radius(double);
+
         valarray<double> Flow_Equation(double vel, valarray<double> pos);
         void Shock_Height_Shooting();
         void Build_Column_Profile();
         virtual void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string);
         void Print_Properties();
-        double Get_Shock_Height();
+
+        static double Get_Radius(double);
+        static double Get_Accretion_Rate(double, double, double, double);
 
     protected:
         void Set_Cooling_Constants();
-        void Set_Radius();
         void Guess_Shock_Height();
         void Update_Shock_Height(double);
         double Get_Landing_Altitude();

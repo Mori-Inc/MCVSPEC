@@ -2,15 +2,14 @@
 
 ## Introduction
 MCVSPEC is a model for the post-shock accretion flow in magnetic Cataclysmic Variables (mCVs).
-It solves the hydrodynamic equations for the flow of material in the post shock region of the mCV accretion column producing a thermal profile of the column.
-The final X-Ray spectrum is produced from the sum of APEC models and their reflected components.
+It solves for the full thermal profile of the post-shock accretion column (PSAC) and produces an X-Ray spectrum by convolving the thermal profile with the optically-thin thermal bremsstrahlung spectrum produced by APEC. Additioanlly, MCVSPEC is capable of reflecting the PSAC column off the WD surface.
 
-MCVSPEC contains three models for different classes of mCVs. All 3 use the following input parameters are:
+MCVSPEC contains two models: `polarspec` and `ipsepc` which are used for their respective class of objects. Both models share the common inputs:
+
 | Variable       | Units                  | Description                                                           |
 |----------------|------------------------|-----------------------------------------------------------------------|
 | `reflectOn`    | 0, 1                   | Toggle reflection                                                     |
 | `M`            | Solar masses (M☉)      | Mass of the white dwarf (WD)                                          |
-| `f`            | Dimensionless (0 to 1) | Fractional accretion area of the WD                                   |
 | `L`            | 10^33 ergs/s           | Luminosity of the WD                                                  |
 | `Z`            | Relative to solar      | Accretion column abundance                                            |
 | `cos i`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the reflecting surface             |
@@ -23,13 +22,10 @@ The magnetic field strength is determined differently for each class of mCV.
 |------------|-------------------|----------|---------------------------------------------|
 | polarspec  | `B`               | MG       | Surface magnetic field of WD                |
 | ipspec     | `Pspin`           | s        | Spin period of WD                           |
-| deqspec    | `Rm/R_wd`         | unitless | Ratio of magnetospheric radius to WD radius |
-
-`polarspec` is  applicable to polars, it assumes that accretion flow begins at the lagrange point
 
 `ipsepc` is our spin-equilibrium model for intermediate polars, it computes the magnetospheric radius from the spin period (and accretion rate) by setting the ram pressure equal to the magnetic pressure. It has one additional parameter: `CoRotRatio`, which is the ratio of the magnetoshperic radius to the co-rotation radius for additional flexibility.
 
-`deqspec` is our non spin-equilibrium model for intermediate polars, one can directly input the magnetoshperic radius (as a multiple of the WD radius)
+Additionally, the accretion area can be specified in one of two ways. Either (in the case of `ipsepc` and `polarspec`) the fractional accretion area (`f`) can be specified or (in the case of `aripsepc` and `arpolarspec`)the accretion area (A) in units of 10<sup>15</sup> cm<sup>2</sup>.
 
 ## Dependencies
 * [HEASOFT](https://heasarc.gsfc.nasa.gov/docs/software/lheasoft/)

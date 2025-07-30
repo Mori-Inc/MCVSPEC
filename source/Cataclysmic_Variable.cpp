@@ -17,42 +17,27 @@ valarray<double> Flow_Equation_Wrapper(double t, valarray<double> y, void* cv_in
     return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(t, y);
 }
 
-Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double fractional_area, double theta, double n, double dist, int reflection):
-    mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), area_exponent(n),  refl(reflection),
-    accretion_column(Flow_Equation_Wrapper, this, 3)
-{}
-
-Cataclysmic_Variable::Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection):
-    mass(m), b_field(b), inverse_mag_radius(0), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), area_exponent(n),  refl(reflection),
+Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double metals, double area, double theta, double n, double dist, int reflection):
+    mass(m), radius(r), b_field(b), accretion_rate(mdot), accretion_area(area), inverse_mag_radius(inv_r_m), distance(dist), metalicity(metals), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection),
     accretion_column(Flow_Equation_Wrapper, this, 3)
 {
-    Set_Radius();
-    Set_Accretion_Rate(luminosity);
-    accretion_area = fractional_area*4.*pi*radius*radius;
+    if(inverse_mag_radius>0){
+        b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
+    }
     Set_Abundances(metalicity);
     Guess_Shock_Height();
 }
 
-Cataclysmic_Variable::Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection, double r_m):
-    mass(m), inverse_mag_radius(1/r_m), distance(dist), metalicity(metals), pressure_ratio(1.), incl_angle(theta), area_exponent(n),  refl(reflection),
-    accretion_column(Flow_Equation_Wrapper, this, 3)
-{
-    Set_Radius();
-    Set_Accretion_Rate(luminosity);
-    b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
-    accretion_area = fractional_area*4.*pi*radius*radius;
-    Set_Abundances(metalicity);
-    Guess_Shock_Height();
-}
+void Cataclysmic_Variable::Set_Abundances(double metalicity){
+    abundances.resize(atomic_charge.size());
+    abundances[0] = FunctionUtility::getAbundance(atomic_charge[0]);
 
-double Cataclysmic_Variable::Get_Shock_Height(){
-    return shock_height;
-}
-
-void Cataclysmic_Variable::Set_Inverse_Mag_Radius(double mag_ratio){
-    inverse_mag_radius = 1./(mag_ratio*radius);
-    b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
-    Guess_Shock_Height();
+    abundances[1] = FunctionUtility::getAbundance(atomic_charge[1]);
+    for(int i = 2; i < 14; i++){
+        abundances[i] = metalicity*FunctionUtility::getAbundance(atomic_charge[i]);
+    }
+    abundances = abundances/abundances.sum();
+    Set_Cooling_Constants();
 }
 
 void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as these values depend only on the input properties not on any derived properties
@@ -71,20 +56,28 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     bremss_const *= (avg_charge_squared/avg_atomic_charge)*sqrt(pow(density_const/avg_ion_mass,3));
 }
 
-void Cataclysmic_Variable::Set_Abundances(double metalicity){
-    abundances.resize(atomic_charge.size());
-    abundances[0] = FunctionUtility::getAbundance(atomic_charge[0]);
-
-    abundances[1] = FunctionUtility::getAbundance(atomic_charge[1]);
-    for(int i = 2; i < 14; i++){
-        abundances[i] = metalicity*FunctionUtility::getAbundance(atomic_charge[i]);
-    }
-    abundances = abundances/abundances.sum();
-    Set_Cooling_Constants();
+double Cataclysmic_Variable::Get_Accretion_Rate(double luminosity, double mass, double radius, double inverse_mag_radius){
+    double accretion_rate = luminosity/(grav_const*mass*((1./radius) - inverse_mag_radius));
+    return accretion_rate;
 }
 
-void Cataclysmic_Variable::Set_Accretion_Rate(double luminosity){
-    accretion_rate = luminosity/(grav_const*mass*((1./radius) - inverse_mag_radius));
+double Cataclysmic_Variable::Get_Radius(double mass){
+    int left_ind = 0;
+    int i = mass_radius_length/2;
+    int right_ind = mass_radius_length-1;
+    while(right_ind-left_ind > 1){
+        i = left_ind + (right_ind-left_ind)/2;
+        if(mass>white_dwarf_mass[i]){
+            left_ind = i;
+        }
+        else{
+            right_ind = i;
+        }
+    }
+    double delta_r = white_dwarf_radius[right_ind]-white_dwarf_radius[left_ind];
+    double delta_m = white_dwarf_mass[right_ind]-white_dwarf_mass[left_ind];
+    double radius = white_dwarf_radius[left_ind] + (delta_r/delta_m)*(mass-white_dwarf_mass[left_ind]);
+    return radius;
 }
 
 void Cataclysmic_Variable::Guess_Shock_Height(){
@@ -104,24 +97,6 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     shock_mdot = accretion_rate/(accretion_area*pow(1+shock_height/radius, area_exponent));
     non_dim_radius = radius/shock_height;
     cooling_ratio = cooling_ratio_const*pow(shock_speed,5.85)/pow(shock_mdot, 1.85);
-}
-
-void Cataclysmic_Variable::Set_Radius(){
-    int left_ind = 0;
-    int i = mass_radius_length/2;
-    int right_ind = mass_radius_length-1;
-    while(right_ind-left_ind > 1){
-        i = left_ind + (right_ind-left_ind)/2;
-        if(mass>white_dwarf_mass[i]){
-            left_ind = i;
-        }
-        else{
-            right_ind = i;
-        }
-    }
-    double delta_r = white_dwarf_radius[right_ind]-white_dwarf_radius[left_ind];
-    double delta_m = white_dwarf_mass[right_ind]-white_dwarf_mass[left_ind];
-    radius = white_dwarf_radius[left_ind] + (delta_r/delta_m)*(mass-white_dwarf_mass[left_ind]);
 }
 
 valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres_epres){
