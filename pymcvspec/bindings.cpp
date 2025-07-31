@@ -2,33 +2,18 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include "Cataclysmic_Variable.hh"
+#include "constants.hh"
 #include <iostream>
 
 namespace py = pybind11;
 
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
-        Py_Cataclysmic_Variable(double m, double b, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection):
-            Cataclysmic_Variable(m,b,metals,fractional_area,theta,n,dist,reflection)
+        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double metals, double area, double theta, double n, double dist, int reflection):
+            Cataclysmic_Variable(m,r,b,mdot,inv_r_m,area,theta,n,dist,reflection)
         {
-            Set_Radius();
-            inverse_mag_radius = 0;
-            Set_Accretion_Rate(luminosity);
-            accretion_area = fractional_area*4.*pi*radius*radius;
-            Set_Abundances(metalicity);
-            Guess_Shock_Height();
-            Shock_Height_Shooting();
-            Build_Column_Profile();
-        }
-        Py_Cataclysmic_Variable(double m, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection, double r_m):
-            Cataclysmic_Variable(m,r_m,metals,fractional_area,theta,n,dist,reflection)
-        {
-            inverse_mag_radius = 1/r_m;
-            Set_Radius();
-            Set_Accretion_Rate(luminosity);
-            b_field = sqrt(32.*accretion_rate)*pow(grav_const*mass, 1./4.)*pow(r_m,7./4.)*pow(radius,-3);
-            accretion_area = fractional_area*4.*pi*radius*radius;
-            Set_Abundances(metalicity);
+            metalicity = metals;
+            Set_Abundances(metals);
             Guess_Shock_Height();
             Shock_Height_Shooting();
             Build_Column_Profile();
@@ -43,9 +28,6 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         }
         void Set_Pressure_Ratio(double sigma_s){
             pressure_ratio = sigma_s;
-        }
-        void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string) override{
-            std::cout << "Spectrum creation is not yet implented in python" << std::endl;
         }
         py::array_t<double> Valarray_to_Numpy(valarray<double>* arr){
             py::array_t<double> array(arr->size());
@@ -87,56 +69,26 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         }
 };
 
-class Py_Polar : public Py_Cataclysmic_Variable{
-    public:
-        Py_Polar(double m, double b, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection):
-            Py_Cataclysmic_Variable(m,b,metals,luminosity,fractional_area,theta,n,dist,reflection)
-        {}
-};
-
-class Py_IPolar : public Py_Cataclysmic_Variable{
-    public:
-        Py_IPolar(double m, double metals, double luminosity, double fractional_area, double theta, double n, double dist, int reflection, double r_m):
-            Py_Cataclysmic_Variable(m,metals,luminosity,fractional_area,theta,n,dist,reflection,r_m)
-        {}
-};
-
-PYBIND11_MODULE(mcvspec, module) {
-    py::class_<Py_Polar>(module, "Polar", py::module_local())
-        .def(py::init<double,double,double,double,double,double,double,double,int>(),
-            py::arg("mass") = 0.7*m_sol, py::arg("b_field") = 1e7,
-            py::arg("metalicity") = 1., py::arg("luminosity") = 1e33,
-            py::arg("area_frac") = 1e-4, py::arg("cos_incl_angle") = 0.5,
-            py::arg("area_exp") = 0, py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
+PYBIND11_MODULE(_pymcvspec, module) {
+    module.def("_mass_to_radius", &Cataclysmic_Variable::Get_Radius, "Returns the radius (cm) for a corresponding WD mass (g)");
+    module.def("_luminosity_to_mdot", &Cataclysmic_Variable::Get_Accretion_Rate, "Returns the radius (cm) for a corresponding WD mass (g)");
+    py::class_<Py_Cataclysmic_Variable>(module, "_cataclysmic_variable", py::module_local())
+        .def(py::init<double,double,double,double,double,double,double,double,double,double,int>(),
+            py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
+            py::arg("mdot") = 1e15, py::arg("inv_r_m") = 0., py::arg("metalicity") = 1.,
+            py::arg("area") = 1e15, py::arg("cos_incl_angle") = 0.5, py::arg("area_exp") = 0,
+            py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("flow_eq", &Py_Cataclysmic_Variable::Flow_Equation)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
-        .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
-        .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
-        .def("ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
-        .def("electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
-        .def("ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
-        .def("electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
-        .def("total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
-        .def("radius", &Py_Cataclysmic_Variable::Get_Radius)
-        .def("m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
-        .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
-        .def("print", &Py_Cataclysmic_Variable::Print_Properties);
-    py::class_<Py_IPolar>(module, "Intermediate_Polar",  py::module_local())
-        .def(py::init<double,double,double,double,double,double,double,int,double>(),
-            py::arg("mass") = 0.7*m_sol, py::arg("metalicity") = 1.,
-            py::arg("luminosity") = 1e33, py::arg("area_frac") = 1e-4,
-            py::arg("cos_incl_angle") = 0.5, py::arg("area_exp") = 0, py::arg("src_distance") = 200*pc_to_cm,
-            py::arg("refl_on") = 1, py::arg("mag_radius") = 2*r_sol)
-        .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
-        .def("altitude", &Py_Cataclysmic_Variable::Get_Altitude)
-        .def("electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
-        .def("ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
-        .def("electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
-        .def("ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
-        .def("electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
-        .def("total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
-        .def("radius", &Py_Cataclysmic_Variable::Get_Radius)
-        .def("m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
-        .def("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
+        .def("get_altitude", &Py_Cataclysmic_Variable::Get_Altitude)
+        .def("get_electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
+        .def("get_ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
+        .def("get_electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
+        .def("get_ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
+        .def("get_electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
+        .def("get_total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
+        .def("get_radius", &Py_Cataclysmic_Variable::Get_Radius)
+        .def("get_m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
+        .def("get_shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
         .def("print", &Py_Cataclysmic_Variable::Print_Properties);
 }

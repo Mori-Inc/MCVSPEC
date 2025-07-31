@@ -17,8 +17,17 @@ valarray<double> Flow_Equation_Wrapper(double t, valarray<double> y, void* cv_in
     return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(t, y);
 }
 
+Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double area, double theta, double n, double dist, int reflection):
+    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection),
+    accretion_column(Flow_Equation_Wrapper, this, 3)
+{
+    if(inverse_mag_radius>0){
+        b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
+    }
+}
+
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double metals, double area, double theta, double n, double dist, int reflection):
-    mass(m), radius(r), b_field(b), accretion_rate(mdot), accretion_area(area), inverse_mag_radius(inv_r_m), distance(dist), metalicity(metals), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection),
+    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), distance(dist), accretion_rate(mdot), accretion_area(area), metalicity(metals), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection),
     accretion_column(Flow_Equation_Wrapper, this, 3)
 {
     if(inverse_mag_radius>0){

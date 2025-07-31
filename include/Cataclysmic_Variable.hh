@@ -10,7 +10,7 @@
 class Cataclysmic_Variable{
     protected:
         // input white dwarf properties
-        double mass, b_field, radius, inverse_mag_radius, distance;
+        double mass, radius, b_field, inverse_mag_radius, distance;
         double non_dim_radius;
         // input column properties
         double accretion_rate, accretion_area, metalicity, shock_height, shock_speed, pressure_ratio, incl_angle, area_exponent;
@@ -26,6 +26,7 @@ class Cataclysmic_Variable{
         Integrator accretion_column;
 
     public:
+        Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,int);
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);
         virtual void Set_Abundances(double);
 

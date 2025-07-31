@@ -44,27 +44,27 @@ endif(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 if(BUILD_PYBINDINGS)
     find_package(pybind11 CONFIG REQUIRED)
 
-    pybind11_add_module(mcvspec pymcvspec/bindings.cpp
+    pybind11_add_module(_pymcvspec pymcvspec/bindings.cpp
                             source/Cataclysmic_Variable.cpp
                             source/integration.cpp)
 
-    add_dependencies(mcvspec embed_wd_mass_radius)
+    add_dependencies(_pymcvspec embed_wd_mass_radius)
 
     # MCVSPEC Headers
-    target_include_directories(mcvspec PUBLIC "${PROJECT_SOURCE_DIR}/include" ${CMAKE_CURRENT_BINARY_DIR})
+    target_include_directories(_pymcvspec PUBLIC "${PROJECT_SOURCE_DIR}/include" ${CMAKE_CURRENT_BINARY_DIR})
 
     # HEASOFT Headers
-    target_include_directories(mcvspec PUBLIC
+    target_include_directories(_pymcvspec PUBLIC
         "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include"
         "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include/XSFunctions"
         "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/include/XSFunctions/Utilities"
         "${HEASOFT_DIR}/heacore/${HEA_SYSTEM_NAME}/include"
         "${HEASOFT_DIR}/tcltk/${HEA_SYSTEM_NAME}/include"
     )
-    target_link_libraries(mcvspec PRIVATE "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/lib/libXSFunctions.dylib")
+    target_link_libraries(_pymcvspec PRIVATE "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/lib/libXSFunctions.dylib")
     set(PYMCVSPEC_DIR "${CMAKE_INSTALL_PREFIX}/pymcvspec")
-    install(TARGETS mcvspec DESTINATION ${PYMCVSPEC_DIR})
-    target_compile_definitions(mcvspec PRIVATE)
+    install(TARGETS _pymcvspec DESTINATION ${PYMCVSPEC_DIR})
+    target_compile_definitions(_pymcvspec PRIVATE)
 endif()
 
 # compile xspec model

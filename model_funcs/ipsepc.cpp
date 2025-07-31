@@ -1,4 +1,5 @@
 #include "Cataclysmic_Variable.hh"
+#include "constants.hh"
 
 extern "C"
 void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, RealArray& flux, RealArray& err, const string& init_string)
@@ -17,7 +18,8 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double area_exponent = params[8];
     double source_distance = params[9]*pc_to_cm; // source distnace [cm]
 
-    double inverse_mag_radius = 1./(r_m_ratio*cbrt(4*pi*pi*grav_const*mass*p_spin*p_spin));
+    double mag_radius = r_m_ratio*cbrt(grav_const*mass*p_spin*p_spin/(4*pi*pi));
+    double inverse_mag_radius = 1./mag_radius;
     double radius = Cataclysmic_Variable::Get_Radius(mass);
     double area = fractional_area*4*pi*radius*radius;
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, inverse_mag_radius);
