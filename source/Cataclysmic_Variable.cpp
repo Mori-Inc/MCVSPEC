@@ -175,7 +175,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
         else{
             upp_bound = shock_height;
         }
-        cout << "10cm: [" << low_bound << ", " << upp_bound << "]" << endl;
+        cout << "10cm: [" << low_bound << ", " << upp_bound << "] " << upp_bound-low_bound << endl;
     }
     // make sure bounds aren't now wrong
     Update_Shock_Height((upp_bound+low_bound)/2);
@@ -210,7 +210,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
         else{
             upp_bound = shock_height;
         }
-         cout << "1cm: [" << low_bound << ", " << upp_bound << "]" << endl;
+         cout << "1cm: [" << low_bound << ", " << upp_bound << "] " << upp_bound-low_bound << endl;
     }
     // make sure bounds aren't now wrong
     Update_Shock_Height((upp_bound+low_bound)/2);
@@ -245,7 +245,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
         else{
             upp_bound = shock_height;
         }
-        cout << "1e-8: [" << low_bound << ", " << upp_bound << "]" << endl;
+        cout << "1e-8: [" << low_bound << ", " << upp_bound << "] " << upp_bound-low_bound << endl;
     }
     Update_Shock_Height((upp_bound+low_bound)/2);
     accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
