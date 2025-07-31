@@ -33,7 +33,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
 }
 
 extern "C"
-void IPspec_Area(const RealArray& energy, const RealArray& params, int spectrum_num, RealArray& flux, RealArray& err, const string& init_string)
+void IPspecArea(const RealArray& energy, const RealArray& params, int spectrum_num, RealArray& flux, RealArray& err, const string& init_string)
 {
     flux.resize(energy.size()-1,0);
     err.resize(energy.size()-1,0);

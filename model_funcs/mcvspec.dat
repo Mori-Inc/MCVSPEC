@@ -23,7 +23,7 @@ n           " "             0       0.      0.      5.      5.      0
 distance    "pc"            100.    1.      5.      1e4     4e4     0
 
 
-arpolarspec   9   0.  1.e20   C_Polarspec_Area add  0
+arpolarspec   9   0.  1.e20   C_PolarspecArea add  0
 $reflectOn  " "             0
 B           "MG"            1.      0.      0.      1e3     1e3     1e-2
 A           "1e15"          1.      1e-5.   1e-5.   1e4     1e4     1e-5
@@ -35,7 +35,7 @@ n           " "             0       0.      0.      5.      5.      0
 distance    "pc"            100.    1.      5.      1e4     4e4     0
 
 
-aripspec      10   0.  1.e20   C_IPspec_Area    add  0
+aripspec      10   0.  1.e20   C_IPspecArea    add  0
 $reflectOn  " "             1
 Pspin       "s"             600     1.      20.     1e4     5e4     1e-1
 CoRotRatio  " "             1       0.      0.      20      20      1e-5

@@ -27,7 +27,7 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
 }
 
 extern "C"
-void Polarspec_Area(const RealArray& energy, const RealArray& params, int spectrum_num, RealArray& flux, RealArray& err, const string& init_string)
+void PolarspecArea(const RealArray& energy, const RealArray& params, int spectrum_num, RealArray& flux, RealArray& err, const string& init_string)
 {
     flux.resize(energy.size()-1,0);
     err.resize(energy.size()-1,0);
