@@ -54,7 +54,7 @@ class cataclysmic_variable:
         session = pyatomdb.spectrum.CIESession()
         session.set_response(energy_bins, raw=True)
         flux = np.zeros(len(energy_bins)-1)
-        volume = np.append(0, np.diff(self.altitude))/2 + np.append(np.diff(self.altitude),0)/2
+        volume = np.append(0*u.cm, np.diff(self.altitude))/2 + np.append(np.diff(self.altitude),0*u.cm)/2
         for kT, n_e, n_i, vol in zip(self.electron_temperature, self.electron_density, self.ion_density, volume):
             flux += (session.return_spectrum(kT)*(u.cm**5)/u.s/energy_bins.unit)*n_e*n_i*vol/(4*np.pi*self.distance**2)
         return flux.to(1/u.s/u.keV)
