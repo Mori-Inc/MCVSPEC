@@ -66,7 +66,7 @@ class polar(cataclysmic_variable):
         mass: u.Quantity[u.M_sun],
         b_field: u.Quantity[u.MG],
         luminosity: u.Quantity[u.erg/u.s],
-        accretion_area: u.Quantity[u.cm**2]=None,
+        accretion_area: u.Quantity[u.cm**2]=0*u.cm**2,
         fractional_area=1e-3,
         metalicity=1,
         shock_ratio=0.75,
@@ -75,9 +75,9 @@ class polar(cataclysmic_variable):
         distance: u.Quantity[u.pc] = 1*u.pc
     ) -> None:
         radius = (_mass_to_radius(mass.to_value(u.g))*u.cm).to(u.R_sun)
-        if accretion_area is None:
+        if accretion_area == 0*u.cm**2:
             accretion_area = fractional_area*4*np.pi*(radius**2)
-        mdot = _luminosity_to_mdot(luminosity.to_value(u.erg/u.s), mass.to_value(u.g), radius.to_value(u.cm), 0)
+        mdot = _luminosity_to_mdot(luminosity.to_value(u.erg/u.s), mass.to_value(u.g), radius.to_value(u.cm), 0)*u.g/u.s
         cataclysmic_variable.__init__(self, mass, b_field, mdot, accretion_area, 0*u.cm, metalicity, shock_ratio, area_exponent, cos_inclination_angle, distance)
 
 class intermediate_polar(cataclysmic_variable):
@@ -87,7 +87,7 @@ class intermediate_polar(cataclysmic_variable):
         mass: u.Quantity[u.M_sun],
         spin_period: u.Quantity[u.s],
         luminosity: u.Quantity[u.erg/u.s],
-        accretion_area: u.Quantity[u.cm**2]=None,
+        accretion_area: u.Quantity[u.cm**2]=0*u.cm**2,
         fractional_area=1e-3,
         metalicity=1,
         shock_ratio=0.75,
@@ -98,7 +98,7 @@ class intermediate_polar(cataclysmic_variable):
     ) -> None:
         radius = (_mass_to_radius(mass.to_value(u.g))*u.cm).to(u.R_sun)
         r_m = mag_radius_ratio*np.cbrt(G*mass*(spin_period**2)/(4*np.pi*np.pi))
-        if accretion_area is None:
+        if accretion_area == 0*u.cm**2:
             accretion_area = fractional_area*4*np.pi*(radius**2)
         mdot = _luminosity_to_mdot(luminosity.to_value(u.erg/u.s), mass.to_value(u.g), radius.to_value(u.cm), 1/r_m.to_value(u.cm))*u.g/u.s
         b_field = (np.sqrt(32*mdot*np.sqrt(G*mass*(r_m**7)))/(radius**3)).to(u.G, equivalencies=cgs)
