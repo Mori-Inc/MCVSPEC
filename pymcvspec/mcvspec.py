@@ -2,6 +2,7 @@ from _pymcvspec import _cataclysmic_variable, _mass_to_radius, _luminosity_to_md
 import numpy as np
 import astropy.units as u
 from astropy.constants import G
+import pyatomdb
 
 cgs = [(u.statC, ((u.g*u.cm**3)**0.5)/u.s, lambda x:x, lambda x:x),
        (u.G, ((u.g/u.cm)**0.5/u.s), lambda x:x, lambda x:x)]
@@ -48,6 +49,15 @@ class cataclysmic_variable:
         self.ion_density = self.cpp_impl.get_ion_density()/u.cm**3
         self.total_pressure = self.cpp_impl.get_total_pressure()*u.dyne/u.cm**2
         self.electron_pressure = self.cpp_impl.get_electron_pressure()*u.dyne/u.cm**2
+    @u.quantity_input
+    def spectrum(self, energy_bins:u.Quantity[u.keV]) -> u.Quantity[1/u.s/u.keV]:
+        session = pyatomdb.spectrum.CIESession()
+        session.set_response(energy_bins, raw=True)
+        flux = np.zeros(len(energy_bins)-1)
+        volume = np.append(0, np.diff(self.altitude))/2 + np.append(np.diff(self.altitude),0)/2
+        for kT, n_e, n_i, vol in zip(self.electron_temperature, self.electron_density, self.ion_density, volume):
+            flux += (session.return_spectrum(kT)*(u.cm**5)/u.s/energy_bins.unit)*n_e*n_i*vol/(4*np.pi*self.distance**2)
+        return flux.to(1/u.s/u.keV)
 
 class polar(cataclysmic_variable):
     @u.quantity_input
