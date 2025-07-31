@@ -52,11 +52,12 @@ class cataclysmic_variable:
     @u.quantity_input
     def spectrum(self, energy_bins:u.Quantity[u.keV]) -> u.Quantity[1/u.s/u.keV]:
         session = pyatomdb.spectrum.CIESession()
-        session.set_response(energy_bins, raw=True)
-        flux = np.zeros(len(energy_bins)-1)
+        session.set_response(energy_bins.to_value(u.keV), raw=True)
+        flux = np.zeros(len(energy_bins)-1)/(u.s*u.keV)
         volume = np.append(0*u.cm, np.diff(self.altitude))/2 + np.append(np.diff(self.altitude),0*u.cm)/2
+        volume *= self.accretion_area*((1+self.altitude/self.radius)**self.n)
         for kT, n_e, n_i, vol in zip(self.electron_temperature, self.electron_density, self.ion_density, volume):
-            flux += (session.return_spectrum(kT)*(u.cm**5)/u.s/energy_bins.unit)*n_e*n_i*vol/(4*np.pi*self.distance**2)
+            flux += (session.return_spectrum(kT.to_value(u.keV))*(u.cm**5)/u.s/energy_bins.unit)*n_e*n_i*vol/(4*np.pi*self.distance**2)
         return flux.to(1/u.s/u.keV)
 
 class polar(cataclysmic_variable):
