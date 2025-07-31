@@ -64,6 +64,7 @@ if(BUILD_PYBINDINGS)
     target_link_libraries(_pymcvspec PRIVATE "${HEASOFT_DIR}/Xspec/${HEA_SYSTEM_NAME}/lib/libXSFunctions.dylib")
     set(PYMCVSPEC_DIR "${CMAKE_INSTALL_PREFIX}/pymcvspec")
     install(TARGETS _pymcvspec DESTINATION ${PYMCVSPEC_DIR})
+    install(FILES ${PROJECT_SOURCE_DIR}/pymcvspec/mcvspec.py DESTINATION ${PYMCVSPEC_DIR})
     target_compile_definitions(_pymcvspec PRIVATE)
 endif()
 
