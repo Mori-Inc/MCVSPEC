@@ -71,7 +71,6 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
     valarray<double> y_new(n_dim);
     double t_new;
 
-    double t_terminal = t_end;
     bool before_bound = true;
     double bound_dir;
     if(y_bounds){

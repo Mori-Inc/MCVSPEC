@@ -1,4 +1,4 @@
-polarspec   9   0.  1.e20   C_Polarspec add  0
+polarspec   9   0.  1.e20   C_Polarspec add  0 0
 $reflectOn  " "             0
 B           "MG"            1.      0.      0.      1e3     1e3     1e-2
 f           " "             1e-3    0.      0.      0.1     1.      1e-5
@@ -6,11 +6,11 @@ L           "1e33"          1       0.      0.      1e10    1e10    1e-2
 M           "Msun"          1.      0.      0.      1.4     1.4     1e-4
 ABUND       " "             1.      0.      0.      5.      5.      1e-3
 cosAngle    " "             0.45    0.      0.      1.      1.      1e-3
-n           " "             0       0.      0.      5.      5.      0
-distance    "pc"            100.    1.      5.      1e4     4e4     0
+n           " "             0       0.      0.      5.      5.      -1
+distance    "pc"            100.    1.      5.      1e4     4e4     -1e-2
 
 
-ipspec      10   0.  1.e20   C_IPspec    add  0
+ipspec      10   0.  1.e20   C_IPspec    add  0 0
 $reflectOn  " "             1
 Pspin       "s"             600     1.      20.     1e4     5e4     1e-1
 CoRotRatio  " "             1       0.      0.      20      20      1e-5
@@ -19,30 +19,30 @@ L           "1e33"          1       0.      0.      1e10    1e10    1e-2
 M           "Msun"          1.      0.      0.      1.4     1.4     1e-4
 ABUND       " "             1.      0.      0.      5.      5.      1e-3
 cosAngle    " "             0.45    0.      0.      1.      1.      1e-3
-n           " "             0       0.      0.      5.      5.      0
-distance    "pc"            100.    1.      5.      1e4     4e4     0
+n           " "             0       0.      0.      5.      5.      -1
+distance    "pc"            100.    1.      5.      1e4     4e4     -1e-2
 
 
-arpolarspec   9   0.  1.e20   C_PolarspecArea add  0
+arpolarspec   9   0.  1.e20   C_PolarspecArea add  0 0
 $reflectOn  " "             0
 B           "MG"            1.      0.      0.      1e3     1e3     1e-2
-A           "1e15"          1.      1e-5.   1e-5.   1e4     1e4     1e-5
+area        "1e15"          1.      1e-5    1e-5    1e4     1e4     1e-5
 L           "1e33"          1       0.      0.      1e10    1e10    1e-2
 M           "Msun"          1.      0.      0.      1.4     1.4     1e-4
 ABUND       " "             1.      0.      0.      5.      5.      1e-3
 cosAngle    " "             0.45    0.      0.      1.      1.      1e-3
-n           " "             0       0.      0.      5.      5.      0
-distance    "pc"            100.    1.      5.      1e4     4e4     0
+n           " "             0       0.      0.      5.      5.      -1
+distance    "pc"            100.    1.      5.      1e4     4e4     -1e-2
 
 
-aripspec      10   0.  1.e20   C_IPspecArea    add  0
+aripspec      10   0.  1.e20   C_IPspecArea    add  0 0
 $reflectOn  " "             1
 Pspin       "s"             600     1.      20.     1e4     5e4     1e-1
 CoRotRatio  " "             1       0.      0.      20      20      1e-5
-A           "1e15"          1.      1e-5.   1e-5.   1e4     1e4     1e-5
+area        "1e15"          1.      1e-5    1e-5    1e4     1e4     1e-5
 L           "1e33"          1       0.      0.      1e10    1e10    1e-2
 M           "Msun"          1.      0.      0.      1.4     1.4     1e-4
 ABUND       " "             1.      0.      0.      5.      5.      1e-3
 cosAngle    " "             0.45    0.      0.      1.      1.      1e-3
-n           " "             0       0.      0.      5.      5.      0
-distance    "pc"            100.    1.      5.      1e4     4e4     0
+n           " "             0       0.      0.      5.      5.      -1
+distance    "pc"            100.    1.      5.      1e4     4e4     -1e-2
