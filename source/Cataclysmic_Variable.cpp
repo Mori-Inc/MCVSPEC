@@ -303,9 +303,16 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
     valarray<double> reflected_flux(n);
     valarray<double> flux_error(n);
     valarray<double> apec_parameters(3);
-    apec_parameters = {0,metalicity,0};
     valarray<double> refl_parameters(5);
-    refl_parameters = {1,0,metalicity,metalicity,incl_angle};
+
+    apec_parameters[0] = 0;
+    apec_parameters[1] = metalicity;
+    apec_parameters[2] = 0;
+    refl_parameters[0] = 1;
+    refl_parameters[1] = 0;
+    refl_parameters[2] = metalicity;
+    refl_parameters[3] = metalicity;
+    refl_parameters[4] = incl_angle;
 
     last_refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[0]/radius,2));
 
