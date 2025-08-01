@@ -183,6 +183,7 @@ void Cataclysmic_Variable::Bracket_Shock_Height(double integration_limit){
             upper_bound = shock_height;
         }
     }
+    cout << "Final landing altitude: " << x_final << endl;
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
