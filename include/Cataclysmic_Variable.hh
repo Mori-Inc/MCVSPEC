@@ -24,6 +24,7 @@ class Cataclysmic_Variable{
         // utilities
         int refl;
         Integrator accretion_column;
+        double upper_bound, lower_bound;
 
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,int);
@@ -43,6 +44,7 @@ class Cataclysmic_Variable{
         void Set_Cooling_Constants();
         void Guess_Shock_Height();
         void Update_Shock_Height(double);
+        void Bracket_Shock_Height(double);
         double Get_Landing_Altitude();
         double Get_Landing_Altitude(double);
 };

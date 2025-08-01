@@ -145,113 +145,56 @@ double Cataclysmic_Variable::Get_Landing_Altitude(){
     return accretion_column.y.back()[0] - slope*accretion_column.t.back();
 }
 
-void Cataclysmic_Variable::Shock_Height_Shooting(){
-    double upp_bound = shock_height;
-    double low_bound = shock_height;
-    double x_final = Get_Landing_Altitude(1./shock_height);
-    if(x_final < 0){
-        while(x_final < 0){
-            upp_bound *= 2;
-            Update_Shock_Height(upp_bound);
-            x_final = Get_Landing_Altitude(1./shock_height);
+void Cataclysmic_Variable::Bracket_Shock_Height(double integration_limit){
+    double height_lim = integration_limit/shock_height;
+    Update_Shock_Height((upper_bound+lower_bound)/2);
+    double x_final = Get_Landing_Altitude(height_lim);
+    // double check that we bracket the problem
+    if(x_final<0){ // double check that upper bound is an upper bound
+        lower_bound = shock_height;
+        Update_Shock_Height(upper_bound);
+        x_final = Get_Landing_Altitude(height_lim);
+        while(x_final<0){
+            upper_bound = 2*upper_bound - lower_bound;
+            lower_bound = (upper_bound+lower_bound)/2;
+            Update_Shock_Height(upper_bound);
+            x_final = Get_Landing_Altitude(height_lim);
         }
-        low_bound = upp_bound/2.;
     }
-    else{
-        while(x_final > 0){
-            low_bound /= 2.;
-            Update_Shock_Height(low_bound);
-            x_final = Get_Landing_Altitude(1./shock_height);
+    else{ // double check that the lower bound is a lower bound
+        upper_bound = shock_height;
+        Update_Shock_Height(lower_bound);
+        x_final = Get_Landing_Altitude(height_lim);
+        while(x_final>0){
+            lower_bound = 2*lower_bound - upper_bound;
+            upper_bound = (upper_bound+lower_bound)/2;
+            Update_Shock_Height(lower_bound);
+            x_final = Get_Landing_Altitude(height_lim);
         }
-        upp_bound = low_bound*2.;
     }
-    // we start with a coarse adjustment only integrating down to 1cm
-    while(upp_bound-low_bound > 10){
-        Update_Shock_Height((upp_bound+low_bound)/2);
-        x_final = Get_Landing_Altitude(1./shock_height);
+    while(upper_bound-lower_bound > 10*integration_limit){
+        Update_Shock_Height((upper_bound+lower_bound)/2);
+        x_final = Get_Landing_Altitude(height_lim);
+        cout << integration_limit << " cm: [" << lower_bound << ", " << upper_bound << "] diff = " << upper_bound-lower_bound << " x_f = " << x_final << endl;
         if(x_final < 0){
-            low_bound = shock_height;
+            lower_bound = shock_height;
         }
         else{
-            upp_bound = shock_height;
-        }
-        cout << "10cm: [" << low_bound << ", " << upp_bound << "] " << upp_bound-low_bound << endl;
-    }
-    // make sure bounds aren't now wrong
-    Update_Shock_Height((upp_bound+low_bound)/2);
-    x_final = Get_Landing_Altitude(0.1/shock_height);
-    if(x_final > 0){ // we have a new upper bound but need to double check lower bound
-        upp_bound = shock_height;
-        Update_Shock_Height(low_bound);
-        x_final = Get_Landing_Altitude(0.1/shock_height);
-        while(x_final > 0){
-            low_bound /= 2;
-            Update_Shock_Height(low_bound);
-            x_final = Get_Landing_Altitude(0.1/shock_height);
+            upper_bound = shock_height;
         }
     }
-    else{ // we have a better lower bound but need to double check the upper bound
-        low_bound = shock_height;
-        Update_Shock_Height(upp_bound);
-        x_final = Get_Landing_Altitude(0.1/shock_height);
-        while(x_final < 0){
-            upp_bound *= 2;
-            Update_Shock_Height(upp_bound);
-            x_final = Get_Landing_Altitude(0.1/shock_height);
-        }
-    }
-    // refine adjustment down to 0.1cm,
-    while(upp_bound-low_bound > 1){
-        Update_Shock_Height((upp_bound+low_bound)/2);
-        x_final = Get_Landing_Altitude(0.1/shock_height);
-        if(x_final < 0){
-            low_bound = shock_height;
-        }
-        else{
-            upp_bound = shock_height;
-        }
-         cout << "1cm: [" << low_bound << ", " << upp_bound << "] " << upp_bound-low_bound << endl;
-    }
-    // make sure bounds aren't now wrong
-    Update_Shock_Height((upp_bound+low_bound)/2);
-    x_final = Get_Landing_Altitude();
-    if(x_final > 0){ // we have a better upper bound but need to double check lower bound
-        upp_bound = shock_height;
-        Update_Shock_Height(low_bound);
-        x_final = Get_Landing_Altitude();
-        while(x_final > 0){
-            low_bound /= 2;
-            Update_Shock_Height(low_bound);
-            x_final = Get_Landing_Altitude();
-            cout << "low: " << low_bound << ", xf = " << x_final << endl;
-        }
-    }
-    else{ // we have a better lower bound but need to double check the upper bound
-        low_bound = shock_height;
-        Update_Shock_Height(upp_bound);
-        x_final = Get_Landing_Altitude();
-        while(x_final < 0){
-            upp_bound *= 2;
-            Update_Shock_Height(upp_bound);
-            x_final = Get_Landing_Altitude();
-            cout << "up: " << upp_bound << ", xf = " << x_final << endl;
-        }
-    }
+}
 
-    while(abs(x_final) > 1e-8){
-        Update_Shock_Height((upp_bound+low_bound)/2);
-        x_final = Get_Landing_Altitude();
-        if(x_final < 0){
-            low_bound = shock_height;
-        }
-        else{
-            upp_bound = shock_height;
-        }
-        cout << "1e-8: [" << low_bound << ", " << upp_bound << "] " << upp_bound-low_bound << endl;
-    }
-    Update_Shock_Height((upp_bound+low_bound)/2);
+void Cataclysmic_Variable::Shock_Height_Shooting(){
+    upper_bound = shock_height;
+    lower_bound = shock_height;
+    Bracket_Shock_Height(1.);
+    Bracket_Shock_Height(0.1);
+    Bracket_Shock_Height(0.01);
+    Bracket_Shock_Height(1e-9);
+    Update_Shock_Height((upper_bound+lower_bound)/2);
     accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
-    previous_shock_height = (upp_bound+low_bound)/2;
+    previous_shock_height = (upper_bound+lower_bound)/2;
 }
 
 void Cataclysmic_Variable::Build_Column_Profile(){
