@@ -278,7 +278,6 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*avg_atomic_charge*(total_pressure[i]-electron_pressure[i])/electron_density[i];
     }
-    /*
     double x0,x1;
     for(int i=1; i<volume.size()-1; i++){
         x0 = (altitude[i+1]+altitude[i])/2;
@@ -294,7 +293,6 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     x1 = altitude[0];
     volume[0] = accretion_area*radius*pow(1+x1/radius,area_exponent+1)/(area_exponent+1);
     volume[0] -= accretion_area*radius*pow(1+x0/radius,area_exponent+1)/(area_exponent+1);
-    */
 }
 
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
@@ -322,7 +320,7 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         apec_parameters[0] = electron_temperature[i];
         apec_parameters[1] = metalicity;
         apec_parameters[2] = 0;
-        if (apec_parameters[0] > 64.0){
+        /*if (apec_parameters[0] > 64.0){
             CXX_bremss(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
         else{
@@ -331,7 +329,7 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         //apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
         //apec_flux /= 4*pi*distance*distance;
 
-        /*if(refl==1){
+        if(refl==1){
             reflected_flux += apec_flux;
 
             refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
