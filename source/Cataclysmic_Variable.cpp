@@ -346,7 +346,10 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
             }
         }
         else{
-            flux += apec_flux;
+            for(int j=0; j<flux.size(); j++){
+                flux[j] += apec_flux[j];
+            }
+            //flux += apec_flux;
         }
         apec_flux *= 0;
     }
