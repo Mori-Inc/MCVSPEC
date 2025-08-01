@@ -30,8 +30,12 @@ Additionally, the accretion area can be specified in one of two ways. Either (in
 ## Dependencies
 * [HEASOFT](https://heasarc.gsfc.nasa.gov/docs/software/lheasoft/)
 * CMake
-* Python (recommended)
-* [Pybind11](https://pybind11.readthedocs.io/en/stable/) (recommended)
+* Python
+### Additional Dependencies For pybindings (strongly recommended)
+* [Pybind11](https://pybind11.readthedocs.io/en/stable/)
+* [NumPy](https://numpy.org)
+* [Astropy](https://docs.astropy.org/en/stable/index.html)
+* [PyAtomDB](https://atomdb.readthedocs.io/en/master/)
 
 ## Installation
 
@@ -58,19 +62,31 @@ If installing pyMCVSPEC simply add `/path/to/install/pymcvspec` to your `$PYTHON
 ## Usage
 
 ### Load the mcvspec models in xspec
-From the xspec prompt run `lmod mcvspec /path/to/install/xspec` to load the mcvspec models. You can then choose between `polarspec`, `ipsepc`, or `deqspec` depending on your source.
+From the xspec prompt run `lmod mcvspec /path/to/install/xspec` to load the mcvspec models. You can then choose between `polarspec`, `ipsepc`, `apolarspec`, or `aipspec` depending on your source.
 
 To load the python module:
 ```python
 import mcvspec
+import astropy.units as u
 # create an instace of a polar
+mass = 0.63*u.M_sun
+b_field = 13.6*u.MG
+metalicity = 0.5
+luminosity = 0.6e33*u.erg/u.s
+fractional_area = 1e-3
+cos_incl_angle = 0.5
+src_distance = 160*u.pc
 my_source = mcvspec.polar(mass, b_field, metalicity,
     luminosity, fractional_area, cos_incl_angle,
-    src_distance, reflection)
-# solve for the accretion column profile (int argument is max number of itterations for shock height determination)
-my_source.execute(10000)
+    src_distance)
+
 # get information about the thermal profile
-my_source.altitude()
-my_source.electron_temperature()
-my_source.ion_density()
+my_source.altitude
+my_source.electron_temperature
+my_source.ion_density
+
+# get spectrum
+e_bins = np.arange(3., 79., 0.4)*u.keV
+flux = my_source.spectrum(e_bins)
 ```
+Note that there is no reflection implemented in python yet
