@@ -28,7 +28,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     Cataclysmic_Variable polar(mass, radius, b_field, mdot, inverse_mag_radius, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
     polar.Shock_Height_Shooting();
     polar.Build_Column_Profile();
-    //polar.MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
+    polar.MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
     polar.Print_Properties();
 }
 

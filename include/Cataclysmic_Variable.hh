@@ -34,7 +34,7 @@ class Cataclysmic_Variable{
         valarray<double> Flow_Equation(double vel, valarray<double> pos);
         void Shock_Height_Shooting();
         void Build_Column_Profile();
-        virtual void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string);
+        void MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string);
         void Print_Properties();
 
         static double Get_Radius(double);
