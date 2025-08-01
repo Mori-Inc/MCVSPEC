@@ -299,9 +299,9 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
     int n = flux.size();
     double refl_amp, last_refl_amp, sum_refl=0, sum_weights=0;
-    valarray<double> apec_flux(n,0);
-    valarray<double> reflected_flux(n,0);
-    valarray<double> flux_error(n,0);
+    valarray<double> apec_flux(0.,n);
+    valarray<double> reflected_flux(0.,n);
+    valarray<double> flux_error(0.,n);
     valarray<double> apec_parameters(3);
     valarray<double> refl_parameters(5);
 
