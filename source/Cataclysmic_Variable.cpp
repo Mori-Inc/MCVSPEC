@@ -172,7 +172,7 @@ void Cataclysmic_Variable::Bracket_Shock_Height(double integration_limit){
             x_final = Get_Landing_Altitude(height_lim);
         }
     }
-    while((upper_bound-lower_bound > 10*integration_limit)&&(x_final>1e-8)){
+    while((upper_bound-lower_bound > 10*integration_limit)&&(abs(x_final)>1e-8)){
         Update_Shock_Height((upper_bound+lower_bound)/2);
         x_final = Get_Landing_Altitude(height_lim);
         cout << integration_limit << " cm: [" << lower_bound << ", " << upper_bound << "] diff = " << upper_bound-lower_bound << " x_f = " << x_final << endl;
