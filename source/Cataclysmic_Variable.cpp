@@ -10,6 +10,7 @@ using std::cout;
 using std::endl;
 using std::abs;
 using std::ceil;
+using std::fill;
 
 static double previous_shock_height = 0;
 
@@ -338,7 +339,7 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
                 refl_parameters[0] = sum_refl/sum_weights;
                 CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
                 flux += reflected_flux;
-                reflected_flux *= 0;
+                fill(begin(reflected_flux), end(reflected_flux), 0.);
                 sum_refl = 0;
                 sum_weights = 0;
                 last_refl_amp = refl_amp;
@@ -347,7 +348,7 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         else{
             flux += apec_flux;
         }
-        apec_flux *= 0;
+        fill(begin(apec_flux), end(apec_flux), 0.);
     }
     if(refl==1 && sum_refl>0){
         refl_parameters[0] = sum_refl/sum_weights;
