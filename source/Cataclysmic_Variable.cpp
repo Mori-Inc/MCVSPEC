@@ -279,27 +279,25 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         ion_temperature[i] = erg_to_kev*avg_atomic_charge*(total_pressure[i]-electron_pressure[i])/electron_density[i];
     }
 
-    double x[2];
+    double x0,x1;
     for(int i=1; i<volume.size()-1; i++){
-        x[0] = (altitude[i+1]+altitude[i])/2;
-        x[1] = (altitude[i-1]+altitude[i])/2;
-        volume[i] = accretion_area*radius*pow(1+x[1]/radius,area_exponent+1)/(area_exponent+1);
-        volume[i] -= accretion_area*radius*pow(1+x[0]/radius,area_exponent+1)/(area_exponent+1);
+        x0 = (altitude[i+1]+altitude[i])/2;
+        x1 = (altitude[i-1]+altitude[i])/2;
+        volume[i] = accretion_area*radius*pow(1+x1/radius,area_exponent+1)/(area_exponent+1);
+        volume[i] -= accretion_area*radius*pow(1+x0/radius,area_exponent+1)/(area_exponent+1);
     }
-    x[0] = x[1];
-    x[1] = altitude[volume.size()-1];
-    volume[volume.size()-1] = accretion_area*radius*pow(1+x[1]/radius,area_exponent+1)/(area_exponent+1);
-    volume[volume.size()-1] -= accretion_area*radius*pow(1+x[0]/radius,area_exponent+1)/(area_exponent+1);
-    x[0] = (altitude[0]+altitude[1])/2;
-    x[1] = altitude[0];
-    volume[0] = accretion_area*radius*pow(1+x[1]/radius,area_exponent+1)/(area_exponent+1);
-    volume[0] -= accretion_area*radius*pow(1+x[0]/radius,area_exponent+1)/(area_exponent+1);
+    x0 = x1;
+    x1 = altitude[volume.size()-1];
+    volume[volume.size()-1] = accretion_area*radius*pow(1+x1/radius,area_exponent+1)/(area_exponent+1);
+    volume[volume.size()-1] -= accretion_area*radius*pow(1+x0/radius,area_exponent+1)/(area_exponent+1);
+    x0 = (altitude[0]+altitude[1])/2;
+    x1 = altitude[0];
+    volume[0] = accretion_area*radius*pow(1+x1/radius,area_exponent+1)/(area_exponent+1);
+    volume[0] -= accretion_area*radius*pow(1+x0/radius,area_exponent+1)/(area_exponent+1);
 }
 
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
     int n = flux.size();
-    double segment_volume = 0;
-    double segment_top, segment_bottom;
     double refl_amp, last_refl_amp, sum_refl=0, sum_weights=0;
     valarray<double> apec_flux(n);
     valarray<double> reflected_flux(n);
