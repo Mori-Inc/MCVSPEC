@@ -317,6 +317,7 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
     last_refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[0]/radius,2));
 
     for(int i=0; i<altitude.size(); i++){
+        cout << flux.size() << " " << apec_flux.size() << " " << reflected_flux.size() << " " << flux_error.size() << endl;
         apec_parameters[0] = electron_temperature[i];
         if (apec_parameters[0] > 64.0){
             CXX_bremss(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
