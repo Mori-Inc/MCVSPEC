@@ -327,10 +327,10 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         else{
             CXX_apec(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
-        apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
-        apec_flux /= 4*pi*distance*distance;
+        //apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
+        //apec_flux /= 4*pi*distance*distance;
 
-        if(refl==1){
+        /*if(refl==1){
             reflected_flux += apec_flux;
 
             refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
@@ -349,14 +349,14 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         }
         else{
             flux += apec_flux;
-        }
+            }*/
         apec_flux *= 0;
     }
-    if(refl==1 && sum_refl>0){
+    /*if(refl==1 && sum_refl>0){
         refl_parameters[0] = sum_refl/sum_weights;
         CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
         flux += reflected_flux;
-    }
+        }*/
 }
 
 void Cataclysmic_Variable::Print_Properties(){
