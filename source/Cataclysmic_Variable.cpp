@@ -324,8 +324,6 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
             sum_refl += refl_amp*ion_density[i]*electron_density[i]*sqrt(electron_temperature[i])*volume[i];
             sum_weights += ion_density[i]*electron_density[i]*sqrt(electron_temperature[i])*volume[i];
 
-            cout << abs(refl_amp-last_refl_amp) << endl;
-
             if(abs(refl_amp-last_refl_amp)>reflect_spacing){
                 refl_parameters[0] = sum_refl/sum_weights;
                 CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
