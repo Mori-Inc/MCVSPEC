@@ -278,7 +278,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*avg_atomic_charge*(total_pressure[i]-electron_pressure[i])/electron_density[i];
     }
-
+    /*
     double x0,x1;
     for(int i=1; i<volume.size()-1; i++){
         x0 = (altitude[i+1]+altitude[i])/2;
@@ -294,6 +294,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     x1 = altitude[0];
     volume[0] = accretion_area*radius*pow(1+x1/radius,area_exponent+1)/(area_exponent+1);
     volume[0] -= accretion_area*radius*pow(1+x0/radius,area_exponent+1)/(area_exponent+1);
+    */
 }
 
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
