@@ -176,7 +176,6 @@ void Cataclysmic_Variable::Bracket_Shock_Height(double integration_limit){
         while(upper_bound-lower_bound > 10*integration_limit){
             Update_Shock_Height((upper_bound+lower_bound)/2);
             x_final = Get_Landing_Altitude(height_lim);
-            cout << integration_limit << " cm: [" << lower_bound << ", " << upper_bound << "] diff = " << upper_bound-lower_bound << " x_f = " << x_final << endl;
             if(x_final < 0){
                 lower_bound = shock_height;
             }
@@ -189,7 +188,6 @@ void Cataclysmic_Variable::Bracket_Shock_Height(double integration_limit){
         while(x_final>1e-8){
             Update_Shock_Height((upper_bound+lower_bound)/2);
             x_final = Get_Landing_Altitude();
-            cout << integration_limit << " cm: [" << lower_bound << ", " << upper_bound << "] diff = " << upper_bound-lower_bound << " x_f = " << x_final << endl;
             if(x_final < 0){
                 lower_bound = shock_height;
             }
@@ -198,7 +196,6 @@ void Cataclysmic_Variable::Bracket_Shock_Height(double integration_limit){
             }
         }
     }
-    cout << "Final landing altitude: " << x_final << endl;
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
@@ -266,6 +263,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     ion_density.resize(n_points);
     electron_temperature.resize(n_points);
     ion_temperature.resize(n_points);
+    volume.resize(n_points);
 
     double mdot;
 
