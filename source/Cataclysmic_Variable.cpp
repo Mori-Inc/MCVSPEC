@@ -180,7 +180,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
     // make sure bounds aren't now wrong
     Update_Shock_Height((upp_bound+low_bound)/2);
     x_final = Get_Landing_Altitude(0.1/shock_height);
-    if(x_final > 0){ // we have a better upper bound but need to double check lower bound
+    if(x_final > 0){ // we have a new upper bound but need to double check lower bound
         upp_bound = shock_height;
         Update_Shock_Height(low_bound);
         x_final = Get_Landing_Altitude(0.1/shock_height);
@@ -223,7 +223,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
             low_bound /= 2;
             Update_Shock_Height(low_bound);
             x_final = Get_Landing_Altitude();
-            cout << "low: " << low_bound << endl;
+            cout << "low: " << low_bound << ", xf = " << x_final << endl;
         }
     }
     else{ // we have a better lower bound but need to double check the upper bound
@@ -234,7 +234,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
             upp_bound *= 2;
             Update_Shock_Height(upp_bound);
             x_final = Get_Landing_Altitude();
-             cout << "up: " << upp_bound << endl;
+            cout << "up: " << upp_bound << ", xf = " << x_final << endl;
         }
     }
 
