@@ -300,7 +300,7 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
     int n = flux.size();
     double refl_amp, last_refl_amp, sum_refl=0, sum_weights=0;
     valarray<double> apec_flux(0.,n);
-    //valarray<double> reflected_flux(0.,n);
+    valarray<double> reflected_flux(0.,n);
     valarray<double> flux_error(0.,n);
     valarray<double> apec_parameters(3);
     valarray<double> refl_parameters(5);
@@ -317,8 +317,10 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
     last_refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[0]/radius,2));
 
     for(int i=0; i<altitude.size(); i++){
-        //cout << flux.size() << " " << apec_flux.size() << " " << reflected_flux.size() << " " << flux_error.size() << endl;
+        cout << flux.size() << " " << apec_flux.size() << " " << reflected_flux.size() << " " << flux_error.size() << endl;
         apec_parameters[0] = electron_temperature[i];
+        apec_parameters[1] = metalicity;
+        apec_parameters[2] = 0;
         if (apec_parameters[0] > 64.0){
             CXX_bremss(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
@@ -328,7 +330,7 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
         apec_flux /= 4*pi*distance*distance;
 
-        /*if(refl==1){
+        if(refl==1){
             reflected_flux += apec_flux;
 
             refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
@@ -345,20 +347,16 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
                 last_refl_amp = refl_amp;
             }
         }
-        else{*/
-            for(int j=0; j<flux.size(); j++){
-                flux[j] += apec_flux[j];
-                apec_flux[j] = 0.;
-            }
-            //flux += apec_flux;
-        //}
-        //apec_flux *= 0;
+        else{
+            flux += apec_flux;
+        }
+        apec_flux *= 0;
     }
-    /*if(refl==1 && sum_refl>0){
+    if(refl==1 && sum_refl>0){
         refl_parameters[0] = sum_refl/sum_weights;
         CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
         flux += reflected_flux;
-        }*/
+    }
 }
 
 void Cataclysmic_Variable::Print_Properties(){
