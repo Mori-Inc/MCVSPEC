@@ -223,6 +223,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
             low_bound /= 2;
             Update_Shock_Height(low_bound);
             x_final = Get_Landing_Altitude();
+            cout << "low: " << low_bound << endl;
         }
     }
     else{ // we have a better lower bound but need to double check the upper bound
@@ -233,6 +234,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
             upp_bound *= 2;
             Update_Shock_Height(upp_bound);
             x_final = Get_Landing_Altitude();
+             cout << "up: " << upp_bound << endl;
         }
     }
 
