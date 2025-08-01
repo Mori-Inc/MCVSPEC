@@ -172,15 +172,30 @@ void Cataclysmic_Variable::Bracket_Shock_Height(double integration_limit){
             x_final = Get_Landing_Altitude(height_lim);
         }
     }
-    while((upper_bound-lower_bound > 10*integration_limit)&&(abs(x_final)>1e-8)){
-        Update_Shock_Height((upper_bound+lower_bound)/2);
-        x_final = Get_Landing_Altitude(height_lim);
-        cout << integration_limit << " cm: [" << lower_bound << ", " << upper_bound << "] diff = " << upper_bound-lower_bound << " x_f = " << x_final << endl;
-        if(x_final < 0){
-            lower_bound = shock_height;
+    if(integration_limit>0){
+        while(upper_bound-lower_bound > 10*integration_limit){
+            Update_Shock_Height((upper_bound+lower_bound)/2);
+            x_final = Get_Landing_Altitude(height_lim);
+            cout << integration_limit << " cm: [" << lower_bound << ", " << upper_bound << "] diff = " << upper_bound-lower_bound << " x_f = " << x_final << endl;
+            if(x_final < 0){
+                lower_bound = shock_height;
+            }
+            else{
+                upper_bound = shock_height;
+            }
         }
-        else{
-            upper_bound = shock_height;
+    }
+    else{
+        while(x_final>1e-8){
+            Update_Shock_Height((upper_bound+lower_bound)/2);
+            x_final = Get_Landing_Altitude();
+            cout << integration_limit << " cm: [" << lower_bound << ", " << upper_bound << "] diff = " << upper_bound-lower_bound << " x_f = " << x_final << endl;
+            if(x_final < 0){
+                lower_bound = shock_height;
+            }
+            else{
+                upper_bound = shock_height;
+            }
         }
     }
     cout << "Final landing altitude: " << x_final << endl;
@@ -199,7 +214,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
     Bracket_Shock_Height(1.);
     Bracket_Shock_Height(0.1);
     Bracket_Shock_Height(0.01);
-    Bracket_Shock_Height(1e-9);
+    Bracket_Shock_Height(0);
     Update_Shock_Height((upper_bound+lower_bound)/2);
     accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
     previous_shock_height = (upper_bound+lower_bound)/2;
