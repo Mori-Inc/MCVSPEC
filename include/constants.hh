@@ -26,4 +26,4 @@ const double pc_to_cm = 3.0856775814913673e18;
 // constants of the model
 const double gaunt_factor = 1.2;
 const double kT_grid_spacing = 0.5; // keV
-const double altitude_diff = 0.01; // allowable fractional difference in altitude
+const double reflect_spacing = 0.01; // allowable difference in reflection altitude

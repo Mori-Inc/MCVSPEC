@@ -269,7 +269,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
     double mdot;
 
-    for(int i = 0; i < accretion_column.t_eval.size(); i++){
+    for(int i=0; i<accretion_column.t_eval.size(); i++){
         velocity[i] = accretion_column.t_eval[i]*shock_speed;
         altitude[i] = accretion_column.y_eval[i][0]*shock_height;
         total_pressure[i] = shock_mdot*shock_speed*accretion_column.y_eval[i][1];
@@ -280,6 +280,22 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*avg_atomic_charge*(total_pressure[i]-electron_pressure[i])/electron_density[i];
     }
+
+    double x[2];
+    for(int i=1; i<volume.size()-1; i++){
+        x[0] = (altitude[i+1]+altitude[i])/2;
+        x[1] = (altitude[i-1]+altitude[i])/2;
+        volume[i] = accretion_area*radius*pow(1+x[1]/radius,area_exponent+1)/(area_exponent+1);
+        volume[i] -= accretion_area*radius*pow(1+x[0]/radius,area_exponent+1)/(area_exponent+1);
+    }
+    x[0] = x[1];
+    x[1] = altitude[volume.size()-1];
+    volume[volume.size()-1] = accretion_area*radius*pow(1+x[1]/radius,area_exponent+1)/(area_exponent+1);
+    volume[volume.size()-1] -= accretion_area*radius*pow(1+x[0]/radius,area_exponent+1)/(area_exponent+1);
+    x[0] = (altitude[0]+altitude[1])/2;
+    x[1] = altitude[0];
+    volume[0] = accretion_area*radius*pow(1+x[1]/radius,area_exponent+1)/(area_exponent+1);
+    volume[0] -= accretion_area*radius*pow(1+x[0]/radius,area_exponent+1)/(area_exponent+1);
 }
 
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
@@ -290,79 +306,49 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
     valarray<double> apec_flux(n);
     valarray<double> reflected_flux(n);
     valarray<double> flux_error(n);
-    valarray<double> apec_parameters(3);
-    valarray<double> refl_parameters(5);
+    valarray<double> apec_parameters = {0,metalicity,0};
+    valarray<double> refl_parameters = {1,0,metalicity,metalicity,incl_angle};
 
-    // determine how many reflections we need
     last_refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[0]/radius,2));
 
-
-    refl_parameters[0] = 1;
-    refl_parameters[1] = 0.;
-    refl_parameters[2] = metalicity;
-    refl_parameters[3] = metalicity;
-    refl_parameters[4] = incl_angle;
-
     for(int i=0; i<altitude.size(); i++){
-        for(int j=0; j<n; j++){
-            reflected_flux[j] += apec_flux[j];
-            apec_flux[j] = 0;
-        }
-
         apec_parameters[0] = electron_temperature[i];
-        apec_parameters[1] = metalicity;
-        apec_parameters[2] = 0.0;
-
         if (apec_parameters[0] > 64.0){
             CXX_bremss(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
         else{
             CXX_apec(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
-
-        // normalizes spectrum appropriately
-        if(i==0){
-            segment_top = altitude[0];
-            segment_bottom = (altitude[1]+altitude[0])/2;
-        }
-        else if(i==altitude.size()-1){
-            segment_top = (altitude[i]+altitude[i-1])/2;
-            segment_bottom = altitude[i];
-        }
-        else{
-            segment_top = (altitude[i]+altitude[i-1])/2;
-            segment_bottom = (altitude[i]+altitude[i+1])/2;
-        }
-        segment_volume = (accretion_area*radius/(area_exponent+1))*(pow(1+segment_top/radius,area_exponent+1)-pow(1+segment_bottom/radius,area_exponent+1));
-        apec_flux *= segment_volume*ion_density[i]*electron_density[i]*1e-14;
+        apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
         apec_flux /= 4*pi*distance*distance;
 
         if(refl==1){
+            reflected_flux += apec_flux;
+            apec_flux=0;
+
             refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
-            if(abs(refl_amp-last_refl_amp)/last_refl_amp > altitude_diff){
+            sum_refl += refl_amp*ion_density[i]*electron_density[i]*sqrt(electron_temperature[i])*volume[i];
+            sum_weights += ion_density[i]*electron_density[i]*sqrt(electron_temperature[i])*volume[i];
+
+            if(abs(refl_amp-last_refl_amp)>reflect_spacing){
                 refl_parameters[0] = sum_refl/sum_weights;
                 CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
-                for(int j=0; j<n; j++){
-                    flux[j] += reflected_flux[j];
-                    reflected_flux[j] = 0;
-                }
+                flux += reflected_flux;
+                reflected_flux=0;
+                sum_refl = 0;
+                sum_weights = 0;
                 last_refl_amp = refl_amp;
-                sum_refl = refl_amp*ion_density[i]*electron_density[i]*sqrt(electron_temperature[i]);
-                sum_weights = ion_density[i]*electron_density[i]*sqrt(electron_temperature[i]);
-            }
-            else{
-                sum_refl += refl_amp*ion_density[i]*electron_density[i]*sqrt(electron_temperature[i]);
-                sum_weights += ion_density[i]*electron_density[i]*sqrt(electron_temperature[i]);
             }
         }
+        else{
+            flux += apec_flux;
+            apec_flux = 0;
+        }
     }
-
-    if(refl==1){
+    if(refl==1 && sum_refl>0){
         refl_parameters[0] = sum_refl/sum_weights;
         CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
-    }
-    for(int j=0; j<n; j++){
-        flux[j] += reflected_flux[j];
+        flux += reflected_flux;
     }
 }
 
