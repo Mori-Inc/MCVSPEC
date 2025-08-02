@@ -1,4 +1,4 @@
-#include "Cataclysmic_Variable.hh"
+#include "XS_Cataclysmic_Variable.hh"
 
 extern "C"
 void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_num, RealArray& flux, RealArray& err, const string& init_string)

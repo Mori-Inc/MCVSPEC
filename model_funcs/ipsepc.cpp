@@ -1,4 +1,4 @@
-#include "Cataclysmic_Variable.hh"
+#include "XS_Cataclysmic_Variable.hh"
 #include "constants.hh"
 
 extern "C"
