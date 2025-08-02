@@ -297,15 +297,13 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
 void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
     int n = flux.size();
-    double refl_amp, last_refl_amp, sum_refl=0, sum_weights=0;
+    double refl_amp;
     valarray<double> apec_flux(n);
     valarray<double> reflected_flux(n);
     valarray<double> flux_error(n);
     valarray<double> apec_parameters = {0,metalicity,0};
     valarray<double> refl_parameters = {-1,0,metalicity,metalicity,incl_angle};
-    // refl_amp = -1 means only return reflected spectrum, this ensures that reflection can be done seperatly to apec
-
-    last_refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[0]/radius,2));
+    // refl_amp = -1 means only return reflected spectrum, this ensures that reflection can be done separately to apec
 
     for(int i=0; i<altitude.size(); i++){
         apec_parameters[0] = electron_temperature[i];
@@ -326,7 +324,6 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         apec_flux *= 0;
     }
     if(refl==1){
-        refl_parameters[0] = sum_refl/sum_weights;
         CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
         flux += reflected_flux;
     }
