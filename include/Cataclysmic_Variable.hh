@@ -26,7 +26,6 @@ class Cataclysmic_Variable{
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,int);
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);
-        virtual void Set_Abundances(double);
 
         valarray<double> Flow_Equation(double vel, valarray<double> pos);
         void Shock_Height_Shooting();
