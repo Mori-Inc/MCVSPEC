@@ -1,5 +1,5 @@
 polarspec   9   0.  1.e20   C_Polarspec add  0 0
-$reflectOn  " "             0
+$reflectOn  " "             1
 B           "MG"            1.      0.      0.      1e3     1e3     1e-2
 f           " "             1e-3    0.      0.      0.1     1.      1e-5
 L           "1e33"          1       0.      0.      1e10    1e10    1e-2
@@ -24,7 +24,7 @@ distance    "pc"            100.    1.      5.      1e4     4e4     -1e-2
 
 
 apolarspec   9   0.  1.e20   C_PolarspecArea add  0 0
-$reflectOn  " "             0
+$reflectOn  " "             1
 B           "MG"            1.      0.      0.      1e3     1e3     1e-2
 area        "1e15"          1.      1e-5    1e-5    1e4     1e4     1e-5
 L           "1e33"          1       0.      0.      1e10    1e10    1e-2
