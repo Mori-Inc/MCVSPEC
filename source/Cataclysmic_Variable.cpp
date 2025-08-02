@@ -242,7 +242,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     volume.resize(n_points);
     cyclotron_ratio.resize(n_points);
 
-    double mdot;
+    double mdot, nd_dens;
 
     for(int i=0; i<accretion_column.t_eval.size(); i++){
         velocity[i] = accretion_column.t_eval[i]*shock_speed;
@@ -254,7 +254,8 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         ion_density[i] = electron_density[i]/avg_atomic_charge;
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*avg_atomic_charge*(total_pressure[i]-electron_pressure[i])/electron_density[i];
-        cyclotron_ratio[i] = cooling_ratio*electron_pressure[i]*electron_pressure[i]*pow(mdot/velocity[i],-3.85)*pow(1+altitude[i]/radius,-8.55-0.425*area_exponent);
+        nd_dens = pow((1+non_dim_radius)/(accretion_column.y_eval[i][0]+non_dim_radius), area_exponent)/accretion_column.t_eval[i];
+        cyclotron_ratio[i] = cooling_ratio*accretion_column.y_eval[i][2]*accretion_column.y_eval[i][2]*pow(nd_dens,-3.85)*pow(1+altitude[i]/radius,-8.55-0.425*area_exponent);
     }
     double x0,x1;
     for(int i=1; i<volume.size()-1; i++){
