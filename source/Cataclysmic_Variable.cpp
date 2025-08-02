@@ -302,7 +302,8 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
     valarray<double> reflected_flux(n);
     valarray<double> flux_error(n);
     valarray<double> apec_parameters = {0,metalicity,0};
-    valarray<double> refl_parameters = {1,0,metalicity,metalicity,incl_angle};
+    valarray<double> refl_parameters = {-1,0,metalicity,metalicity,incl_angle};
+    // refl_amp = -1 means only return reflected spectrum, this ensures that reflection can be done seperatly to apec
 
     last_refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[0]/radius,2));
 
@@ -316,30 +317,15 @@ void Cataclysmic_Variable::MCVspec_Spectrum(const RealArray& energy, const int s
         }
         apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
         apec_flux /= 4*pi*distance*distance;
+        flux += apec_flux;
 
         if(refl==1){
-            reflected_flux += apec_flux;
-
             refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
-            sum_refl += refl_amp*ion_density[i]*electron_density[i]*sqrt(electron_temperature[i])*volume[i];
-            sum_weights += ion_density[i]*electron_density[i]*sqrt(electron_temperature[i])*volume[i];
-
-            if(abs(refl_amp-last_refl_amp)>reflect_spacing){
-                refl_parameters[0] = sum_refl/sum_weights;
-                CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
-                flux += reflected_flux;
-                reflected_flux *= 0;
-                sum_refl = 0;
-                sum_weights = 0;
-                last_refl_amp = refl_amp;
-            }
+            reflected_flux += refl_amp*apec_flux;
         }
-        else{
-            flux += apec_flux;
-            }
         apec_flux *= 0;
     }
-    if(refl==1 && sum_refl>0){
+    if(refl==1){
         refl_parameters[0] = sum_refl/sum_weights;
         CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
         flux += reflected_flux;
