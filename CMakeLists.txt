@@ -74,6 +74,7 @@ if(BUILD_XSMODEL)
                     ${CMAKE_SOURCE_DIR}/model_funcs/ipsepc.cpp;
                     ${CMAKE_SOURCE_DIR}/model_funcs/mcvspec.dat)
     set(HEADER_FILES ${CMAKE_SOURCE_DIR}/include/Cataclysmic_Variable.hh;
+                    ${CMAKE_SOURCE_DIR}/include/XS_Cataclysmic_Variable.hh;
                     ${CMAKE_SOURCE_DIR}/include/integration.hh;
                     ${CMAKE_SOURCE_DIR}/include/constants.hh;
                     ${CMAKE_SOURCE_DIR}/include/tableau.hh;
