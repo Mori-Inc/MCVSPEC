@@ -16,6 +16,7 @@ class Cataclysmic_Variable{
         double avg_ion_mass, avg_atomic_charge;
         double density_const, force_const, cooling_ratio_const, coulomb_log_const, exchange_const, bremss_const;
         double cooling_ratio, shock_mdot;
+        double total_cyclotron_to_brems_ratio;
         // thermal profile
         valarray<double> velocity, altitude, electron_temperature, ion_temperature, electron_density, ion_density, electron_pressure, total_pressure, volume, cyclotron_ratio;
         // utilities

@@ -58,8 +58,8 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         py::array_t<double> Get_Electron_Pressure(){
             return Valarray_to_Numpy(&electron_pressure);
         }
-        py::array_t<double> Get_Cyclotron_Ratio(){
-            return Valarray_to_Numpy(&cyclotron_ratio);
+        double Get_Cyclotron_Ratio(){
+            return total_cyclotron_to_brems_ratio;
         }
         double Get_Radius(){
             return radius;

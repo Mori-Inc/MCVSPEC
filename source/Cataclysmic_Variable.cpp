@@ -278,15 +278,16 @@ void Cataclysmic_Variable::Print_Properties(){
     cout << "===================================================" << endl;
     cout << "                   mCV Properties                  " << endl;
     cout << "===================================================" << endl;
-    cout << " mass:              " << mass/m_sol << " M_solar" << endl;
-    cout << " radius:            " << radius/r_sol << " R_solar" << endl;
-    cout << " B_field:           " << b_field/1e6 << " MG" << endl;
+    cout << " mass:               " << mass/m_sol << " M_solar" << endl;
+    cout << " radius:             " << radius/r_sol << " R_solar" << endl;
+    cout << " B_field:            " << b_field/1e6 << " MG" << endl;
     if(inverse_mag_radius != 0){
-        cout << " R_m/R:             " << (1./inverse_mag_radius)/radius << endl;
+        cout << " R_m/R:              " << (1./inverse_mag_radius)/radius << endl;
     }
-    cout << " accretion rate:    " << accretion_rate << " g/s" << endl;
-    cout << " accretion rate:    " << shock_mdot << "-->" << accretion_rate/accretion_area << " g/cm2/s" << endl;
-    cout << " shock height:      " << shock_height/radius << " (h/R_wd)" << endl;
-    cout << " shock temperature: " << electron_temperature[0] << " keV" << endl;
-    cout << " cooling ratio:     " << cooling_ratio << endl;
+    cout << " accretion rate:     " << accretion_rate << " g/s" << endl;
+    cout << " accretion rate:     " << shock_mdot << "-->" << accretion_rate/accretion_area << " g/cm2/s" << endl;
+    cout << " shock height:       " << shock_height/radius << " (h/R_wd)" << endl;
+    cout << " shock temperature:  " << electron_temperature[0] << " keV" << endl;
+    cout << " cooling ratio:      " << cooling_ratio << endl;
+    cout << " cycl to brems flux: " << total_cyclotron_to_brems_ratio << endl;
 }

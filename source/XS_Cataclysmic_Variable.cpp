@@ -25,6 +25,7 @@ void XS_Cataclysmic_Variable::Set_Abundances(double metalicity){
 void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
     int n = flux.size();
     double refl_amp;
+    double total_brems_flux;
     valarray<double> apec_flux(n);
     valarray<double> reflected_flux(n);
     valarray<double> flux_error(n);
@@ -42,6 +43,8 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
         }
         apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
         apec_flux /= 4*pi*distance*distance;
+        total_cyclotron_to_brems_ratio += cyclotron_ratio[i]*volume[i]*ion_density[i]*electron_density[i];
+        total_brems_flux += volume[i]*ion_density[i]*electron_density[i];
         flux += apec_flux;
 
         if(refl==1){
@@ -54,4 +57,5 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
         CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
         flux += reflected_flux;
     }
+    total_cyclotron_to_brems_ratio /= total_brems_flux;
 }
