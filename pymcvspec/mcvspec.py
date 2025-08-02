@@ -34,7 +34,7 @@ class cataclysmic_variable:
         self.n = area_exponent
         self.cos_incl = cos_inclination_angle
         self.distance = distance.to(u.pc)
-        if magnetospheric_radius==0:
+        if magnetospheric_radius.value==0:
             irm = 0./u.cm
         else:
             irm = 1/magnetospheric_radius
@@ -49,6 +49,7 @@ class cataclysmic_variable:
         self.ion_density = self.cpp_impl.get_ion_density()/u.cm**3
         self.total_pressure = self.cpp_impl.get_total_pressure()*u.dyne/u.cm**2
         self.electron_pressure = self.cpp_impl.get_electron_pressure()*u.dyne/u.cm**2
+        self.cyclotron_ratio = self.cpp_impl.get_cyclotron_ratio()
     @u.quantity_input
     def spectrum(self, energy_bins:u.Quantity[u.keV]) -> u.Quantity[1/u.s/u.keV]:
         session = pyatomdb.spectrum.CIESession()

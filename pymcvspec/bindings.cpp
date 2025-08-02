@@ -58,6 +58,9 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         py::array_t<double> Get_Electron_Pressure(){
             return Valarray_to_Numpy(&electron_pressure);
         }
+        py::array_t<double> Get_Cyclotron_Ratio(){
+            return Valarray_to_Numpy(&cyclotron_ratio);
+        }
         double Get_Radius(){
             return radius;
         }
@@ -87,6 +90,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("get_ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
         .def("get_electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
         .def("get_total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
+        .def("get_cyclotron_ratio", &Py_Cataclysmic_Variable::Get_Cyclotron_Ratio)
         .def("get_radius", &Py_Cataclysmic_Variable::Get_Radius)
         .def("get_m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
         .def("get_shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
