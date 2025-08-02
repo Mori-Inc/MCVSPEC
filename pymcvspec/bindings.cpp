@@ -22,7 +22,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             abundances.resize(atomic_charge.size());
             abundances = {1.00e+00, 9.77e-02, m*3.63e-04, m*1.12e-04, m*8.51e-04, m*1.23e-04,
                           m*3.80e-05, m*2.95e-06, m*3.55e-05, m*1.62e-05, m*3.63e-06, m*2.29e-06,
-                          m*4.68e-05, m*1.78e-06};
+                          m*4.68e-05, m*1.78e-06}; // taken from Anders & Grevesse (1989) DOI: 10.1016/0016-7037(89)90286-X
             abundances = abundances/abundances.sum();
             Set_Cooling_Constants();
         }

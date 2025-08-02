@@ -1,4 +1,4 @@
-#include "Cataclysmic_Variable.hh"
+#include "XS_Cataclysmic_Variable.hh"
 #include "constants.hh"
 
 extern "C"
@@ -25,11 +25,11 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, inverse_mag_radius);
     double b_field = sqrt(32*mdot*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
 
-    Cataclysmic_Variable polar(mass, radius, b_field, mdot, inverse_mag_radius, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
-    polar.Shock_Height_Shooting();
-    polar.Build_Column_Profile();
-    polar.MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
-    polar.Print_Properties();
+    XS_Cataclysmic_Variable intermediate_polar(mass, radius, b_field, mdot, inverse_mag_radius, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
+    intermediate_polar.Shock_Height_Shooting();
+    intermediate_polar.Build_Column_Profile();
+    intermediate_polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
+    intermediate_polar.Print_Properties();
 }
 
 extern "C"
@@ -54,9 +54,9 @@ void IPspecArea(const RealArray& energy, const RealArray& params, int spectrum_n
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, inverse_mag_radius);
     double b_field = sqrt(32*mdot*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
 
-    Cataclysmic_Variable polar(mass, radius, b_field, mdot, inverse_mag_radius, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
-    polar.Shock_Height_Shooting();
-    polar.Build_Column_Profile();
-    polar.MCVspec_Spectrum(energy, spectrum_num, flux, init_string);
-    polar.Print_Properties();
+    XS_Cataclysmic_Variable intermediate_polar(mass, radius, b_field, mdot, inverse_mag_radius, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
+    intermediate_polar.Shock_Height_Shooting();
+    intermediate_polar.Build_Column_Profile();
+    intermediate_polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
+    intermediate_polar.Print_Properties();
 }

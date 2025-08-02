@@ -2,7 +2,9 @@
 
 ## Introduction
 MCVSPEC is a model for the post-shock accretion flow in magnetic Cataclysmic Variables (mCVs).
-It solves for the full thermal profile of the post-shock accretion column (PSAC) and produces an X-Ray spectrum by convolving the thermal profile with the optically-thin thermal bremsstrahlung spectrum produced by APEC. Additioanlly, MCVSPEC is capable of reflecting the PSAC column off the WD surface.
+It solves for the full thermal profile of the post-shock accretion column (PSAC) and can produce an X-Ray spectrum from that profile. Currently MCVSPEC supports two interfaces: python and xspec. These interfaces are not totally equivalent (in particular the python interface provides more flexible accsess to the thermal profiles while the xspec interface provides a more accurate spectrum) so it is recommended that both are installed where possible.
+
+## XSPEC Interface
 
 MCVSPEC contains two models: `polarspec` and `ipsepc` which are used for their respective class of objects. Both models share the common inputs:
 
@@ -27,11 +29,16 @@ The magnetic field strength is determined differently for each class of mCV.
 
 Additionally, the accretion area can be specified in one of two ways. Either (in the case of `ipsepc` and `polarspec`) the fractional accretion area (`f`) can be specified or (in the case of `aripsepc` and `arpolarspec`)the accretion area (A) in units of 10<sup>15</sup> cm<sup>2</sup>.
 
+## Python Interface
+
+MCVSPECs python interface utilizes `AtomDB`s python api to generate the primary thermal X-Ray spectrum but has no implementation for X-Ray reflection at this time.
+
 ## Dependencies
-* [HEASOFT](https://heasarc.gsfc.nasa.gov/docs/software/lheasoft/)
 * CMake
 * Python
-### Additional Dependencies For pybindings (strongly recommended)
+### XSPEC Interface
+* [HEASOFT](https://heasarc.gsfc.nasa.gov/docs/software/lheasoft/)
+### Python Interface
 * [Pybind11](https://pybind11.readthedocs.io/en/stable/)
 * [NumPy](https://numpy.org)
 * [Astropy](https://docs.astropy.org/en/stable/index.html)
@@ -43,26 +50,26 @@ Additionally, the accretion area can be specified in one of two ways. Either (in
 We will assume that the repository is located in `/path/to/MCVSPEC`. You will also want to create a build directory (`/path/to/MCVSPEC/build` is fine, but it can be anywhere)
 
 ### Build MCVSPEC
-`HEASoft` must be initialized and (optionally but highly recommended) the virtual environment you wish to install pyMCVSPEC to should be activated.
-
 From your build directory execute
 
 `cmake /path/to/MCVSPEC` (optionally specify an installation directory with `-DCMAKE_INSTALL_PREFIX`)
 
-`make`
+By default both the python and xspec interface will be built which require that cmake can find `HEASoft` and `pybind11` respectively. `HEASoft` is found through `$HEADAS` environmental variable. If you would like to turn off either of the interfaces it can be done with the cmake variables BUILD_PYBINDINGS and
+BUILD_XSMODEL.
 
-`make install`
+After cmake configures your build simply run `make` and `make install`.
 
 `cmake` will execute the `HEASoft` utility `initpackage` supplying your install directory with the necessary build files.
 `make` will execute `hmake` producing the mcvspec xspec library.
 
 ### Initialize Package
 If installing pyMCVSPEC simply add `/path/to/install/pymcvspec` to your `$PYTHONPATH`
+For the XSPEC interface one can run, from the xspec prompt, `lmod mcvspec /path/to/install/xspec` to load the mcvspec models into their xspec session. If you would like to configure XSPEC to load mcvspec on start you can always add `load /path/to/install/xspec/libmcvspec.dylib` the `global_customize.tcl` file in `HEASoft` (described in the "Customizing system-wide" section of the XSPEC manual)
 
 ## Usage
 
 ### Load the mcvspec models in xspec
-From the xspec prompt run `lmod mcvspec /path/to/install/xspec` to load the mcvspec models. You can then choose between `polarspec`, `ipsepc`, `apolarspec`, or `aipspec` depending on your source.
+Once loaded into XSPEC you can then choose between `polarspec`, `ipsepc`, `apolarspec`, or `aipspec` depending on your source.
 
 To load the python module:
 ```python
