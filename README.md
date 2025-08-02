@@ -4,35 +4,6 @@
 MCVSPEC is a model for the post-shock accretion flow in magnetic Cataclysmic Variables (mCVs).
 It solves for the full thermal profile of the post-shock accretion column (PSAC) and can produce an X-Ray spectrum from that profile. Currently MCVSPEC supports two interfaces: python and xspec. These interfaces are not totally equivalent (in particular the python interface provides more flexible accsess to the thermal profiles while the xspec interface provides a more accurate spectrum) so it is recommended that both are installed where possible.
 
-## XSPEC Interface
-
-MCVSPEC contains two models: `polarspec` and `ipsepc` which are used for their respective class of objects. Both models share the common inputs:
-
-| Variable       | Units                  | Description                                                           |
-|----------------|------------------------|-----------------------------------------------------------------------|
-| `reflectOn`    | 0, 1                   | Toggle reflection                                                     |
-| `M`            | Solar masses (M☉)      | Mass of the white dwarf (WD)                                          |
-| `L`            | 10^33 ergs/s           | Luminosity of the WD                                                  |
-| `Z`            | Relative to solar      | Accretion column abundance                                            |
-| `cos i`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the reflecting surface             |
-| `areaScal`     | Dimensionless          | Column cross-sectional scaling exponent A~(1+x/R)^n                   |
-| `distance`     | parsecs                | distance to source (used only for flux normalization)                 |
-
-The magnetic field strength is determined differently for each class of mCV.
-
-| Model Name | Magnetic Variable | Units    | Description                                 |
-|------------|-------------------|----------|---------------------------------------------|
-| polarspec  | `B`               | MG       | Surface magnetic field of WD                |
-| ipspec     | `Pspin`           | s        | Spin period of WD                           |
-
-`ipsepc` is our spin-equilibrium model for intermediate polars, it computes the magnetospheric radius from the spin period (and accretion rate) by setting the ram pressure equal to the magnetic pressure. It has one additional parameter: `CoRotRatio`, which is the ratio of the magnetoshperic radius to the co-rotation radius for additional flexibility.
-
-Additionally, the accretion area can be specified in one of two ways. Either (in the case of `ipsepc` and `polarspec`) the fractional accretion area (`f`) can be specified or (in the case of `aripsepc` and `arpolarspec`)the accretion area (A) in units of 10<sup>15</sup> cm<sup>2</sup>.
-
-## Python Interface
-
-MCVSPECs python interface utilizes `AtomDB`s python api to generate the primary thermal X-Ray spectrum but has no implementation for X-Ray reflection at this time.
-
 ## Dependencies
 * CMake
 * Python
@@ -66,10 +37,36 @@ After cmake configures your build simply run `make` and `make install`.
 If installing pyMCVSPEC simply add `/path/to/install/pymcvspec` to your `$PYTHONPATH`
 For the XSPEC interface one can run, from the xspec prompt, `lmod mcvspec /path/to/install/xspec` to load the mcvspec models into their xspec session. If you would like to configure XSPEC to load mcvspec on start you can always add `load /path/to/install/xspec/libmcvspec.dylib` the `global_customize.tcl` file in `HEASoft` (described in the "Customizing system-wide" section of the XSPEC manual)
 
-## Usage
+## Usage.
 
-### Load the mcvspec models in xspec
-Once loaded into XSPEC you can then choose between `polarspec`, `ipsepc`, `apolarspec`, or `aipspec` depending on your source.
+## XSPEC Interface
+
+MCVSPEC contains two models: `polarspec` and `ipsepc` which are used for their respective class of objects. Both models share the common inputs:
+
+| Variable       | Units                  | Description                                                           |
+|----------------|------------------------|-----------------------------------------------------------------------|
+| `reflectOn`    | 0, 1                   | Toggle reflection                                                     |
+| `M`            | Solar masses (M☉)      | Mass of the white dwarf (WD)                                          |
+| `L`            | 10^33 ergs/s           | Luminosity of the WD                                                  |
+| `Z`            | Relative to solar      | Accretion column abundance                                            |
+| `cos i`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the reflecting surface             |
+| `areaScal`     | Dimensionless          | Column cross-sectional scaling exponent A~(1+x/R)^n                   |
+| `distance`     | parsecs                | distance to source (used only for flux normalization)                 |
+
+The magnetic field strength is determined differently for each class of mCV.
+
+| Model Name | Magnetic Variable | Units    | Description                                 |
+|------------|-------------------|----------|---------------------------------------------|
+| polarspec  | `B`               | MG       | Surface magnetic field of WD                |
+| ipspec     | `Pspin`           | s        | Spin period of WD                           |
+
+`ipsepc` is our spin-equilibrium model for intermediate polars, it computes the magnetospheric radius from the spin period (and accretion rate) by setting the ram pressure equal to the magnetic pressure. It has one additional parameter: `CoRotRatio`, which is the ratio of the magnetoshperic radius to the co-rotation radius for additional flexibility.
+
+Additionally, the accretion area can be specified in one of two ways. Either (in the case of `ipsepc` and `polarspec`) the fractional accretion area (`f`) can be specified or (in the case of `aripsepc` and `arpolarspec`)the accretion area (A) in units of 10<sup>15</sup> cm<sup>2</sup>.
+
+## Python Interface
+
+MCVSPECs python interface utilizes `AtomDB`s python api to generate the primary thermal X-Ray spectrum but has no implementation for X-Ray reflection at this time.
 
 To load the python module:
 ```python
@@ -96,4 +93,10 @@ my_source.ion_density
 e_bins = np.arange(3., 79., 0.4)*u.keV
 flux = my_source.spectrum(e_bins)
 ```
-Note that there is no reflection implemented in python yet
+Note that there is no reflection implemented in python yet.
+
+The python interface has 3 classes `polar` and `intermediate_polar` which take similar arguments to the XSPEC interface. Both of these classes are extended from a single `cataclysmic_variable` class which, instead, takes the parameters: mass, b_field, accretion_rate, accretion_area, magnetospheric_radius and may be more useful for source simulation than the observational approach taken in `polar` and `intermediate_polar`.
+
+## The WD Mass-Radius Relationship
+
+MCVSPEC uses a numerical solution to the WD mass-radius relationship following the model of [Hamada and Salpeter (1961)](https://ui.adsabs.harvard.edu/abs/1961ApJ...134..683H/abstract). Specifcially it requires a file, `data/mass_radius.txt`, which contains a list of WD masses and radii. This file is generated with the python script `data/wd_mass_radius.py` and then compiled into MCVSPEC during the build process. Hamada and Salpeter's model depends on the white dwarf composition which is set with the parameters $\mu=\frac{A}{Z}$ and $Z$. The default `data/mass_radius.txt` was generated for $\mu=2$ and $Z=6$. To generate a different mass-radius relationship simply execute the script with `python wd_mass_radius.py -Z <you_z> -mu <your_mu>` and then rebuild the software. One could also test their own mass-radius relationship by generating an identically formatted `data/mass_radius.txt` and rebuilding.
