@@ -37,7 +37,7 @@ class Cataclysmic_Variable{
         static double Get_Accretion_Rate(double, double, double, double);
 
     protected:
-        virtual void Set_Abundances();
+        virtual void Set_Abundances() = 0;
         void Set_Cooling_Constants();
         void Guess_Shock_Height();
         void Update_Shock_Height(double);
