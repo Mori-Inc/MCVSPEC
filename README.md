@@ -93,7 +93,9 @@ my_source.ion_density
 e_bins = np.arange(3., 79., 0.4)*u.keV
 flux = my_source.spectrum(e_bins)
 ```
-Note that there is no reflection implemented in python yet
+Note that there is no reflection implemented in python yet.
+
+The python interface has 3 classes `polar` and `intermediate_polar` which take similar arguments to the XSPEC interface. Both of these classes are extended from a single `cataclysmic_variable` class which, instead, takes the parameters: mass, b_field, accretion_rate, accretion_area, magnetospheric_radius and may be more useful for source simulation than the observational approach taken in `polar` and `intermediate_polar`.
 
 ## The WD Mass-Radius Relationship
 
