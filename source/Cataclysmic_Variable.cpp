@@ -241,7 +241,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     ion_temperature.resize(n_points);
     volume.resize(n_points);
 
-    double mdot, dens, e_press, bremss_weight;
+    double mdot, dens, e_press, bremss_weight=0;
 
     for(int i=0; i<accretion_column.t_eval.size(); i++){
         velocity[i] = accretion_column.t_eval[i]*shock_speed;
