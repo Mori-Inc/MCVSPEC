@@ -184,9 +184,6 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
     else{
         lower_bound *= 0.9;
     }
-    Bracket_Shock_Height(1.);
-    Bracket_Shock_Height(0.1);
-    Bracket_Shock_Height(0.01);
     Bracket_Shock_Height(0);
     Update_Shock_Height((upper_bound+lower_bound)/2);
     accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
