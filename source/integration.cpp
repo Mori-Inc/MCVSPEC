@@ -8,6 +8,8 @@ using std::max;
 using std::min;
 using std::pow;
 
+using namespace tableau;
+
 double norm(valarray<double> x){
     return sqrt((x*x).sum()/x.size());
 }
@@ -18,7 +20,10 @@ valarray<double> element_max(valarray<double> x, valarray<double> y){
     }
     return max_arr;
 }
-Integrator::Integrator(function<valarray<double>(double, valarray<double>, void*)> function, const int n_dims){
+
+Integrator::Integrator(){}
+
+Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), const int n_dims){
     double pars = 1;
     func = {function, &pars};
     n_dim = n_dims;
@@ -26,7 +31,14 @@ Integrator::Integrator(function<valarray<double>(double, valarray<double>, void*
     rel_err = relative_err;
 }
 
-Integrator::Integrator(function<valarray<double>(double, valarray<double>, void*)> function, const int n_dims, const double absolute_err, const double relative_err){
+Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), void* pars, const int n_dims){
+    func = {function, pars};
+    n_dim = n_dims;
+    abs_err = absolute_err;
+    rel_err = relative_err;
+}
+
+Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), const int n_dims, const double absolute_err, const double relative_err){
     double pars = 1;
     func = {function, &pars};
     n_dim = n_dims;
@@ -43,7 +55,7 @@ void Integrator::Set_Initial_Step(const double dir, const double t0, const valar
     h = min(1e2*h_0,h_1);
 }
 
-void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start){
+void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, bool interpolate, bool y_bounds){
     func.pars = parameters;
     fill(begin(k), end(k), valarray<double>(0.,n_dim));
     fill(begin(q), end(q), valarray<double>(0.,n_dim));
@@ -58,79 +70,48 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
 
     valarray<double> y_new(n_dim);
     double t_new;
+
+    bool before_bound = true;
+    double bound_dir;
+    if(y_bounds){
+        bound_dir = (y_boundary-y_start[boundary_index]>0)-(y_boundary-y_start[boundary_index]<0);
+    }
 
     while(dir*(t_end-t.back()) > 0 && t.size() < max_itter){
         h = min(h,dir*(t_end-t.back()));
         h = Step(dir, t.back(), y.back(), &t_new, &y_new);
-        y.push_back(y_new);
-        t.push_back(t_new);
-        k[0] = k[n_stages];
-    }
-}
 
-void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const valarray<double> y_bound){
-    func.pars = parameters;
-
-    fill(begin(k), end(k), valarray<double>(0.,n_dim));
-    fill(begin(q), end(q), valarray<double>(0.,n_dim));
-    t.resize(1);
-    y.resize(1);
-    t[0] = t_start;
-    y[0] = y_start;
-
-    bool before_bound = true;
-    valarray<double> bound_dir(n_dim);
-    for(int i = 0; i < n_dim; i++){
-        bound_dir[i] = (0. < (y_bound[i]-y_start[i])) - ((y_bound[i]-y_start[i]) < 0.);
-    }
-
-    double dir = (0. < (t_end-t[0])) - ((t_end-t[0]) < 0.);
-    k[0] = func(t[0], y[0]);
-    Set_Initial_Step(dir, t[0], y[0]);
-    valarray<double> y_new(n_dim);
-    double t_new;
-    while(dir*(t_end-t.back()) > 0 && t.size() < max_itter && before_bound){
-        h = min(h,dir*(t_end-t.back()));
-        h = Step(dir, t.back(), y.back(), &t_new, &y_new);
-
-        for(int i = 0; i < n_dim; i++){
-            if(bound_dir[i]*(y_bound[i]-y_new[i]) < 0.){
-                before_bound = false;
-            }
+        if(interpolate){
+            Dense_Output(dir, t.back(), y.back(), t_new);
+        }
+        if(y_bounds){
+            before_bound = bound_dir*(y_boundary-y_new[boundary_index]) > absolute_err;
         }
 
         y.push_back(y_new);
         t.push_back(t_new);
         k[0] = k[n_stages];
-        deriv.push_back(k[0]);
+        if(!before_bound){
+            return;
+        }
     }
 }
 
+void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start){
+    Integrate(parameters, t_start, t_end, y_start, false, false);
+}
+
 void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const vector<double> t_evals){
-    func.pars = parameters;
-    t = t_evals;
-    y.resize(t_evals.size());
 
-    fill(begin(k), end(k), valarray<double>(0.,n_dim));
-    fill(begin(q), end(q), valarray<double>(0.,n_dim));
+    t_eval = valarray<double>(t_evals.data(), t_evals.size());
+    y_eval.resize(t_eval.size());
+    Integrate(parameters, t_start, t_end, y_start, true, false);
+}
 
-    double dir = (0. < (t_end-t[0])) - ((t_end-t[0]) < 0.);
-    k[0] = func(t_start, y_start);
-    Set_Initial_Step(dir, t_start, y_start);
-    valarray<double> y_old(n_dim), y_new(n_dim);
-    double t_old, t_new, h_new;
-    y_old = y_start;
-    t_old = t_start;
-
-    while(dir*(t_end-t_old) > 0 && t.size() < max_itter){
-        h = min(h,dir*(t_end-t_old));
-        h_new = Step(dir, t_old, y_old, &t_new, &y_new);
-        Dense_Output(dir, t_old, y_old, t_new);
-        h = h_new;
-        y_old = y_new;
-        t_old = t_new;
-        k[0] = k[n_stages];
-    }
+void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const double y_bound, const int bound_ind){
+    y_boundary = y_bound;
+    boundary_index = bound_ind;
+    Integrate(parameters, t_start, t_end, y_start, false, true);
 }
 
 double Integrator::Step(double dir, const double t_old, const valarray<double> y_old, double* t_new, valarray<double>* y_new){
@@ -184,7 +165,9 @@ double Integrator::Step(double dir, const double t_old, const valarray<double> y
 }
 
 void Integrator::Dense_Output(const double dir, const double t_old, const valarray<double> y_old, const double t_new){
-    double sigma;
+    double sigma, h;
+    h = abs(t_new-t_old);
+
     valarray<double> dy(n_dim);
     for(int i = 0; i<order-1; i++){
         q[i] = 0.;
@@ -192,7 +175,7 @@ void Integrator::Dense_Output(const double dir, const double t_old, const valarr
             q[i] += k[j]*p[j][i];
         }
     }
-    for(double t_interp:t){
+    for(double t_interp:t_eval){
         if((dir*(t_new-t_interp)<0)|(dir*(t_interp-t_old)<0)){
             continue;
         }
@@ -202,7 +185,7 @@ void Integrator::Dense_Output(const double dir, const double t_old, const valarr
             dy += q[i]*pow(sigma,i+1);
         }
         dy *= dir*h;
-        int ind = find(t.begin(), t.end(), t_interp) - t.begin();
-        y[ind] = y_old + dy;
+        int ind = find(begin(t_eval), end(t_eval), t_interp) - begin(t_eval);
+        y_eval[ind] = y_old + dy;
     }
 }

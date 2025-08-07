@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pymcvspec"
+version = "1.0.0"
+authors = [{ name = "Gabriel Bridges", email = "glb2139@columbia.edu" }]
+description = "Spectral Model for mCV Emission"
+dependencies = ["numpy", "astropy>=5.3", "pyatomdb"]
+keywords = [
+    "physics",
+    "astronomy",
+    "astrophysics",
+    "science",
+    "white dwarf",
+    "accretion",
+    "cataclysmic variable",
+    "polar",
+    "intermediate polar",
+    "x-ray",
+    "xspec",
+    "accretion column",
+]
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Topic :: Scientific/Engineering ",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+license = "MIT"
+license-files = ["../LICENSE"]
+
+[project.urls]
+Homepage = "https://github.com/Mori-Inc/MCVSPEC"
+Issues = "https://github.com/Mori-Inc/MCVSPEC/issues"
