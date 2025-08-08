@@ -109,67 +109,46 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
     return {dpos_dvel,dpress_dvel,depress_dvel};
 }
 
-double Cataclysmic_Variable::Get_Landing_Altitude(double cutoff_alt){
-    accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))}, cutoff_alt, 0);
-    double slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back())[0];
-    return accretion_column.y.back()[0] - slope*accretion_column.t.back();
-}
-
 double Cataclysmic_Variable::Get_Landing_Altitude(){
     accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
     double slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back())[0];
     return accretion_column.y.back()[0] - slope*accretion_column.t.back();
 }
 
-void Cataclysmic_Variable::Bracket_Shock_Height(double integration_limit){
-    double height_lim = integration_limit/shock_height;
+void Cataclysmic_Variable::Bracket_Shock_Height(){
     Update_Shock_Height((upper_bound+lower_bound)/2);
-    double x_final = Get_Landing_Altitude(height_lim);
+    double x_final = Get_Landing_Altitude();
     // double check that we bracket the problem
     if(x_final<0){ // double check that upper bound is an upper bound
         lower_bound = (upper_bound+lower_bound)/2;
         Update_Shock_Height(upper_bound);
-        x_final = Get_Landing_Altitude(height_lim);
+        x_final = Get_Landing_Altitude();
         while(x_final<0){
             upper_bound = 2*upper_bound - lower_bound;
             lower_bound = (upper_bound+lower_bound)/2;
             Update_Shock_Height(upper_bound);
-            x_final = Get_Landing_Altitude(height_lim);
+            x_final = Get_Landing_Altitude();
         }
     }
     else{ // double check that the lower bound is a lower bound
         upper_bound = (upper_bound+lower_bound)/2;
         Update_Shock_Height(lower_bound);
-        x_final = Get_Landing_Altitude(height_lim);
+        x_final = Get_Landing_Altitude();
         while(x_final>0){
             lower_bound = 2*lower_bound - upper_bound;
             upper_bound = (upper_bound+lower_bound)/2;
             Update_Shock_Height(lower_bound);
-            x_final = Get_Landing_Altitude(height_lim);
-        }
-    }
-    if(integration_limit>0){
-        while(upper_bound-lower_bound > 10*integration_limit){
-            Update_Shock_Height((upper_bound+lower_bound)/2);
-            x_final = Get_Landing_Altitude(height_lim);
-            if(x_final < 0){
-                lower_bound = shock_height;
-            }
-            else{
-                upper_bound = shock_height;
-            }
-        }
-    }
-    else{
-        while(x_final>1e-8){
-            Update_Shock_Height((upper_bound+lower_bound)/2);
             x_final = Get_Landing_Altitude();
-            if(x_final < 0){
-                lower_bound = shock_height;
-            }
-            else{
-                upper_bound = shock_height;
-            }
+        }
+    }
+    while(abs(x_final)>1e-8){
+        Update_Shock_Height((upper_bound+lower_bound)/2);
+        x_final = Get_Landing_Altitude();
+        if(x_final < 0){
+            lower_bound = shock_height;
+        }
+        else{
+            upper_bound = shock_height;
         }
     }
 }
@@ -178,16 +157,15 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
     upper_bound = shock_height;
     lower_bound = shock_height;
     Update_Shock_Height((upper_bound+lower_bound)/2);
-    if(Get_Landing_Altitude(1./shock_height)<0){
+    if(Get_Landing_Altitude()<0){
         upper_bound *= 1.1;
     }
     else{
         lower_bound *= 0.9;
     }
-    Bracket_Shock_Height(0);
-    Update_Shock_Height((upper_bound+lower_bound)/2);
+    Bracket_Shock_Height();
     accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
-    previous_shock_height = (upper_bound+lower_bound)/2;
+    previous_shock_height = shock_height;
 }
 
 void Cataclysmic_Variable::Build_Column_Profile(){

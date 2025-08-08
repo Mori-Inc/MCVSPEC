@@ -41,7 +41,6 @@ class Cataclysmic_Variable{
         void Set_Cooling_Constants();
         void Guess_Shock_Height();
         void Update_Shock_Height(double);
-        void Bracket_Shock_Height(double);
+        void Bracket_Shock_Height();
         double Get_Landing_Altitude();
-        double Get_Landing_Altitude(double);
 };
