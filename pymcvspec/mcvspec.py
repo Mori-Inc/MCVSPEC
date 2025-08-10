@@ -43,6 +43,7 @@ class cataclysmic_variable:
                                               cos_inclination_angle, area_exponent, distance.to_value(u.cm), 1)
 
         self.altitude = self.cpp_impl.get_altitude()*u.cm
+        self.velocity = self.cpp_impl.get_velocity()*u.cm/u.s
         self.electron_temperature = self.cpp_impl.get_electron_temperature()*u.keV
         self.ion_temperature = self.cpp_impl.get_ion_temperature()*u.keV
         self.electron_density = self.cpp_impl.get_electron_density()/u.cm**3

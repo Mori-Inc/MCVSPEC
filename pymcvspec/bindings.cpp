@@ -40,6 +40,9 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         py::array_t<double> Get_Altitude(){
             return Valarray_to_Numpy(&altitude);
         }
+        py::array_t<double> Get_Velocity(){
+            return Valarray_to_Numpy(&velocity);
+        }
         py::array_t<double> Get_Electron_Temperature(){
             return Valarray_to_Numpy(&electron_temperature);
         }
@@ -86,6 +89,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("get_landing", &Py_Cataclysmic_Variable::Get_Landing_Altitude)
         .def("get_altitude", &Py_Cataclysmic_Variable::Get_Altitude)
+        .def("get_velocity", &Py_Cataclysmic_Variable::Get_Velocity)
         .def("get_electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
         .def("get_ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
         .def("get_electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
