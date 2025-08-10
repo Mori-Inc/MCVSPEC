@@ -82,7 +82,9 @@ PYBIND11_MODULE(_pymcvspec, module) {
             py::arg("area") = 1e15, py::arg("cos_incl_angle") = 0.5, py::arg("area_exp") = 0,
             py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("flow_eq", &Py_Cataclysmic_Variable::Flow_Equation)
+        .def("set_shock_height", &Py_Cataclysmic_Variable::Update_Shock_Height)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
+        .def("get_landing", &Py_Cataclysmic_Variable::Get_Landing_Altitude)
         .def("get_altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("get_electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
         .def("get_ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)

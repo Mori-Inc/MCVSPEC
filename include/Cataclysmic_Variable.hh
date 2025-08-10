@@ -32,6 +32,8 @@ class Cataclysmic_Variable{
         void Shock_Height_Shooting();
         void Build_Column_Profile();
         void Print_Properties();
+        void Update_Shock_Height(double);
+        double Get_Landing_Altitude();
 
         static double Get_Radius(double);
         static double Get_Accretion_Rate(double, double, double, double);
@@ -40,7 +42,4 @@ class Cataclysmic_Variable{
         virtual void Set_Abundances(double) = 0;
         void Set_Cooling_Constants();
         void Guess_Shock_Height();
-        void Update_Shock_Height(double);
-        void Bracket_Shock_Height();
-        double Get_Landing_Altitude();
 };
