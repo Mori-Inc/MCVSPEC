@@ -59,7 +59,11 @@ class cataclysmic_variable:
         volume = np.append(0*u.cm, np.abs(np.diff(self.altitude)))/2 + np.append(np.abs(np.diff(self.altitude)),0*u.cm)/2
         volume *= self.accretion_area*((1+self.altitude/self.radius)**self.n)
         for kT, n_e, n_i, vol in zip(self.electron_temperature, self.electron_density, self.ion_density, volume):
-            flux += (session.return_spectrum(kT.to_value(u.keV))*(u.cm**5)/u.s/energy_bins.unit)*n_e*n_i*vol/(4*np.pi*self.distance**2)
+            # note: pyatomdb returns a spectrum which is normalized to emissivity*effective area
+            # when no arf is set the arf defaults to 1 cm^2
+            # so I assign units here of emissivity instead
+            # If an arf was set one would need to first divide by the arf to get back to the appropriate norm
+            flux += (session.return_spectrum(kT.to_value(u.keV))*(u.cm**3)/u.s/energy_bins.unit)*n_e*n_i*vol/(4*np.pi*self.distance**2)
         return flux.to(1/u.s/u.keV)
 
 class polar(cataclysmic_variable):
