@@ -7,18 +7,18 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     flux.resize(energy.size()-1,0);
     err.resize(energy.size()-1,0);
 
-    int reflection_sel = params[0]; // how to apply reflection 0 = off, 1 = on, apply at each layer, 2 = on, apply once to whole spectrum
-    double p_spin = params[1]; // spin period [s]; assumes spin equilibrium
+    double mass = params[0]*m_sol; // WD mass [grams]
+    double p_spin = params[1]; // spin period [s]
     double r_m_ratio = params[2]; // ratio between corotation radius and sping period
+    double luminosity = params[3]*1e33; // luminosity [ergs/s]
     double fractional_area = params[3]; //fractional accretion area
-    double luminosity = params[4]*1e33; // luminosity [ergs/s]
-    double mass = params[5]*m_sol; // WD mass [grams]
-    double col_abund = params[6]; // accretion column abundance [solar abundances]
-    double cos_incl = params[7]; // cos inclination angle
-    double area_exponent = params[8];
-    double source_distance = params[9]*pc_to_cm; // source distnace [cm]
+    double col_abund = params[5]; // accretion column abundance [solar abundances]
+    double cos_incl = params[6]; // cos inclination angle
+    double area_exponent = params[7];
+    double source_distance = params[8]*pc_to_cm; // source distnace [cm]
+    int reflection_sel = params[9]; // how to apply reflection 0 = off, 1 = on
 
-    double mag_radius = r_m_ratio*cbrt(grav_const*mass*p_spin*p_spin/(4*pi*pi));
+    double mag_radius = r_m_ratio*cbrt(grav_const*mass*p_spin*p_spin/(4*pi*pi)); // spin equilibrium
     double inverse_mag_radius = 1./mag_radius;
     double radius = Cataclysmic_Variable::Get_Radius(mass);
     double area = fractional_area*4*pi*radius*radius;
@@ -38,16 +38,16 @@ void IPspecArea(const RealArray& energy, const RealArray& params, int spectrum_n
     flux.resize(energy.size()-1,0);
     err.resize(energy.size()-1,0);
 
-    int reflection_sel = params[0]; // how to apply reflection 0 = off, 1 = on, apply at each layer, 2 = on, apply once to whole spectrum
-    double p_spin = params[1]; // spin period [s]; assumes spin equilibrium
+    double mass = params[0]*m_sol; // WD mass [grams]
+    double p_spin = params[1]; // spin period [s]
     double r_m_ratio = params[2]; // ratio between corotation radius and sping period
+    double luminosity = params[3]*1e33; // luminosity [ergs/s]
     double area = params[3]*1e15; //accretion area [cm^2]
-    double luminosity = params[4]*1e33; // luminosity [ergs/s]
-    double mass = params[5]*m_sol; // WD mass [grams]
-    double col_abund = params[6]; // accretion column abundance [solar abundances]
-    double cos_incl = params[7]; // cos inclination angle
-    double area_exponent = params[8];
-    double source_distance = params[9]*pc_to_cm; // source distnace [cm]
+    double col_abund = params[5]; // accretion column abundance [solar abundances]
+    double cos_incl = params[6]; // cos inclination angle
+    double area_exponent = params[7];
+    double source_distance = params[8]*pc_to_cm; // source distnace [cm]
+    int reflection_sel = params[9]; // how to apply reflection 0 = off, 1 = on
 
     double inverse_mag_radius = 1./(r_m_ratio*cbrt(4*pi*pi*grav_const*mass*p_spin*p_spin));
     double radius = Cataclysmic_Variable::Get_Radius(mass);

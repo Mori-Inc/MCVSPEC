@@ -6,15 +6,15 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     flux.resize(energy.size()-1,0);
     err.resize(energy.size()-1,0);
 
-    int reflection_sel = params[0]; // how to apply reflection 0 = off, 1 = on
+    double mass = params[0]*m_sol; // WD mass [grams]
     double b_field = params[1]*1e6; // surface b field [gauss]
-    double fractional_area = params[2]; //fractional accretion area
-    double luminosity = params[3]*1e33; // luminosity [ergs/s]
-    double mass = params[4]*m_sol; // WD mass [grams]
-    double col_abund = params[5]; // accretion column abundance [solar abundances]
-    double cos_incl = params[6]; // cos inclination angle
-    double area_exponent = params[7];
-    double source_distance = params[8]*pc_to_cm; // source distnace [cm]
+    double luminosity = params[2]*1e33; // luminosity [ergs/s]
+    double fractional_area = params[3]; //fractional accretion area
+    double col_abund = params[4]; // accretion column abundance [solar abundances]
+    double cos_incl = params[5]; // cos inclination angle
+    double area_exponent = params[6];
+    double source_distance = params[7]*pc_to_cm; // source distnace [cm]
+    int reflection_sel = params[8]; // how to apply reflection 0 = off, 1 = on
 
     double radius = Cataclysmic_Variable::Get_Radius(mass);
     double area = fractional_area*4*pi*radius*radius;
@@ -32,15 +32,15 @@ void PolarspecArea(const RealArray& energy, const RealArray& params, int spectru
     flux.resize(energy.size()-1,0);
     err.resize(energy.size()-1,0);
 
-    int reflection_sel = params[0]; // how to apply reflection 0 = off, 1 = on
+    double mass = params[0]*m_sol; // WD mass [grams]
     double b_field = params[1]*1e6; // surface b field [gauss]
-    double area = params[2]*1e15; // accretion area [cm^2]
-    double luminosity = params[3]*1e33; // luminosity [ergs/s]
-    double mass = params[4]*m_sol; // WD mass [grams]
-    double col_abund = params[5]; // accretion column abundance [solar abundances]
-    double cos_incl = params[6]; // cos inclination angle
-    double area_exponent = params[7];
-    double source_distance = params[8]*pc_to_cm; // source distnace [cm]
+    double luminosity = params[2]*1e33; // luminosity [ergs/s]
+    double area = params[3]*1e15; //fractional accretion area
+    double col_abund = params[4]; // accretion column abundance [solar abundances]
+    double cos_incl = params[5]; // cos inclination angle
+    double area_exponent = params[6];
+    double source_distance = params[7]*pc_to_cm; // source distnace [cm]
+    int reflection_sel = params[8]; // how to apply reflection 0 = off, 1 = on
 
     double radius = Cataclysmic_Variable::Get_Radius(mass);
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, 0);
