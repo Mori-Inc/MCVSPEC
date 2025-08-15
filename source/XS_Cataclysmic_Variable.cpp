@@ -34,11 +34,12 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
 
     for(int i=0; i<altitude.size(); i++){
         apec_parameters[0] = electron_temperature[i];
-        if (apec_parameters[0] > 64.0){
+        apec_parameters[1] = ion_temperature[i];
+        if (electron_temperature[i] > 64.0 || ion_temperature[i] > 64.0){
             CXX_bremss(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
         else{
-            CXX_apec(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
+            CXX_tapec(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
         apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
         apec_flux /= 4*pi*distance*distance;
