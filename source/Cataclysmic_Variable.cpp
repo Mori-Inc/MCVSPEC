@@ -4,6 +4,7 @@
 #include "mass_radius.hh"
 #include <cmath>
 #include <iostream>
+#include "gaunt.hh"
 
 using std::cout;
 using std::endl;
@@ -34,10 +35,10 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
 
     force_const = grav_const*mass/(radius*radius);
     cooling_ratio_const = 8.07e-2*avg_atomic_charge*pow(b_field, 2.85)*pow(avg_ion_mass/density_const,3.85);
-    cooling_ratio_const /= gaunt_factor*avg_charge_squared*k_b*k_b*pow(accretion_area,0.425);
+    cooling_ratio_const /= avg_charge_squared*k_b*k_b*pow(accretion_area,0.425);
     coulomb_log_const = 0.5*log(2*m_e/(pi*alpha*c)) + 1.5*log(avg_ion_mass/(hbar*density_const));
     exchange_const = 4*(alpha*hbar*c)*(alpha*hbar*c)*sqrt(2*pi*m_e*pow((density_const/avg_ion_mass),5))*avg_charge_sqr_over_mass;
-    bremss_const = sqrt(512*pi/(27*m_e*m_e*m_e))*alpha*alpha*alpha*hbar*hbar*gaunt_factor;
+    bremss_const = sqrt(512*pi/(27*m_e*m_e*m_e))*alpha*alpha*alpha*hbar*hbar;
     bremss_const *= (avg_charge_squared/avg_atomic_charge)*sqrt(pow(density_const/avg_ion_mass,3));
 }
 
@@ -91,14 +92,15 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
 
     double mdot = pow((1+non_dim_radius)/(pos+non_dim_radius), area_exponent);
     double dens = mdot/vel;
+    double kT = (avg_ion_mass/density_const)*shock_speed*shock_speed*e_press*vel/mdot;
     double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(e_press*e_press/(dens*dens*dens));
 
     double gravity = force_const*dens/((1+pos/non_dim_radius)*(1+pos/non_dim_radius));
     gravity *= (shock_height/(shock_speed*shock_speed));
     double exchange = exchange_const*coulomb_log*sqrt(dens*dens*dens*dens*dens/e_press)*(press/e_press - ((1+avg_atomic_charge)/avg_atomic_charge));
     exchange *= (shock_mdot*shock_height/(shock_speed*shock_speed*shock_speed));
-    double radiation = bremss_const*sqrt(dens*dens*dens*e_press);
-    radiation *= 1 + cooling_ratio*e_press*e_press*pow(dens,-3.85)*pow(1+pos/non_dim_radius,-8.55-0.425*area_exponent);
+    double radiation = bremss_const*gaunt::gaunt_factor(kT)*sqrt(dens*dens*dens*e_press);
+    radiation *= 1 + (cooling_ratio/gaunt::gaunt_factor(kT))*e_press*e_press*pow(dens,-3.85)*pow(1+pos/non_dim_radius,-8.55-0.425*area_exponent);
     radiation *= (shock_mdot*shock_height/(shock_speed*shock_speed*shock_speed));
 
     double dpos_dvel = (5*press - 3*mdot*vel)/(2*radiation + 3*vel*gravity - 5*press*vel*area_exponent/(non_dim_radius+pos));
