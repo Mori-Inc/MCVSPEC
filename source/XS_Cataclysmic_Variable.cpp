@@ -28,7 +28,7 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
     valarray<double> apec_flux(n);
     valarray<double> reflected_flux(n);
     valarray<double> flux_error(n);
-    valarray<double> apec_parameters = {0,metalicity,0};
+    valarray<double> apec_parameters = {0,0,metalicity,0};
     valarray<double> refl_parameters = {-1,0,metalicity,metalicity,incl_angle};
     // refl_amp = -1 means only return reflected spectrum, this ensures that reflection can be done separately to apec
 
