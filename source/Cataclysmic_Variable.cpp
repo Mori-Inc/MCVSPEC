@@ -73,7 +73,7 @@ void Cataclysmic_Variable::Guess_Shock_Height(){
     else{
         double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
         shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
-        Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*accretion_rate));
+        Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*1.2*accretion_rate));
     }
 }
 
@@ -94,7 +94,6 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
     double dens = mdot/vel;
     double kT = (avg_ion_mass/density_const)*shock_speed*shock_speed*e_press*vel/mdot;
     double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(e_press*e_press/(dens*dens*dens));
-
     double gravity = force_const*dens/((1+pos/non_dim_radius)*(1+pos/non_dim_radius));
     gravity *= (shock_height/(shock_speed*shock_speed));
     double exchange = exchange_const*coulomb_log*sqrt(dens*dens*dens*dens*dens/e_press)*(press/e_press - ((1+avg_atomic_charge)/avg_atomic_charge));

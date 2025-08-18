@@ -11,7 +11,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double p_spin = params[1]; // spin period [s]
     double r_m_ratio = params[2]; // ratio between corotation radius and sping period
     double luminosity = params[3]*1e33; // luminosity [ergs/s]
-    double fractional_area = params[3]; //fractional accretion area
+    double fractional_area = params[4]; //fractional accretion area
     double col_abund = params[5]; // accretion column abundance [solar abundances]
     double cos_incl = params[6]; // cos inclination angle
     double area_exponent = params[7];
@@ -42,7 +42,7 @@ void IPspecArea(const RealArray& energy, const RealArray& params, int spectrum_n
     double p_spin = params[1]; // spin period [s]
     double r_m_ratio = params[2]; // ratio between corotation radius and sping period
     double luminosity = params[3]*1e33; // luminosity [ergs/s]
-    double area = params[3]*1e15; //accretion area [cm^2]
+    double area = params[4]*1e15; //accretion area [cm^2]
     double col_abund = params[5]; // accretion column abundance [solar abundances]
     double cos_incl = params[6]; // cos inclination angle
     double area_exponent = params[7];
