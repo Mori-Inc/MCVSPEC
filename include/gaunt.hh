@@ -15,3 +15,37 @@ namespace gaunt{
 
     double gaunt_factor(double);
 }
+
+/*
+    Copyright (c) 2014, Peter A.M. van Hoof.
+
+    This program is provided 'as-is', without any express or implied warranty. In
+    no event will the author be held liable for any damages arising from the use
+    of this program.
+
+    Permission is granted to anyone to use this program for any purpose, including
+    commercial applications, and to alter it and redistribute it freely, subject
+    to the following restrictions:
+
+    1. The origin of this program must not be misrepresented; you must not claim
+       that you created the original program. If you use this program in a product,
+       an acknowledgment in the product documentation would be appreciated but
+       is not required.
+    2. Altered program versions must be plainly marked as such, and must not be
+       misrepresented as being the original program.
+    3. This notice may not be removed or altered from any further distribution.
+
+    Peter A.M. van Hoof
+    Royal Observatory of Belgium
+    Ringlaan 3
+    B-1180 Brussels
+    Belgium
+    p.vanhoof@oma.be
+*/
+
+/*
+ * This program was retrieved from https://data.nublado.org/gauntff/ on Aug 18, 2025
+ * It was modified heavily from its original form
+ * The non-relativistic formula are the same with simplification for use in the relevant temperature range
+ * For high temperature plasmas, linear interpolation is used over the relativsitc quantities from the same source
+ */
