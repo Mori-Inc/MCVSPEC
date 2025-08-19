@@ -7,7 +7,7 @@
 class Cataclysmic_Variable{
     protected:
         // input white dwarf properties
-        double mass, radius, b_field, inverse_mag_radius, distance;
+        double mass, radius, b_field, inverse_mag_radius, corotation_ratio, distance;
         double non_dim_radius;
         // input column properties
         double accretion_rate, accretion_area, metalicity, shock_height, shock_speed, pressure_ratio, incl_angle, area_exponent;
@@ -25,7 +25,6 @@ class Cataclysmic_Variable{
         double upper_bound, lower_bound;
 
     public:
-        Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,int);
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);
 
         valarray<double> Flow_Equation(double vel, valarray<double> pos);

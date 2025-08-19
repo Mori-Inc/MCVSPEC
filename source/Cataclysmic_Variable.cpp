@@ -17,8 +17,8 @@ valarray<double> Flow_Equation_Wrapper(double t, valarray<double> y, void* cv_in
     return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(t, y);
 }
 
-Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double area, double theta, double n, double dist, int reflection):
-    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection),
+Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double corot_rat, double area, double theta, double n, double dist, int reflection):
+    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection),
     accretion_column(Flow_Equation_Wrapper, this, 3)
 {
     if(inverse_mag_radius>0){
@@ -74,12 +74,15 @@ void Cataclysmic_Variable::Guess_Shock_Height(){
         double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
         shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
         Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*1.2*accretion_rate));
+        Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*1.2*accretion_rate));
     }
 }
 
 void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     shock_height = h_s;
-    shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius));
+    double rotation_correction = 0.5*corotation_ratio*corotation_ratio*corotation_ratio*inverse_mag_radius;
+    rotation_correction *= (radius+shock_height)*(radius+shock_height)*inverse_mag_radius*inverse_mag_radius - 1.;
+    shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius + rotation_correction));
     shock_mdot = accretion_rate/(accretion_area*pow(1+shock_height/radius, area_exponent));
     non_dim_radius = radius/shock_height;
     cooling_ratio = cooling_ratio_const*pow(shock_speed,5.85)/pow(shock_mdot, 1.85);

@@ -1,7 +1,7 @@
 #include "XS_Cataclysmic_Variable.hh"
 
-XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double metals, double area, double theta, double n, double dist, int reflection):
-    Cataclysmic_Variable(m,r,b,mdot,inv_r_m,area,theta,n,dist,reflection)
+XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double metals, double area, double theta, double n, double dist, int reflection):
+    Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,theta,n,dist,reflection)
 {
     metalicity = metals;
     Set_Abundances(metals);

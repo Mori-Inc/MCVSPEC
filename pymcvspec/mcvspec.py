@@ -16,6 +16,7 @@ class cataclysmic_variable:
         accretion_rate: u.Quantity[u.g/u.s],
         accretion_area: u.Quantity[u.cm**2],
         magnetospheric_radius: u.Quantity[u.cm] = 0*u.cm,
+        mag_radius_ratio=1,
         metalicity=1,
         shock_ratio=0.75,
         area_exponent=0,
@@ -39,7 +40,7 @@ class cataclysmic_variable:
         else:
             irm = 1/magnetospheric_radius
         self.cpp_impl = _cataclysmic_variable(mass.to_value(u.g), self.radius.to_value(u.cm), b_field.to_value(u.G), accretion_rate.to_value(u.g/u.s),
-                                              irm.to_value(1/u.cm), metalicity, accretion_area.to_value(u.cm**2),
+                                              irm.to_value(1/u.cm), mag_radius_ratio, metalicity, accretion_area.to_value(u.cm**2),
                                               cos_inclination_angle, area_exponent, distance.to_value(u.cm), 1)
 
         self.altitude = self.cpp_impl.get_altitude()*u.cm
@@ -85,7 +86,10 @@ class polar(cataclysmic_variable):
         if accretion_area == 0*u.cm**2:
             accretion_area = fractional_area*4*np.pi*(radius**2)
         mdot = _luminosity_to_mdot(luminosity.to_value(u.erg/u.s), mass.to_value(u.g), radius.to_value(u.cm), 0)*u.g/u.s
-        cataclysmic_variable.__init__(self, mass, b_field, mdot, accretion_area, 0*u.cm, metalicity, shock_ratio, area_exponent, cos_inclination_angle, distance)
+        cataclysmic_variable.__init__(self, mass, b_field, mdot, accretion_area,
+                                        metalicity=metalicity,shock_ratio=shock_ratio,
+                                        area_exponent=area_exponent, cos_inclination_angle=cos_inclination_angle,
+                                        distance=distance)
 
 class intermediate_polar(cataclysmic_variable):
     @u.quantity_input
@@ -109,4 +113,7 @@ class intermediate_polar(cataclysmic_variable):
             accretion_area = fractional_area*4*np.pi*(radius**2)
         mdot = _luminosity_to_mdot(luminosity.to_value(u.erg/u.s), mass.to_value(u.g), radius.to_value(u.cm), 1/r_m.to_value(u.cm))*u.g/u.s
         b_field = (np.sqrt(32*mdot*np.sqrt(G*mass*(r_m**7)))/(radius**3)).to(u.G, equivalencies=cgs)
-        cataclysmic_variable.__init__(self, mass, b_field, mdot, accretion_area, r_m, metalicity, shock_ratio, area_exponent, cos_inclination_angle, distance)
+        cataclysmic_variable.__init__(self, mass, b_field, mdot, accretion_area,
+                                        magnetospheric_radius=r_m, mag_radius_ratio=mag_radius_ratio,
+                                        metalicity=metalicity, shock_ratio=shock_ratio, area_exponent=area_exponent,
+                                        cos_inclination_angle=cos_inclination_angle, distance=distance)
