@@ -1,7 +1,9 @@
 #include "XS_Cataclysmic_Variable.hh"
+#include <XSFunctions/Utilities/FunctionUtility.h>
+#include <funcWrappers.h>
 
-XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double metals, double area, double theta, double n, double dist, int reflection):
-    Cataclysmic_Variable(m,r,b,mdot,inv_r_m,area,theta,n,dist,reflection)
+XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double metals, double area, double theta, double n, double dist, int reflection):
+    Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,theta,n,dist,reflection)
 {
     metalicity = metals;
     Set_Abundances(metals);
@@ -28,17 +30,18 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
     valarray<double> apec_flux(n);
     valarray<double> reflected_flux(n);
     valarray<double> flux_error(n);
-    valarray<double> apec_parameters = {0,metalicity,0};
+    valarray<double> apec_parameters = {0,0,metalicity,0};
     valarray<double> refl_parameters = {-1,0,metalicity,metalicity,incl_angle};
     // refl_amp = -1 means only return reflected spectrum, this ensures that reflection can be done separately to apec
 
     for(int i=0; i<altitude.size(); i++){
         apec_parameters[0] = electron_temperature[i];
-        if (apec_parameters[0] > 64.0){
+        apec_parameters[1] = ion_temperature[i];
+        if (electron_temperature[i] > 64.0 || ion_temperature[i] > 64.0){
             CXX_bremss(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
         else{
-            CXX_apec(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
+            CXX_tapec(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
         apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
         apec_flux /= 4*pi*distance*distance;
