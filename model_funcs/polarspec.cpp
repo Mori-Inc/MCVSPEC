@@ -20,8 +20,6 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     double area = fractional_area*4*pi*radius*radius;
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, 0);
     XS_Cataclysmic_Variable polar(mass, radius, b_field, mdot, 0, 0, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
-    polar.Shock_Height_Shooting();
-    polar.Build_Column_Profile();
     polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
     polar.Print_Properties();
 }
@@ -45,8 +43,6 @@ void PolarspecArea(const RealArray& energy, const RealArray& params, int spectru
     double radius = Cataclysmic_Variable::Get_Radius(mass);
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, 0);
     XS_Cataclysmic_Variable polar(mass, radius, b_field, mdot, 0, 0, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
-    polar.Shock_Height_Shooting();
-    polar.Build_Column_Profile();
     polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
     polar.Print_Properties();
 }

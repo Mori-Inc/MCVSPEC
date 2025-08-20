@@ -1,10 +1,7 @@
 #pragma once
 
 #include "Cataclysmic_Variable.hh"
-#include <XSFunctions/Utilities/FunctionUtility.h>
 #include <xsTypes.h>
-#include <funcWrappers.h>
-#include <XSFunctions/Utilities/FunctionUtility.h>
 
 class XS_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:

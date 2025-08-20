@@ -26,8 +26,6 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double b_field = sqrt(32*mdot*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
 
     XS_Cataclysmic_Variable intermediate_polar(mass, radius, b_field, mdot, inverse_mag_radius, r_m_ratio, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
-    intermediate_polar.Shock_Height_Shooting();
-    intermediate_polar.Build_Column_Profile();
     intermediate_polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
     intermediate_polar.Print_Properties();
 }
@@ -56,8 +54,6 @@ void IPspecArea(const RealArray& energy, const RealArray& params, int spectrum_n
     double b_field = sqrt(32*mdot*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
 
     XS_Cataclysmic_Variable intermediate_polar(mass, radius, b_field, mdot, inverse_mag_radius, r_m_ratio, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
-    intermediate_polar.Shock_Height_Shooting();
-    intermediate_polar.Build_Column_Profile();
     intermediate_polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
     intermediate_polar.Print_Properties();
 }

@@ -2,9 +2,9 @@
 #include "constants.hh"
 #include "integration.hh"
 #include "mass_radius.hh"
+#include "gaunt.hh"
 #include <cmath>
 #include <iostream>
-#include "gaunt.hh"
 
 using std::cout;
 using std::endl;
