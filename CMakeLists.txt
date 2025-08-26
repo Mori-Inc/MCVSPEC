@@ -49,7 +49,8 @@ if(BUILD_PYBINDINGS)
 
     pybind11_add_module(_pymcvspec pymcvspec/bindings.cpp
                             source/Cataclysmic_Variable.cpp
-                            source/integration.cpp)
+                            source/integration.cpp
+                            source/gaunt.cpp)
 
     add_dependencies(_pymcvspec embed_wd_mass_radius)
 
@@ -68,6 +69,7 @@ if(BUILD_XSMODEL)
     file(MAKE_DIRECTORY "${XSPEC_MODEL_DIR}")
 
     set(SOURCE_FILES ${CMAKE_SOURCE_DIR}/source/Cataclysmic_Variable.cpp;
+                    ${CMAKE_SOURCE_DIR}/source/gaunt.cpp;
                     ${CMAKE_SOURCE_DIR}/source/XS_Cataclysmic_Variable.cpp;
                     ${CMAKE_SOURCE_DIR}/source/integration.cpp)
     set(MODEL_FILES ${CMAKE_SOURCE_DIR}/model_funcs/polarspec.cpp;
@@ -78,6 +80,7 @@ if(BUILD_XSMODEL)
                     ${CMAKE_SOURCE_DIR}/include/integration.hh;
                     ${CMAKE_SOURCE_DIR}/include/constants.hh;
                     ${CMAKE_SOURCE_DIR}/include/tableau.hh;
+                    ${CMAKE_SOURCE_DIR}/include/gaunt.hh;
                     ${MR_HEADER_PATH})
 
     foreach(FILE IN LISTS SOURCE_FILES MODEL_FILES HEADER_FILES)

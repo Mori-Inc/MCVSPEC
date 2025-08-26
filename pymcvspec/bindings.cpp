@@ -3,14 +3,13 @@
 #include <pybind11/numpy.h>
 #include "Cataclysmic_Variable.hh"
 #include "constants.hh"
-#include <iostream>
 
 namespace py = pybind11;
 
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
-        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double metals, double area, double theta, double n, double dist, int reflection):
-            Cataclysmic_Variable(m,r,b,mdot,inv_r_m,area,theta,n,dist,reflection)
+        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double metals, double area, double theta, double n, double dist, int reflection):
+            Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,theta,n,dist,reflection)
         {
             metalicity = metals;
             Set_Abundances(metals);
@@ -39,6 +38,9 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         }
         py::array_t<double> Get_Altitude(){
             return Valarray_to_Numpy(&altitude);
+        }
+        py::array_t<double> Get_Velocity(){
+            return Valarray_to_Numpy(&velocity);
         }
         py::array_t<double> Get_Electron_Temperature(){
             return Valarray_to_Numpy(&electron_temperature);
@@ -76,14 +78,17 @@ PYBIND11_MODULE(_pymcvspec, module) {
     module.def("_mass_to_radius", &Cataclysmic_Variable::Get_Radius, "Returns the radius (cm) for a corresponding WD mass (g)");
     module.def("_luminosity_to_mdot", &Cataclysmic_Variable::Get_Accretion_Rate, "Returns the radius (cm) for a corresponding WD mass (g)");
     py::class_<Py_Cataclysmic_Variable>(module, "_cataclysmic_variable", py::module_local())
-        .def(py::init<double,double,double,double,double,double,double,double,double,double,int>(),
+        .def(py::init<double,double,double,double,double,double,double,double,double,double,double,int>(),
             py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
-            py::arg("mdot") = 1e15, py::arg("inv_r_m") = 0., py::arg("metalicity") = 1.,
+            py::arg("mdot") = 1e15, py::arg("inv_r_m") = 0., py::arg("r_m_ratio") = 1., py::arg("metalicity") = 1.,
             py::arg("area") = 1e15, py::arg("cos_incl_angle") = 0.5, py::arg("area_exp") = 0,
             py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("flow_eq", &Py_Cataclysmic_Variable::Flow_Equation)
+        .def("set_shock_height", &Py_Cataclysmic_Variable::Update_Shock_Height)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
+        .def("get_landing", &Py_Cataclysmic_Variable::Get_Landing_Altitude)
         .def("get_altitude", &Py_Cataclysmic_Variable::Get_Altitude)
+        .def("get_velocity", &Py_Cataclysmic_Variable::Get_Velocity)
         .def("get_electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
         .def("get_ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
         .def("get_electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
