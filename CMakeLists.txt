@@ -73,7 +73,7 @@ if(BUILD_XSMODEL)
                     ${CMAKE_SOURCE_DIR}/source/XS_Cataclysmic_Variable.cpp;
                     ${CMAKE_SOURCE_DIR}/source/integration.cpp)
     set(MODEL_FILES ${CMAKE_SOURCE_DIR}/model_funcs/polarspec.cpp;
-                    ${CMAKE_SOURCE_DIR}/model_funcs/ipsepc.cpp;
+                    ${CMAKE_SOURCE_DIR}/model_funcs/ipspec.cpp;
                     ${CMAKE_SOURCE_DIR}/model_funcs/mcvspec.dat)
     set(HEADER_FILES ${CMAKE_SOURCE_DIR}/include/Cataclysmic_Variable.hh;
                     ${CMAKE_SOURCE_DIR}/include/XS_Cataclysmic_Variable.hh;
