@@ -50,7 +50,7 @@ MCVSPEC contains two models: `polarspec` and `ipsepc` which are used for their r
 | `L`            | 10^33 ergs/s           | Luminosity of the WD                                                  |
 | `Z`            | Relative to solar      | Accretion column abundance                                            |
 | `cos i`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the reflecting surface             |
-| `areaScal`     | Dimensionless          | Column cross-sectional scaling exponent A~(1+x/R)^n                   |
+| `n`            | Dimensionless          | Column cross-sectional scaling exponent A~(1+x/R)^n                   |
 | `distance`     | parsecs                | distance to source (used only for flux normalization)                 |
 
 The magnetic field strength is determined differently for each class of mCV.
