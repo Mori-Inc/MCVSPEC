@@ -2,6 +2,7 @@
 
 #include "constants.hh"
 #include "integration.hh"
+#include "dipole.hh"
 #include <valarray>
 
 class Cataclysmic_Variable{
@@ -22,6 +23,7 @@ class Cataclysmic_Variable{
         // utilities
         int refl;
         Integrator accretion_column;
+        Dipole geometry;
         double upper_bound, lower_bound;
 
     public:

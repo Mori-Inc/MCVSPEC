@@ -19,12 +19,8 @@ valarray<double> Flow_Equation_Wrapper(double t, valarray<double> y, void* cv_in
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double corot_rat, double area, double theta, double n, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection),
-    accretion_column(Flow_Equation_Wrapper, this, 3)
-{
-    if(inverse_mag_radius>0){
-        b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
-    }
-}
+    accretion_column(Flow_Equation_Wrapper, this, 3), geometry()
+{}
 
 void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as these values depend only on the input properties not on any derived properties
     avg_ion_mass = (abundances*atomic_mass).sum()*amu_to_g;
@@ -88,17 +84,24 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     cooling_ratio = cooling_ratio_const*pow(shock_speed,5.85)/pow(shock_mdot, 1.85);
 }
 
-valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres_epres){
-    double pos = pos_pres_epres[0];
-    double press = pos_pres_epres[1];
-    double e_press = pos_pres_epres[2];
+valarray<double> Cataclysmic_Variable::Flow_Equation(double entropy, valarray<double> state){
+    const double position = state[0];
+    const double velocity = state[1];
+    const double pressure = state[2];
+    const double pr_ratio = state[3];
 
-    double mdot = pow((1+non_dim_radius)/(pos+non_dim_radius), area_exponent);
-    double dens = mdot/vel;
-    double kT = (avg_ion_mass/density_const)*shock_speed*shock_speed*e_press*vel/mdot;
-    double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(e_press*e_press/(dens*dens*dens));
-    double gravity = force_const*dens/((1+pos/non_dim_radius)*(1+pos/non_dim_radius));
-    gravity *= (shock_height/(shock_speed*shock_speed));
+    // solve for geometry
+    geometry.Solve_Coordinates(position);
+    double area = geometry.Get_Metric(0)*geometry.Get_Metric(2);
+
+    double density = accretion_rate/(area*velocity);
+    double kT = avg_ion_mass*pressure/(density_const*density);
+    double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(pressure*pressure/(density*density*density));
+    double g_ff = gaunt::gaunt_factor(kT);
+
+    double gravity = density*grav_const*mass*geometry.Get_Projection()/(geometry.Get_Radial_Distance()*geometry.Get_Radial_Distance()*radius*radius);
+
+
     double exchange = exchange_const*coulomb_log*sqrt(dens*dens*dens*dens*dens/e_press)*(press/e_press - ((1+avg_atomic_charge)/avg_atomic_charge));
     exchange *= (shock_mdot*shock_height/(shock_speed*shock_speed*shock_speed));
     double radiation = bremss_const*gaunt::gaunt_factor(kT)*sqrt(dens*dens*dens*e_press);
