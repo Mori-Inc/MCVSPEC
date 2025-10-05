@@ -13,13 +13,9 @@ using std::ceil;
 
 static double previous_shock_height = 0;
 
-valarray<double> Flow_Equation_Wrapper(double t, valarray<double> y, void* cv_instance){
-    return ((Cataclysmic_Variable*)(cv_instance))->Flow_Equation(t, y);
-}
-
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double corot_rat, double area, double theta, double n, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection),
-    accretion_column(Flow_Equation_Wrapper, this, 3)
+    accretion_column(*this)
 {
     if(inverse_mag_radius>0){
         b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
@@ -88,7 +84,7 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     cooling_ratio = cooling_ratio_const*pow(shock_speed,5.85)/pow(shock_mdot, 1.85);
 }
 
-valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double> pos_pres_epres){
+void Cataclysmic_Variable::Flow_Equation(double vel,const valarray<double>& pos_pres_epres, valarray<double>& derivs) const{
     double pos = pos_pres_epres[0];
     double press = pos_pres_epres[1];
     double e_press = pos_pres_epres[2];
@@ -110,13 +106,16 @@ valarray<double> Cataclysmic_Variable::Flow_Equation(double vel, valarray<double
     double depress_dvel = 2*(radiation - exchange/(shock_speed*shock_speed))*dpos_dvel/(3*vel);
     depress_dvel -= 5*e_press*((1/vel) + area_exponent*dpos_dvel/(non_dim_radius+pos))/3.;
 
-    return {dpos_dvel,dpress_dvel,depress_dvel};
+    derivs[0] = dpos_dvel;
+    derivs[1] = dpress_dvel;
+    derivs[2] = depress_dvel;
 }
 
 double Cataclysmic_Variable::Get_Landing_Altitude(){
-    accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
-    double slope = Flow_Equation(accretion_column.t.back(),  accretion_column.y.back())[0];
-    return accretion_column.y.back()[0] - slope*accretion_column.t.back();
+    accretion_column.Integrate(0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
+    valarray<double> slope(3);
+    Flow_Equation(accretion_column.t.back(),  accretion_column.y.back(), slope);
+    return accretion_column.y.back()[0] - slope[0]*accretion_column.t.back();
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
@@ -194,7 +193,7 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
         i++;
     }
     Update_Shock_Height((upper_bound+lower_bound)/2);
-    accretion_column.Integrate(this, 0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
+    accretion_column.Integrate(0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
     previous_shock_height = shock_height;
 }
 
@@ -234,7 +233,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         }
         kT_left = kT_right;
     }
-    accretion_column.Integrate(this, 0.25, vel_eval.back(), {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))}, vel_eval);
+    accretion_column.Integrate(0.25, vel_eval.back(), {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))}, vel_eval);
     int n_points = vel_eval.size();
     velocity.resize(n_points);
     altitude.resize(n_points);

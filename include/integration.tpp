@@ -1,3 +1,4 @@
+#pragma once
 #include "integration.hh"
 using std::find;
 using std::fill;
@@ -8,12 +9,13 @@ using std::max;
 using std::min;
 using std::pow;
 
-using namespace tableau;
+template <typename model>
+using exec = void (model::*)(double, const valarray<double>&, valarray<double>&) const;
 
-double norm(valarray<double> x){
+inline double norm(valarray<double> x){
     return sqrt((x*x).sum()/x.size());
 }
-valarray<double> element_max(valarray<double> x, valarray<double> y){
+inline valarray<double> element_max(valarray<double> x, valarray<double> y){
     valarray<double> max_arr(x.size());
     for(int i = 0; i<x.size(); i++){
         max_arr[i] = max(x[i],y[i]);
@@ -21,54 +23,36 @@ valarray<double> element_max(valarray<double> x, valarray<double> y){
     return max_arr;
 }
 
-Integrator::Integrator(){}
+template <typename model, exec<model> call>
+Integrator<model,call>::Integrator(const model& function, const double absolute_err, const double relative_err):
+    func(&function), abs_err(absolute_err), rel_err(relative_err)
+{}
 
-Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), const int n_dims){
-    double pars = 1;
-    func = {function, &pars};
-    n_dim = n_dims;
-    abs_err = absolute_err;
-    rel_err = relative_err;
-}
-
-Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), void* pars, const int n_dims){
-    func = {function, pars};
-    n_dim = n_dims;
-    abs_err = absolute_err;
-    rel_err = relative_err;
-}
-
-Integrator::Integrator(valarray<double> (*function)(double, valarray<double>, void*), const int n_dims, const double absolute_err, const double relative_err){
-    double pars = 1;
-    func = {function, &pars};
-    n_dim = n_dims;
-    abs_err = absolute_err;
-    rel_err = relative_err;
-}
-
-void Integrator::Set_Initial_Step(const double dir, const double t0, const valarray<double> y0){
+template <typename model, exec<model> call>
+void Integrator<model,call>::Set_Initial_Step(const double dir, const double t0, const valarray<double> y0){
+    using namespace tableau;
     valarray<double> tol = abs_err + rel_err*abs(y0);
     double h_0 = 1e-2*norm(y0)/norm(k[0]);
-    valarray<double> f_1 = func(t0+dir*h_0, y0+dir*h_0*k[0]);
-    double delta = norm((f_1-k[0])/tol)/h_0;
+    (func->*call)(t0+dir*h_0, y0+dir*h_0*k[0], k[1]);
+    double delta = norm((k[1]-k[0])/tol)/h_0;
     double h_1 = pow(1e-2/max(delta,norm(k[0]/tol)),1./order);
     h = min(1e2*h_0,h_1);
 }
 
-void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, bool interpolate, bool y_bounds){
-    func.pars = parameters;
-    fill(begin(k), end(k), valarray<double>(0.,n_dim));
-    fill(begin(q), end(q), valarray<double>(0.,n_dim));
+template <typename model, exec<model> call>
+void Integrator<model,call>::Integrate(const double t_start, const double t_end, const valarray<double> y_start, bool interpolate, bool y_bounds){
+    fill(begin(k), end(k), valarray<double>(0.,y_start.size()));
+    fill(begin(q), end(q), valarray<double>(0.,y_start.size()));
     t.resize(1);
     y.resize(1);
     t[0] = t_start;
     y[0] = y_start;
 
     double dir = (0. < (t_end-t[0])) - ((t_end-t[0]) < 0.);
-    k[0] = func(t[0], y[0]);
+    (func->*call)(t[0], y[0], k[0]);
     Set_Initial_Step(dir, t[0], y[0]);
 
-    valarray<double> y_new(n_dim);
+    valarray<double> y_new(y_start.size());
     double t_new;
 
     bool before_bound = true;
@@ -85,7 +69,7 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
             Dense_Output(dir, t.back(), y.back(), t_new);
         }
         if(y_bounds){
-            before_bound = bound_dir*(y_boundary-y_new[boundary_index]) > absolute_err;
+            before_bound = bound_dir*(y_boundary-y_new[boundary_index]) > abs_err;
         }
 
         y.push_back(y_new);
@@ -97,27 +81,33 @@ void Integrator::Integrate(void* parameters, const double t_start, const double 
     }
 }
 
-void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start){
-    Integrate(parameters, t_start, t_end, y_start, false, false);
+template <typename model, exec<model> call>
+void Integrator<model,call>::Integrate(const double t_start, const double t_end, const valarray<double> y_start){
+    Integrate(t_start, t_end, y_start, false, false);
 }
 
-void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const vector<double> t_evals){
+template <typename model, exec<model> call>
+void Integrator<model,call>::Integrate(const double t_start, const double t_end, const valarray<double> y_start, const vector<double> t_evals){
 
     t_eval = valarray<double>(t_evals.data(), t_evals.size());
     y_eval.resize(t_eval.size());
-    Integrate(parameters, t_start, t_end, y_start, true, false);
+    Integrate(t_start, t_end, y_start, true, false);
 }
 
-void Integrator::Integrate(void* parameters, const double t_start, const double t_end, const valarray<double> y_start, const double y_bound, const int bound_ind){
+template <typename model, exec<model> call>
+void Integrator<model,call>::Integrate(const double t_start, const double t_end, const valarray<double> y_start, const double y_bound, const int bound_ind){
     y_boundary = y_bound;
     boundary_index = bound_ind;
-    Integrate(parameters, t_start, t_end, y_start, false, true);
+    Integrate(t_start, t_end, y_start, false, true);
 }
 
-double Integrator::Step(double dir, const double t_old, const valarray<double> y_old, double* t_new, valarray<double>* y_new){
+template <typename model, exec<model> call>
+double Integrator<model,call>::Step(double dir, const double t_old, const valarray<double> y_old, double* t_new, valarray<double>* y_new){
+    using namespace tableau;
+    using tableau::c;
     bool step_succeded = false;
     bool step_failed = false;
-    valarray<double> dy(n_dim), err_arr(n_dim);
+    valarray<double> dy(y_old.size()), err_arr(y_old.size());
     double h_new, err_norm;
     while(!step_succeded){
         *t_new = t_old+dir*h;
@@ -126,7 +116,7 @@ double Integrator::Step(double dir, const double t_old, const valarray<double> y
             for(int j = 0; j<i; j++){
                 dy += a[i][j]*k[j];
             }
-            k[i] = func(t_old+c[i]*dir*h, y_old+dir*h*dy);
+            (func->*call)(t_old+c[i]*dir*h, y_old+dir*h*dy, k[i]);
         }
         *y_new = 0;
         err_arr = 0;
@@ -135,7 +125,7 @@ double Integrator::Step(double dir, const double t_old, const valarray<double> y
             err_arr += e[i]*k[i];
         }
         *y_new = y_old + dir*h*(*y_new);
-        k[n_stages] = func(*t_new, *y_new);
+        (func->*call)(*t_new, *y_new, k[n_stages]);
         tol = abs_err + rel_err*element_max(abs(y_old), abs(*y_new));
         err_norm = norm((err_arr+e[n_stages]*k[n_stages])*h/tol);
 
@@ -164,11 +154,13 @@ double Integrator::Step(double dir, const double t_old, const valarray<double> y
     return h_new;
 }
 
-void Integrator::Dense_Output(const double dir, const double t_old, const valarray<double> y_old, const double t_new){
+template <typename model, exec<model> call>
+void Integrator<model,call>::Dense_Output(const double dir, const double t_old, const valarray<double> y_old, const double t_new){
+    using namespace tableau;
     double sigma, h;
     h = abs(t_new-t_old);
 
-    valarray<double> dy(n_dim);
+    valarray<double> dy(y_old.size());
     for(int i = 0; i<order-1; i++){
         q[i] = 0.;
         for(int j = 0; j<n_stages+1; j++){

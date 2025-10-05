@@ -2,7 +2,6 @@
 
 #include "constants.hh"
 #include "integration.hh"
-#include <valarray>
 
 class Cataclysmic_Variable{
     protected:
@@ -21,19 +20,19 @@ class Cataclysmic_Variable{
         valarray<double> velocity, altitude, electron_temperature, ion_temperature, electron_density, ion_density, electron_pressure, total_pressure, volume;
         // utilities
         int refl;
-        Integrator accretion_column;
         double upper_bound, lower_bound;
+
+        void Flow_Equation(double,const valarray<double>&, valarray<double>&) const;
+        Integrator<Cataclysmic_Variable, &Cataclysmic_Variable::Flow_Equation> accretion_column;
 
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);
 
-        valarray<double> Flow_Equation(double vel, valarray<double> pos);
         void Shock_Height_Shooting();
         void Build_Column_Profile();
         void Print_Properties();
         void Update_Shock_Height(double);
         double Get_Landing_Altitude();
-
         static double Get_Radius(double);
         static double Get_Accretion_Rate(double, double, double, double);
 
