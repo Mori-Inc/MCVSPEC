@@ -22,9 +22,6 @@ class Cataclysmic_Variable{
         int refl;
         double upper_bound, lower_bound;
 
-        void Flow_Equation(double,const valarray<double>&, valarray<double>&) const;
-        Integrator<Cataclysmic_Variable, &Cataclysmic_Variable::Flow_Equation> accretion_column;
-
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);
 
@@ -40,4 +37,6 @@ class Cataclysmic_Variable{
         virtual void Set_Abundances(double) = 0;
         void Set_Cooling_Constants();
         void Guess_Shock_Height();
+        void Flow_Equation(double,const valarray<double>&, valarray<double>&) const;
+        Integrator<Cataclysmic_Variable, &Cataclysmic_Variable::Flow_Equation> accretion_column{*this};
 };
