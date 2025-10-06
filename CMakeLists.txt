@@ -48,8 +48,7 @@ if(BUILD_PYBINDINGS)
     find_package(pybind11 CONFIG REQUIRED)
 
     pybind11_add_module(_pymcvspec pymcvspec/bindings.cpp
-                            source/Cataclysmic_Variable.cpp
-                            source/gaunt.cpp)
+                            source/Cataclysmic_Variable.cpp)
 
     add_dependencies(_pymcvspec embed_wd_mass_radius)
 
@@ -68,7 +67,6 @@ if(BUILD_XSMODEL)
     file(MAKE_DIRECTORY "${XSPEC_MODEL_DIR}")
 
     set(SOURCE_FILES ${CMAKE_SOURCE_DIR}/source/Cataclysmic_Variable.cpp;
-                    ${CMAKE_SOURCE_DIR}/source/gaunt.cpp;
                     ${CMAKE_SOURCE_DIR}/source/XS_Cataclysmic_Variable.cpp)
     set(MODEL_FILES ${CMAKE_SOURCE_DIR}/model_funcs/polarspec.cpp;
                     ${CMAKE_SOURCE_DIR}/model_funcs/ipspec.cpp;

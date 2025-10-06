@@ -1,4 +1,5 @@
 #pragma once
+#include "constants.hh"
 
 namespace gaunt{
     // coefficients for exact non-relativistic gaunt factor
@@ -13,7 +14,24 @@ namespace gaunt{
                                      1.15894, 1.15595, 1.15531, 1.15629, 1.1588 , 1.16247, 1.16731, 1.17318, 1.18009, 1.188 ,1.19693,
                                      1.20686, 1.21782, 1.22984, 1.24287};
 
-    double gaunt_factor(double);
+    inline double gaunt_factor(const double kT){
+        const double gamma_sqr = ryd_to_erg/kT;
+        const double log_gam = log10(gamma_sqr);
+        double p,q;
+        if(kT > 1./erg_to_kev){
+            int i = (log_gam-gamma_interp[0])/0.1;
+            return ((gaunt_interp[i+1]-gaunt_interp[i])/(gamma_interp[i+1]-gamma_interp[i]))*(log_gam-gamma_interp[i]) + gaunt_interp[i];
+        }
+        else if(log_gam<=0.8){
+            p = a_high[0] + log_gam*(a_high[1] + log_gam*(a_high[2] + log_gam*(a_high[3] + log_gam*a_high[4])));
+            q = b_high[0] + log_gam*(b_high[1] + log_gam*(b_high[2] + log_gam*(b_high[3] + log_gam*b_high[4])));
+        }
+        else{
+            p = a_low[0] + log_gam*(a_low[1] + log_gam*(a_low[2] + log_gam*(a_low[3] + log_gam*a_low[4])));
+            q = b_low[0] + log_gam*(b_low[1] + log_gam*(b_low[2] + log_gam*(b_low[3] + log_gam*b_low[4])));
+        }
+        return p/q;
+    }
 }
 
 /*
