@@ -8,6 +8,10 @@ XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, d
     metalicity = metals;
     Set_Abundances(metals);
     Guess_Shock_Height();
+    double t = 0.25;
+    valarray<double> y ={1,0.75,.32};
+    accretion_column.Initialize(t, 1e-4, y);
+    accretion_column.Step(t, y);
     Shock_Height_Shooting();
     Build_Column_Profile();
 }

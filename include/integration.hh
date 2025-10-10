@@ -24,7 +24,7 @@ class Integrator{
         valarray<double> tol;
         double dir;
         double h;
-        double t_old,h_old;
+        double t_old;
 
     public:
         explicit Integrator(const model&, const double absolute_err=1e-8, const double relative_err=1e-6);

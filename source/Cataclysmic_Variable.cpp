@@ -242,15 +242,13 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
     double kTe_old, kTi_old, x_old, v_old;
 
-    while(t>1e-4 && kTe_new > 0.5*dkTe){
+    while(t>1e-4 && kTe_grid > 0.5*dkTe){
 
         x_old = x;
         kTe_old = kTe_new;
         kTi_old = kTi_new;
         v_old = v;
-
         accretion_column.Dense_Step(t, y);
-
         ascale = pow(1+x/r,n);
         kTe_new = pe*v*ascale;
         kTi_new = (p-pe)*v*ascale;
@@ -352,7 +350,6 @@ void Cataclysmic_Variable::Build_Column_Profile(){
             v_i = 0;
         }
     }
-
     int n_points = grid.size();
     velocity.resize(n_points);
     altitude.resize(n_points);
@@ -377,12 +374,12 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         ion_density[i] = electron_density[i]/avg_atomic_charge;
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*avg_atomic_charge*(total_pressure[i]-electron_pressure[i])/electron_density[i];
-        volume[i] -= pow(1+(grid[i][1]+grid[i+1][1])/(2*r), n+1);
-        volume[i] *= accretion_area*radius/(n+1);
         if(i==n_points-1){
             break;
         }
-        volume[i+1] = pow(1+(grid[i][1]+grid[i-1][1])/(2*r), n+1);
+        volume[i] -= pow(1+(grid[i][1]+grid[i+1][1])/(2*r), n+1);
+        volume[i] *= accretion_area*radius/(n+1);
+        volume[i+1] = pow(1+(grid[i+1][1]+grid[i][1])/(2*r), n+1);
     }
     volume[n_points-1] = (accretion_area*radius/(n+1))*(pow(1+(grid[n_points-1][1]+grid[n_points-2][1])/(2*r), n+1)-1);
 

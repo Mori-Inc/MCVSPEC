@@ -30,7 +30,6 @@ Integrator<model,call>::Integrator(const model& function, const double absolute_
 
 template <typename model, exec<model> call>
 void Integrator<model,call>::Set_Initial_Step(const double t0, const valarray<double> y0){
-    using namespace tableau;
     valarray<double> tol = abs_err + rel_err*abs(y0);
     double h_0 = 1e-2*norm(y0)/norm(k[0]);
     (func->*call)(t0+dir*h_0, y0+dir*h_0*k[0], k[1]);
@@ -42,6 +41,7 @@ void Integrator<model,call>::Set_Initial_Step(const double t0, const valarray<do
 template <typename model, exec<model> call>
 void Integrator<model,call>::Initialize(double& t, const double t_end, const valarray<double>& y){
     fill(begin(k), end(k), valarray<double>(0.,y.size()));
+    fill(begin(q), end(q), valarray<double>(0.,y.size()));
     dir = (0. < (t_end-t)) - ((t_end-t) < 0.);
     (func->*call)(t, y, k[0]);
     Set_Initial_Step(t, y);
@@ -89,7 +89,6 @@ void Integrator<model,call>::Prepare_Step(const double& t, double& dt,const vala
         (func->*call)(t+dt, y+dy, k[n_stages]);
         tol = abs_err + rel_err*element_max(abs(y), abs(y+dy));
         err_norm = norm((err_arr+e[n_stages]*k[n_stages])*h/tol);
-
         if(err_norm < 1.){
             step_succeded = true;
             if (err_norm == 0){
@@ -116,8 +115,8 @@ void Integrator<model,call>::Prepare_Step(const double& t, double& dt,const vala
 
 template <typename model, exec<model> call>
 void Integrator<model,call>::Step(double& t, valarray<double>& y){
-    double dt, h_new;
-    valarray<double> dy;
+    double dt=h, h_new=h;
+    valarray<double> dy(y.size());
     Prepare_Step(t, dt, y, dy, h_new);
     y += dy;
     t += dt;
@@ -127,8 +126,8 @@ void Integrator<model,call>::Step(double& t, valarray<double>& y){
 template <typename model, exec<model> call>
 void Integrator<model,call>::Dense_Step(double& t, valarray<double>& y){
     using tableau::p;
-    double dt, h_new;
-    valarray<double> dy;
+    double dt=h, h_new=h;
+    valarray<double> dy(y.size());
     t_old = t;
     q[0]=y;
     Prepare_Step(t, dt, y, dy, h_new);
