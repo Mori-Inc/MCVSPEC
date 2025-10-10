@@ -5,11 +5,11 @@
 #include "gaunt.hh"
 #include <cmath>
 #include <iostream>
+#include <valarray>
 
 using std::cout;
 using std::endl;
 using std::abs;
-using std::ceil;
 
 static double previous_shock_height = 0;
 
@@ -84,37 +84,44 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
 }
 
 void Cataclysmic_Variable::Flow_Equation(double vel,const valarray<double>& pos_pres_epres, valarray<double>& derivs) const{
-    double pos = pos_pres_epres[0];
-    double press = pos_pres_epres[1];
-    double e_press = pos_pres_epres[2];
+    const double& v = vel;
+    const double& x = pos_pres_epres[0];
+    const double& p = pos_pres_epres[1];
+    const double& pe = pos_pres_epres[2];
+    const double& r = non_dim_radius;
+    const double& hs = shock_height;
+    const double& n = area_exponent;
 
-    double mdot = pow((1+non_dim_radius)/(pos+non_dim_radius), area_exponent);
-    double dens = mdot/vel;
-    double kT = (avg_ion_mass/density_const)*shock_speed*shock_speed*e_press*vel/mdot;
-    double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(e_press*e_press/(dens*dens*dens));
-    double gravity = force_const*dens/((1+pos/non_dim_radius)*(1+pos/non_dim_radius));
-    gravity *= (shock_height/(shock_speed*shock_speed));
-    double exchange = exchange_const*coulomb_log*sqrt(dens*dens*dens*dens*dens/e_press)*(press/e_press - ((1+avg_atomic_charge)/avg_atomic_charge));
-    exchange *= (shock_mdot*shock_height/(shock_speed*shock_speed*shock_speed));
-    double radiation = bremss_const*gaunt::gaunt_factor(kT)*sqrt(dens*dens*dens*e_press);
-    radiation *= 1 + (cooling_ratio/gaunt::gaunt_factor(kT))*e_press*e_press*pow(dens,-3.85)*pow(1+pos/non_dim_radius,-8.55-0.425*area_exponent);
-    radiation *= (shock_mdot*shock_height/(shock_speed*shock_speed*shock_speed));
+    const double mdot = pow((1+r)/(x+r), n);
+    const double dens = mdot/v;
+    const double vff2 = shock_speed*shock_speed;
+    const double vff3 = shock_speed*shock_speed*shock_speed;
+    const double kT = (avg_ion_mass/density_const)*vff2*pe*v/mdot;
+    const double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(pe*pe/(dens*dens*dens));
+    const double gff = gaunt::gaunt_factor(kT);
 
-    double dpos_dvel = (5*press - 3*mdot*vel)/(2*radiation + 3*vel*gravity - 5*press*vel*area_exponent/(non_dim_radius+pos));
-    double dpress_dvel = -gravity*dpos_dvel - mdot;
-    double depress_dvel = 2*(radiation - exchange/(shock_speed*shock_speed))*dpos_dvel/(3*vel);
-    depress_dvel -= 5*e_press*((1/vel) + area_exponent*dpos_dvel/(non_dim_radius+pos))/3.;
+    const double grav = (hs/vff2)*force_const*dens/((1+x/r)*(1+x/r));
+    const double chi = (1+avg_atomic_charge)/avg_atomic_charge;
+    const double exch = (shock_mdot*hs/vff3)*exchange_const*coulomb_log*sqrt(dens*dens*dens*dens*dens/pe)*(p/pe - chi);
+    const double cyc = (cooling_ratio/gff)*pe*pe*pow(dens,-3.85)*pow(1+x/r,-8.55-0.425*n);
+    const double rad = (shock_mdot*hs/vff3)*bremss_const*gff*sqrt(dens*dens*dens*pe)*(1+cyc);
 
-    derivs[0] = dpos_dvel;
-    derivs[1] = dpress_dvel;
-    derivs[2] = depress_dvel;
+    double dx_dv = (5*p - 3*mdot*v)/(2*rad + 3*v*grav - 5*p*v*n/(r+x));
+    double dp_dv = -grav*dx_dv - mdot;
+    double dpe_dv = (2./(3*v))*(rad - exch/vff2)*dx_dv - (5*pe/3.)*(1/v + n*dx_dv/(r+x));
+
+    derivs[0] = dx_dv;
+    derivs[1] = dp_dv;
+    derivs[2] = dpe_dv;
 }
 
 double Cataclysmic_Variable::Get_Landing_Altitude(){
-    accretion_column.Integrate(0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
+    double t = 0.25;
+    valarray<double> y = {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
+    accretion_column.Integrate(t, 1e-4, y);
     valarray<double> slope(3);
-    Flow_Equation(accretion_column.t.back(),  accretion_column.y.back(), slope);
-    return accretion_column.y.back()[0] - slope[0]*accretion_column.t.back();
+    Flow_Equation(t,  y, slope);
+    return y[0] - slope[0]*t;
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
@@ -192,48 +199,161 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
         i++;
     }
     Update_Shock_Height((upper_bound+lower_bound)/2);
-    accretion_column.Integrate(0.25, 1e-4, {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))});
     previous_shock_height = shock_height;
 }
 
 void Cataclysmic_Variable::Build_Column_Profile(){
     // generate a velocity grid that is has a spacing of ~ kT_grid_spacing
     // interpolate between each point in the RK grid to find a set of velocities to evaluate our integral at
-    vector<double> vel_eval = {0.25};
-    double kT, dir, kT_new, dv_dkT;
-    double kT_left, kT_right;
-    int n_possible_vals; // maximum number of grid points that could be in an interval
 
-    kT = accretion_column.y[0][2]*accretion_column.t[0]*pow((non_dim_radius+accretion_column.y[0][0])/(non_dim_radius+1),area_exponent);
-    kT *= erg_to_kev*avg_ion_mass*shock_speed*shock_speed/density_const;
+    // determine de-dimensionalized grid size
+    const double kTe_const = erg_to_kev*avg_ion_mass*shock_speed*shock_speed/density_const;
+    const double kTi_const = avg_atomic_charge*kTe_const;
+    const double dkTe = kT_grid_spacing/kTe_const;
+    const double dkTi = kT_grid_spacing/kTi_const;
+    const double& dx = altitude_grid_spacing;
+    const double& r = non_dim_radius;
+    const double& n = area_exponent;
 
-    kT_left = kT;
+    // prep vars for integration
+    double t = 0.25;
+    valarray<double> y = {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
+    const double& v = t;
+    const double& x = y[0];
+    const double& p = y[1];
+    const double& pe = y[2];
+    accretion_column.Initialize(t, 1e-4, y);
 
-    for(int i=1; i<accretion_column.t.size(); i++){
-        kT_right = accretion_column.y[i][2]*accretion_column.t[i]*pow((non_dim_radius+accretion_column.y[i][0])/(non_dim_radius+1),area_exponent);
-        kT_right *= erg_to_kev*avg_ion_mass*shock_speed*shock_speed/density_const;
+    double ascale = pow(1+x/r,n);
+    double kTe_new = pe*v*ascale;
+    double kTi_new = (p-pe)*v*ascale;
 
-        dir = -1;
-        if(kT_right > kT){
-            dir = 1;
-        }
-        n_possible_vals = ceil(abs((kT_right-kT_left)/kT_grid_spacing));
-        while(n_possible_vals>0){
-            kT_new = kT + dir*kT_grid_spacing;
-            if((kT_right-kT_new)*(kT_left-kT_new)<0){ // only true if kT_new is contained in the interval
-                dv_dkT = (accretion_column.t[i]-accretion_column.t[i-1])/(kT_right-kT_left);
-                kT = kT_new;
-                vel_eval.push_back(dv_dkT*(kT-kT_left) + accretion_column.t[i-1]);
-                n_possible_vals--;
+    bool found_grid=false;
+    double kTe_grid=kTe_new, kTi_grid=kTi_new, x_grid=x;
+    double target, v_high, v_low, v_mid;
+    double v_x=0, v_e=0, v_i=0;
+    valarray<double> y_mid(3);
+    const double& x_mid = y_mid[0];
+    const double& p_mid = y_mid[1];
+    const double& pe_mid = y_mid[2];
+    double kTe_mid, kTi_mid;
+    vector<valarray<double>> grid;
+    grid.push_back({v,x,p,pe});
+
+    double kTe_old, kTi_old, x_old, v_old;
+
+    while(t>1e-4 && kTe_new > 0.5*dkTe){
+
+        x_old = x;
+        kTe_old = kTe_new;
+        kTi_old = kTi_new;
+        v_old = v;
+
+        accretion_column.Dense_Step(t, y);
+
+        ascale = pow(1+x/r,n);
+        kTe_new = pe*v*ascale;
+        kTi_new = (p-pe)*v*ascale;
+
+        if(x_grid-dx < x_old && x_grid-dx >= x){
+            found_grid = true;
+            target = x_grid-dx;
+            if(target == x){
+                v_x = v;
             }
             else{
-                break;
+                v_high = v_old;
+                v_low = v;
+                while(abs(v_high-v_low) > 1e-4){
+                    v_mid = (v_high+v_low)/2;
+                    accretion_column.Interpolate(v_mid, y_mid);
+                    if(x_mid < target){
+                        v_low = v_mid;
+                    }
+                    else{
+                        v_high = v_mid;
+                    }
+                }
+                v_x = (v_high+v_low)/2;
             }
         }
-        kT_left = kT_right;
+        if(((kTe_old-kTe_grid-dkTe)*(kTe_new-kTe_grid-dkTe)<=0)||
+           ((kTe_old-kTe_grid+dkTe)*(kTe_new-kTe_grid+dkTe)<=0)){
+
+            found_grid = true;
+            target = kTe_grid+dkTe;
+            if((kTe_old-kTe_grid-dkTe)*(kTe_new-kTe_grid-dkTe)<=0){
+                target = kTe_grid-dkTe;
+            }
+            if(target == kTe_new){
+                v_e = v;
+            }
+            else{
+                v_high = v_old;
+                v_low = v;
+                if(kTe_old < kTe_new){
+                    v_high = v;
+                    v_low = v_old;
+                }
+                while(abs(v_high-v_low) > 1e-4){
+                    v_mid = (v_high+v_low)/2;
+                    accretion_column.Interpolate(v_mid, y_mid);
+                    kTe_mid = pe_mid*v_mid*pow(1+x_mid/r,n);
+                    if(kTe_mid < target){
+                        v_low = v_mid;
+                    }
+                    else{
+                        v_high = v_mid;
+                    }
+                }
+                v_e = (v_high+v_low)/2;
+            }
+        }
+        if(((kTi_old-kTi_grid-dkTi)*(kTi_new-kTi_grid-dkTi)<=0)||
+           ((kTi_old-kTi_grid+dkTi)*(kTi_new-kTi_grid+dkTi)<=0)){
+
+            found_grid = true;
+            target = kTi_grid+dkTi;
+            if((kTi_old-kTi_grid-dkTi)*(kTi_new-kTi_grid-dkTi)<=0){
+                target = kTi_grid-dkTi;
+            }
+            if(target == kTi_new){
+                v_i = v;
+            }
+            else{
+                v_high = v_old;
+                v_low = v;
+                if(kTi_old < kTi_new){
+                    v_high = v;
+                    v_low = v_old;
+                }
+                while(abs(v_high-v_low) > 1e-4){
+                    v_mid = (v_high+v_low)/2;
+                    accretion_column.Interpolate(v_mid, y_mid);
+                    kTi_mid = (p_mid-pe_mid)*v_mid*pow(1+x_mid/r,n);
+                    if(kTi_mid < target){
+                        v_low = v_mid;
+                    }
+                    else{
+                        v_high = v_mid;
+                    }
+                }
+                v_i = (v_high+v_low)/2;
+            }
+        }
+
+        if(found_grid){
+            found_grid=false;
+            v_mid = max(v_x,max(v_e,v_i));
+            accretion_column.Interpolate(v_mid, y_mid);
+            grid.push_back({v_mid,x_mid,p_mid,pe_mid});
+            v_x = 0;
+            v_e = 0;
+            v_i = 0;
+        }
     }
-    accretion_column.Integrate(0.25, vel_eval.back(), {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))}, vel_eval);
-    int n_points = vel_eval.size();
+
+    int n_points = grid.size();
     velocity.resize(n_points);
     altitude.resize(n_points);
     total_pressure.resize(n_points);
@@ -244,42 +364,38 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     ion_temperature.resize(n_points);
     volume.resize(n_points);
 
-    double mdot, dens, e_press, bremss_weight=0;
+    double mdot;
 
-    for(int i=0; i<accretion_column.t_eval.size(); i++){
-        velocity[i] = accretion_column.t_eval[i]*shock_speed;
-        altitude[i] = accretion_column.y_eval[i][0]*shock_height;
-        total_pressure[i] = shock_mdot*shock_speed*accretion_column.y_eval[i][1];
-        electron_pressure[i] = shock_mdot*shock_speed*accretion_column.y_eval[i][2];
-        mdot = (accretion_rate/accretion_area)*pow(1+altitude[i]/radius,-area_exponent);
+    volume[0] = pow(1+grid[0][1]/r, n+1);
+    for(uint i=0; i<n_points; i++){
+        velocity[i] = grid[i][0]*shock_speed;
+        altitude[i] = grid[i][1]*shock_height;
+        total_pressure[i] = shock_mdot*shock_speed*grid[i][2];
+        electron_pressure[i] = shock_mdot*shock_speed*grid[i][3];
+        mdot = (accretion_rate/accretion_area)*pow(1+altitude[i]/radius,-n);
         electron_density[i] = (mdot/velocity[i])*density_const/avg_ion_mass;
         ion_density[i] = electron_density[i]/avg_atomic_charge;
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*avg_atomic_charge*(total_pressure[i]-electron_pressure[i])/electron_density[i];
+        volume[i] -= pow(1+(grid[i][1]+grid[i+1][1])/(2*r), n+1);
+        volume[i] *= accretion_area*radius/(n+1);
+        if(i==n_points-1){
+            break;
+        }
+        volume[i+1] = pow(1+(grid[i][1]+grid[i-1][1])/(2*r), n+1);
     }
-    double x0,x1;
-    for(int i=1; i<volume.size()-1; i++){
-        x0 = (altitude[i+1]+altitude[i])/2;
-        x1 = (altitude[i-1]+altitude[i])/2;
-        volume[i] = accretion_area*radius*pow(1+x1/radius,area_exponent+1)/(area_exponent+1);
-        volume[i] -= accretion_area*radius*pow(1+x0/radius,area_exponent+1)/(area_exponent+1);
-        e_press = accretion_column.y_eval[i][2];
-        dens = electron_density[i]*avg_ion_mass/density_const/(shock_mdot/shock_speed);
-        cyclotron_ratio += volume[i]*sqrt(dens*dens*dens*e_press)*cooling_ratio*e_press*e_press*pow(dens,-3.85)*pow(1+altitude[i]/radius,-8.55-0.425*area_exponent);
-        bremss_weight += volume[i]*sqrt(dens*dens*dens*e_press);
+    volume[n_points-1] = (accretion_area*radius/(n+1))*(pow(1+(grid[n_points-1][1]+grid[n_points-2][1])/(2*r), n+1)-1);
+
+    double dens, gff, cyc, brems, bremss_weight=0;
+    cyclotron_ratio = 0;
+    for(uint i=0; i<n_points; i++){
+        gff = gaunt::gaunt_factor(electron_temperature[i]/erg_to_kev);
+        dens = pow((1+r)/(grid[i][1]+r), n)/grid[i][0];
+        cyc = (cooling_ratio/gff)*grid[i][3]*grid[i][3]*pow(dens,-3.85)*pow(1+grid[i][1]/r,-8.55-0.425*n);
+        brems = volume[i]*gff*sqrt(dens*dens*dens*grid[i][3]);
+        cyclotron_ratio += brems*cyc;
+        bremss_weight += brems*(1+cyc);
     }
-    x0 = x1;
-    x1 = altitude[volume.size()-1];
-    volume[volume.size()-1] = accretion_area*radius*pow(1+x1/radius,area_exponent+1)/(area_exponent+1);
-    volume[volume.size()-1] -= accretion_area*radius*pow(1+x0/radius,area_exponent+1)/(area_exponent+1);
-    x0 = (altitude[0]+altitude[1])/2;
-    x1 = altitude[0];
-    volume[0] = accretion_area*radius*pow(1+x1/radius,area_exponent+1)/(area_exponent+1);
-    volume[0] -= accretion_area*radius*pow(1+x0/radius,area_exponent+1)/(area_exponent+1);
-    e_press = accretion_column.y_eval[0][2];
-    dens = electron_density[0]*avg_ion_mass/density_const/(shock_mdot/shock_speed);
-    cyclotron_ratio += volume[0]*sqrt(dens*dens*dens*e_press)*cooling_ratio*e_press*e_press*pow(dens,-3.85)*pow(1+altitude[0]/radius,-8.55-0.425*area_exponent);
-    bremss_weight += volume[0]*sqrt(dens*dens*dens*e_press);
     cyclotron_ratio /= bremss_weight;
 }
 

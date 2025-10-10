@@ -28,3 +28,4 @@ const double ryd_to_erg = 2.1798723611035845e-11; // rydberg energy unit in ergs
 const double h_s_tolerance = 0.1; // cm
 //const double gaunt_factor = 1.2;
 const double kT_grid_spacing = 0.5; // keV
+const double altitude_grid_spacing = 0.1; // fractional
