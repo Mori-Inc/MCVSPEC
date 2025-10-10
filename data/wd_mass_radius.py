@@ -90,8 +90,8 @@ def equation_of_state(r, state, Z):
 pressre_coeff = ((m_e*c**2)/(3*np.pi**2))*(m_e*c/hbar)**3
 density_coeff = (args.mu*amu/(3*np.pi**2))*(m_e*c/hbar)**3
 
-n_points = 200
-initial_x = np.logspace(-1,3,n_points//2)
+n_points = 400
+initial_x = np.logspace(-1,4,n_points//2)
 mass = np.zeros(n_points)
 radius = np.zeros(n_points)
 
