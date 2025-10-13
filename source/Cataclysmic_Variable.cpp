@@ -211,143 +211,92 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     const double kTi_const = avg_atomic_charge*kTe_const;
     const double dkTe = kT_grid_spacing/kTe_const;
     const double dkTi = kT_grid_spacing/kTi_const;
-    const double& dx = altitude_grid_spacing;
+    const valarray<double> grid_spacing = {altitude_grid_spacing, dkTe, dkTi};
     const double& r = non_dim_radius;
     const double& n = area_exponent;
 
-    // prep vars for integration
-    double t = 0.25;
+    // vars for integration
+    double v = 0.25;
     valarray<double> y = {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
-    const double& v = t;
-    const double& x = y[0];
-    const double& p = y[1];
-    const double& pe = y[2];
-    accretion_column.Initialize(t, 1e-4, y);
+    accretion_column.Initialize(v, 1e-4, y);
+    double v_old = v;
+    double dv;
 
+    // vars for interval splitting
+    valarray<double> y_mid(3), grid_vars(3), grid_vars_l(3), grid_vars_r(3), crossing(3);
+    y_mid = y;
+    const double& x = y_mid[0];
+    const double& p = y_mid[1];
+    const double& pe = y_mid[2];
     double ascale = pow(1+x/r,n);
-    double kTe_new = pe*v*ascale;
-    double kTi_new = (p-pe)*v*ascale;
+    grid_vars_r = {x, pe*v*ascale, (p-pe)*v*ascale};
+    grid_vars = {x, pe*v*ascale, (p-pe)*v*ascale};
+    // vars for root finding
+    double v_high, v_low, v_mid;
+    valarray<double> root_vars(3);
 
-    bool found_grid=false;
-    double kTe_grid=kTe_new, kTi_grid=kTi_new, x_grid=x;
-    double target, v_high, v_low, v_mid;
-    double v_x=0, v_e=0, v_i=0;
-    valarray<double> y_mid(3);
-    const double& x_mid = y_mid[0];
-    const double& p_mid = y_mid[1];
-    const double& pe_mid = y_mid[2];
-    double kTe_mid, kTi_mid;
+    // grid
     vector<valarray<double>> grid;
     grid.push_back({v,x,p,pe});
 
-    double kTe_old, kTi_old, x_old, v_old;
+    int seg;
+    bool root_found=false;
 
-    while(t>1e-4 && kTe_grid > 0.5*dkTe){
-
-        x_old = x;
-        kTe_old = kTe_new;
-        kTi_old = kTi_new;
+    while(v>1e-4 && grid_vars[1] > 0.5*dkTe){
         v_old = v;
-        accretion_column.Dense_Step(t, y);
-        ascale = pow(1+x/r,n);
-        kTe_new = pe*v*ascale;
-        kTi_new = (p-pe)*v*ascale;
+        accretion_column.Dense_Step(v, y);
+        dv = (v_old-v)/16.;
+        seg=0;
 
-        if(x_grid-dx < x_old && x_grid-dx >= x){
-            found_grid = true;
-            target = x_grid-dx;
-            if(target == x){
-                v_x = v;
-            }
-            else{
-                v_high = v_old;
-                v_low = v;
-                while(abs(v_high-v_low) > 1e-4){
-                    v_mid = (v_high+v_low)/2;
-                    accretion_column.Interpolate(v_mid, y_mid);
-                    if(x_mid < target){
-                        v_low = v_mid;
-                    }
-                    else{
-                        v_high = v_mid;
-                    }
-                }
-                v_x = (v_high+v_low)/2;
-            }
-        }
-        if(((kTe_old-kTe_grid-dkTe)*(kTe_new-kTe_grid-dkTe)<=0)||
-           ((kTe_old-kTe_grid+dkTe)*(kTe_new-kTe_grid+dkTe)<=0)){
+        while(seg<16){
+            //v_mid = v_old - dv*seg;
+            //accretion_column.Interpolate(v_mid, y_mid);
+            //ascale = pow(1+x/r,n);
+            //grid_vars_l = {x, pe*v_mid*pow(1+x/r,n), (p-pe)*v_mid*pow(1+x/r,n)};
+            grid_vars_l = grid_vars_r;
 
-            found_grid = true;
-            target = kTe_grid+dkTe;
-            if((kTe_old-kTe_grid-dkTe)*(kTe_new-kTe_grid-dkTe)<=0){
-                target = kTe_grid-dkTe;
-            }
-            if(target == kTe_new){
-                v_e = v;
-            }
-            else{
-                v_high = v_old;
-                v_low = v;
-                if(kTe_old < kTe_new){
-                    v_high = v;
-                    v_low = v_old;
-                }
-                while(abs(v_high-v_low) > 1e-4){
-                    v_mid = (v_high+v_low)/2;
-                    accretion_column.Interpolate(v_mid, y_mid);
-                    kTe_mid = pe_mid*v_mid*pow(1+x_mid/r,n);
-                    if(kTe_mid < target){
-                        v_low = v_mid;
-                    }
-                    else{
-                        v_high = v_mid;
-                    }
-                }
-                v_e = (v_high+v_low)/2;
-            }
-        }
-        if(((kTi_old-kTi_grid-dkTi)*(kTi_new-kTi_grid-dkTi)<=0)||
-           ((kTi_old-kTi_grid+dkTi)*(kTi_new-kTi_grid+dkTi)<=0)){
-
-            found_grid = true;
-            target = kTi_grid+dkTi;
-            if((kTi_old-kTi_grid-dkTi)*(kTi_new-kTi_grid-dkTi)<=0){
-                target = kTi_grid-dkTi;
-            }
-            if(target == kTi_new){
-                v_i = v;
-            }
-            else{
-                v_high = v_old;
-                v_low = v;
-                if(kTi_old < kTi_new){
-                    v_high = v;
-                    v_low = v_old;
-                }
-                while(abs(v_high-v_low) > 1e-4){
-                    v_mid = (v_high+v_low)/2;
-                    accretion_column.Interpolate(v_mid, y_mid);
-                    kTi_mid = (p_mid-pe_mid)*v_mid*pow(1+x_mid/r,n);
-                    if(kTi_mid < target){
-                        v_low = v_mid;
-                    }
-                    else{
-                        v_high = v_mid;
-                    }
-                }
-                v_i = (v_high+v_low)/2;
-            }
-        }
-
-        if(found_grid){
-            found_grid=false;
-            v_mid = max(v_x,max(v_e,v_i));
+            v_mid = v_old - dv*(seg+1);
             accretion_column.Interpolate(v_mid, y_mid);
-            grid.push_back({v_mid,x_mid,p_mid,pe_mid});
-            v_x = 0;
-            v_e = 0;
-            v_i = 0;
+            ascale = pow(1+x/r,n);
+            grid_vars_r = {x, pe*v_mid*pow(1+x/r,n), (p-pe)*v_mid*pow(1+x/r,n)};
+
+            crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(grid_vars_r-grid_vars)/grid_spacing - 1);
+
+            for(uint i=0; i<crossing.size(); i++){
+                if(crossing[i]<0){
+                    root_found = true;
+                    v_high = v_old - dv*seg;
+                    v_low = v_old - dv*(seg+1);
+                    while(v_high-v_low > 1e-8){
+                        v_mid = (v_high+v_low)/2;
+                        accretion_column.Interpolate(v_mid, y_mid);
+                        ascale = pow(1+x/r,n);
+                        root_vars = {x, pe*v_mid*ascale, (p-pe)*v_mid*ascale};
+                        if(abs(root_vars[i]-grid_vars[i])/grid_spacing[i] - 1 > 0){
+                            v_low = v_mid;
+                        }
+                        else{
+                            v_high = v_mid;
+                        }
+                    }
+                    accretion_column.Interpolate(v_high, y_mid);
+                    ascale = pow(1+x/r,n);
+                    root_vars = {x, pe*v_high*ascale, (p-pe)*v_high*ascale};
+                    crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(root_vars-grid_vars)/grid_spacing - 1); // update crossing with the new
+                }
+            }// after checking crossing I will have found the earliest grid point in a given segment
+            seg++;
+            // update the grid
+            if(root_found){
+                grid_vars = root_vars;
+                grid.push_back({v_high,x,p,pe});
+                root_found=false;
+                seg--; // repeate search on segment in case
+                v_mid = v_high-1e-8;
+                accretion_column.Interpolate(v_mid, y_mid);
+                ascale = pow(1+x/r,n);
+                grid_vars_r = {x, pe*v_mid*ascale, (p-pe)*v_mid*ascale}; // shift left bound to just after our previous root
+            }
         }
     }
     int n_points = grid.size();

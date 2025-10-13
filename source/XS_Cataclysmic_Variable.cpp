@@ -52,6 +52,9 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
         flux += apec_flux;
 
         if(refl==1){
+            if(altitude[i]<0){
+                altitude[i] = 0;
+            }
             refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
             reflected_flux += refl_amp*apec_flux;
         }

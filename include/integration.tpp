@@ -55,7 +55,6 @@ void Integrator<model,call>::Integrate(double& t, const double t_end, valarray<d
     while(dir*(t_end-t) > 0 && n_steps < max_itter){
         h = min(h,dir*(t_end-t));
         Step(t, y);
-        k[0] = k[n_stages];
     }
 }
 
@@ -121,6 +120,7 @@ void Integrator<model,call>::Step(double& t, valarray<double>& y){
     y += dy;
     t += dt;
     h = h_new;
+    k[0] = k[n_stages];
 }
 
 template <typename model, exec<model> call>
@@ -131,16 +131,17 @@ void Integrator<model,call>::Dense_Step(double& t, valarray<double>& y){
     t_old = t;
     q[0]=y;
     Prepare_Step(t, dt, y, dy, h_new);
-    for(int i = 1; i<order-1; i++){
+    for(int i = 1; i<order; i++){
         q[i] = 0.;
         for(int j = 0; j<n_stages+1; j++){
-            q[i] += k[j]*p[j][i];
+            q[i] += k[j]*p[j][i-1];
         }
-        q[i] /= pow(h,i);
+        q[i] /= pow(h,i-1);
     }
     y += dy;
     t += dt;
     h = h_new;
+    k[0] = k[n_stages];
 }
 
 template <typename model, exec<model> call>
@@ -148,6 +149,6 @@ void Integrator<model,call>::Interpolate(double t, valarray<double>& y){
     double dt = dir*(t-t_old);
     y = q[0];
     for(uint i=1; i<order; i++){
-        y += dir*h*q[i]*pow(dt,i+1);
+        y += dir*q[i]*pow(dt,i);
     }
 }
