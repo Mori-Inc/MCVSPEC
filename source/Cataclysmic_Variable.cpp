@@ -12,7 +12,6 @@ using std::endl;
 using std::abs;
 
 static double previous_shock_height = 0;
-
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double corot_rat, double area, double theta, double n, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection)
 {
@@ -83,17 +82,19 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     cooling_ratio = cooling_ratio_const*pow(shock_speed,5.85)/pow(shock_mdot, 1.85);
 }
 
-void Cataclysmic_Variable::Flow_Equation(double vel,const valarray<double>& pos_pres_epres, valarray<double>& derivs) const{
-    const double& v = vel;
-    const double& x = pos_pres_epres[0];
-    const double& p = pos_pres_epres[1];
-    const double& pe = pos_pres_epres[2];
+void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& pos_vel_pres_epres, valarray<double>& derivs) const{
+    const double& s = entropy;
+    const double& x = pos_vel_pres_epres[0];
+    const double& v = pos_vel_pres_epres[1];
+    const double& p = pos_vel_pres_epres[2];
+    const double& pe = pos_vel_pres_epres[3];
     const double& r = non_dim_radius;
     const double& hs = shock_height;
     const double& n = area_exponent;
 
     const double mdot = pow((1+r)/(x+r), n);
     const double dens = mdot/v;
+    const double crdens = cbrt(dens);
     const double vff2 = shock_speed*shock_speed;
     const double vff3 = shock_speed*shock_speed*shock_speed;
     const double kT = (avg_ion_mass/density_const)*vff2*pe*v/mdot;
@@ -106,28 +107,31 @@ void Cataclysmic_Variable::Flow_Equation(double vel,const valarray<double>& pos_
     const double cyc = (cooling_ratio/gff)*pe*pe*pow(dens,-3.85)*pow(1+x/r,-8.55-0.425*n);
     const double rad = (shock_mdot*hs/vff3)*bremss_const*gff*sqrt(dens*dens*dens*pe)*(1+cyc);
 
-    double dx_dv = (5*p - 3*mdot*v)/(2*rad + 3*v*grav - 5*p*v*n/(r+x));
-    double dp_dv = -grav*dx_dv - mdot;
-    double dpe_dv = (2./(3*v))*(rad - exch/vff2)*dx_dv - (5*pe/3.)*(1/v + n*dx_dv/(r+x));
+    double dx_ds = 1.5*mdot*crdens*crdens/rad;
+    double dv_ds = 3*mdot/(5*s*dens - 3*v*v*crdens) + 3*mdot*mdot*(3*grav - 5*n*p/(r+x))/(2*rad*crdens*(5*p - 3*mdot*v));
+    double dp_ds = -1.5*mdot*crdens*crdens*grav/rad - mdot*dv_ds;
+    double dpe_ds = dens*crdens*crdens*(1 - (1./vff2)*exch/rad) - (5./3.)*pe*(n*dx_ds/(x+r) + dv_ds/v);
 
-    derivs[0] = dx_dv;
-    derivs[1] = dp_dv;
-    derivs[2] = dpe_dv;
+    derivs[0] = dx_ds;
+    derivs[1] = dv_ds;
+    derivs[2] = dp_ds;
+    derivs[3] = dpe_ds;
 }
 
 double Cataclysmic_Variable::Get_Landing_Altitude(){
-    double t = 0.25;
-    valarray<double> y = {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
-    int success = accretion_column.Integrate(t, 1e-4, y);
-    valarray<double> slope(3);
+    double t = entropy_boundary;
+    valarray<double> y = {1., 0.25, 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
+    int success = accretion_column.Integrate(t, 1e-6, y);
+    valarray<double> slope(4);
     Flow_Equation(t,  y, slope);
-    double landing = y[0] - slope[0]*t;
+    double landing = y[0] - (slope[0]/slope[1])*y[1];
+
     if(success != 1){
         accretion_column.Initialize(t, min(0.25,10*t), y);
         accretion_column.Step(t,y);
         Flow_Equation(t,  y, slope);
-        if(abs(landing - (y[0] - slope[0]*t)) > 1e-6){
-            cout << "WARNING: integration failed to complete, error on landing altitude is estimated as " << landing << " +/- " << abs(landing - (y[0] - slope[0]*t)) << endl;
+        if(abs(landing - (y[0] - (slope[0]/slope[1])*y[1])) > 1e-6){
+            cout << "WARNING: integration failed to complete, error on landing altitude is estimated as " << landing << " +/- " << abs(landing - (y[0] - (slope[0]/slope[1])*y[1])) << endl;
         }
     }
     return landing;
@@ -225,72 +229,69 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     const double& n = area_exponent;
 
     // vars for integration
-    double v = 0.25;
-    valarray<double> y = {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
-    accretion_column.Initialize(v, 1e-4, y);
-    double v_old = v;
-    double dv;
+    double s = entropy_boundary;
+    valarray<double> y = {1., 0.25, 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
+    accretion_column.Initialize(s, 1e-8, y);
+    double s_old = s;
+    double ds;
 
     // vars for interval splitting
-    valarray<double> y_mid(3), grid_vars(3), grid_vars_l(3), grid_vars_r(3), crossing(3);
+    valarray<double> y_mid(4), grid_vars(3), grid_vars_l(3), grid_vars_r(3), crossing(3);
     y_mid = y;
     const double& x = y_mid[0];
-    const double& p = y_mid[1];
-    const double& pe = y_mid[2];
+    const double& v = y_mid[1];
+    const double& p = y_mid[2];
+    const double& pe = y_mid[3];
     double imdot = pow((r+x)/(r+1),n);
     grid_vars_r = {x, pe*v*imdot, (p-pe)*v*imdot};
     grid_vars = {x, pe*v*imdot, (p-pe)*v*imdot};
     // vars for root finding
-    double v_high, v_low, v_mid;
+    double s_high, s_low, s_mid;
     valarray<double> root_vars(3);
 
     // grid
     vector<valarray<double>> grid;
-    grid.push_back({v,x,p,pe});
+    grid.push_back(y);
 
     int seg;
     bool root_found=false;
 
-    while(v>1e-4 && grid_vars[1] > 0.5*dkTe){
-        v_old = v;
-        accretion_column.Dense_Step(v, y);
-        dv = (v_old-v)/16.;
+    while(s>1e-8 && grid_vars[2] > 0.5*dkTe){
+        s_old = s;
+        accretion_column.Dense_Step(s, y);
+        ds = (s_old-s)/16.;
         seg=0;
 
         while(seg<16){
-            //v_mid = v_old - dv*seg;
-            //accretion_column.Interpolate(v_mid, y_mid);
-            //ascale = pow(1+x/r,n);
-            //grid_vars_l = {x, pe*v_mid*pow(1+x/r,n), (p-pe)*v_mid*pow(1+x/r,n)};
             grid_vars_l = grid_vars_r;
 
-            v_mid = v_old - dv*(seg+1);
-            accretion_column.Interpolate(v_mid, y_mid);
+            s_mid = s_old - ds*(seg+1);
+            accretion_column.Interpolate(s_mid, y_mid);
             imdot = pow((r+x)/(r+1),n);
-            grid_vars_r = {x, pe*v_mid*imdot, (p-pe)*v_mid*imdot};
+            grid_vars_r = {x, pe*v*imdot, (p-pe)*v*imdot};
 
             crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(grid_vars_r-grid_vars)/grid_spacing - 1);
 
             for(uint i=0; i<crossing.size(); i++){
                 if(crossing[i]<0){
                     root_found = true;
-                    v_high = v_old - dv*seg;
-                    v_low = v_old - dv*(seg+1);
-                    while(v_high-v_low > 1e-8){
-                        v_mid = (v_high+v_low)/2;
-                        accretion_column.Interpolate(v_mid, y_mid);
+                    s_high = s_old - ds*seg;
+                    s_low = s_old - ds*(seg+1);
+                    while(s_high-s_low > 1e-8){
+                        s_mid = (s_high+s_low)/2;
+                        accretion_column.Interpolate(s_mid, y_mid);
                         imdot = pow((r+x)/(r+1),n);
-                        root_vars = {x, pe*v_mid*imdot, (p-pe)*v_mid*imdot};
+                        root_vars = {x, pe*v*imdot, (p-pe)*v*imdot};
                         if(abs(root_vars[i]-grid_vars[i])/grid_spacing[i] - 1 > 0){
-                            v_low = v_mid;
+                            s_low = s_mid;
                         }
                         else{
-                            v_high = v_mid;
+                            s_high = s_mid;
                         }
                     }
-                    accretion_column.Interpolate(v_high, y_mid);
+                    accretion_column.Interpolate(s_high, y_mid);
                     imdot = pow((r+x)/(r+1),n);
-                    root_vars = {x, pe*v_high*imdot, (p-pe)*v_high*imdot};
+                    root_vars = {x, pe*v*imdot, (p-pe)*v*imdot};
                     crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(root_vars-grid_vars)/grid_spacing - 1); // update crossing with the new
                 }
             }// after checking crossing I will have found the earliest grid point in a given segment
@@ -298,13 +299,13 @@ void Cataclysmic_Variable::Build_Column_Profile(){
             // update the grid
             if(root_found){
                 grid_vars = root_vars;
-                grid.push_back({v_high,x,p,pe});
+                grid.push_back(y_mid);
                 root_found=false;
                 seg--; // repeate search on segment in case
-                v_mid = v_high-1e-8;
-                accretion_column.Interpolate(v_mid, y_mid);
+                s_mid = s_high-1e-8;
+                accretion_column.Interpolate(s_mid, y_mid);
                 imdot = pow((r+x)/(r+1),n);
-                grid_vars_r = {x, pe*v_mid*imdot, (p-pe)*v_mid*imdot}; // shift left bound to just after our previous root
+                grid_vars_r = {x, pe*v*imdot, (p-pe)*v*imdot}; // shift left bound to just after our previous root
             }
         }
     }
@@ -321,10 +322,10 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
     double mdot;
 
-    volume[0] = pow(1+grid[0][1]/r, n+1);
+    volume[0] = pow(1+grid[0][0]/r, n+1);
     for(uint i=0; i<n_points; i++){
-        velocity[i] = grid[i][0]*shock_speed;
-        altitude[i] = grid[i][1]*shock_height;
+        altitude[i] = grid[i][0]*shock_height;
+        velocity[i] = grid[i][1]*shock_speed;
         total_pressure[i] = shock_mdot*shock_speed*grid[i][2];
         electron_pressure[i] = shock_mdot*shock_speed*grid[i][3];
         mdot = (accretion_rate/accretion_area)*pow(1+altitude[i]/radius,-n);
@@ -335,18 +336,18 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         if(i==n_points-1){
             break;
         }
-        volume[i] -= pow(1+(grid[i][1]+grid[i+1][1])/(2*r), n+1);
+        volume[i] -= pow(1+(grid[i][0]+grid[i+1][0])/(2*r), n+1);
         volume[i] *= accretion_area*radius/(n+1);
-        volume[i+1] = pow(1+(grid[i+1][1]+grid[i][1])/(2*r), n+1);
+        volume[i+1] = pow(1+(grid[i+1][0]+grid[i][0])/(2*r), n+1);
     }
-    volume[n_points-1] = (accretion_area*radius/(n+1))*(pow(1+(grid[n_points-1][1]+grid[n_points-2][1])/(2*r), n+1)-1);
+    volume[n_points-1] = (accretion_area*radius/(n+1))*(pow(1+(grid[n_points-1][0]+grid[n_points-2][0])/(2*r), n+1)-1);
 
     double dens, gff, cyc, brems, bremss_weight=0;
     cyclotron_ratio = 0;
     for(uint i=0; i<n_points; i++){
         gff = gaunt::gaunt_factor(electron_temperature[i]/erg_to_kev);
-        dens = pow((1+r)/(grid[i][1]+r), n)/grid[i][0];
-        cyc = (cooling_ratio/gff)*grid[i][3]*grid[i][3]*pow(dens,-3.85)*pow(1+grid[i][1]/r,-8.55-0.425*n);
+        dens = pow((1+r)/(grid[i][0]+r), n)/grid[i][1];
+        cyc = (cooling_ratio/gff)*grid[i][3]*grid[i][3]*pow(dens,-3.85)*pow(1+grid[i][0]/r,-8.55-0.425*n);
         brems = volume[i]*gff*sqrt(dens*dens*dens*grid[i][3]);
         cyclotron_ratio += brems*cyc;
         bremss_weight += brems*(1+cyc);
