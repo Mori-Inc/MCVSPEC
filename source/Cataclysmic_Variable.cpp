@@ -118,10 +118,19 @@ void Cataclysmic_Variable::Flow_Equation(double vel,const valarray<double>& pos_
 double Cataclysmic_Variable::Get_Landing_Altitude(){
     double t = 0.25;
     valarray<double> y = {1., 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
-    accretion_column.Integrate(t, 1e-4, y);
+    int success = accretion_column.Integrate(t, 1e-4, y);
     valarray<double> slope(3);
     Flow_Equation(t,  y, slope);
-    return y[0] - slope[0]*t;
+    double landing = y[0] - slope[0]*t;
+    if(success != 1){
+        accretion_column.Initialize(t, min(0.25,10*t), y);
+        accretion_column.Step(t,y);
+        Flow_Equation(t,  y, slope);
+        if(abs(landing - (y[0] - slope[0]*t)) > 1e-6){
+            cout << "WARNING: integration failed to complete, error on landing altitude is estimated as " << landing << " +/- " << abs(landing - (y[0] - slope[0]*t)) << endl;
+        }
+    }
+    return landing;
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
@@ -228,9 +237,9 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     const double& x = y_mid[0];
     const double& p = y_mid[1];
     const double& pe = y_mid[2];
-    double ascale = pow(1+x/r,n);
-    grid_vars_r = {x, pe*v*ascale, (p-pe)*v*ascale};
-    grid_vars = {x, pe*v*ascale, (p-pe)*v*ascale};
+    double imdot = pow((r+x)/(r+1),n);
+    grid_vars_r = {x, pe*v*imdot, (p-pe)*v*imdot};
+    grid_vars = {x, pe*v*imdot, (p-pe)*v*imdot};
     // vars for root finding
     double v_high, v_low, v_mid;
     valarray<double> root_vars(3);
@@ -257,8 +266,8 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
             v_mid = v_old - dv*(seg+1);
             accretion_column.Interpolate(v_mid, y_mid);
-            ascale = pow(1+x/r,n);
-            grid_vars_r = {x, pe*v_mid*pow(1+x/r,n), (p-pe)*v_mid*pow(1+x/r,n)};
+            imdot = pow((r+x)/(r+1),n);
+            grid_vars_r = {x, pe*v_mid*imdot, (p-pe)*v_mid*imdot};
 
             crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(grid_vars_r-grid_vars)/grid_spacing - 1);
 
@@ -270,8 +279,8 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                     while(v_high-v_low > 1e-8){
                         v_mid = (v_high+v_low)/2;
                         accretion_column.Interpolate(v_mid, y_mid);
-                        ascale = pow(1+x/r,n);
-                        root_vars = {x, pe*v_mid*ascale, (p-pe)*v_mid*ascale};
+                        imdot = pow((r+x)/(r+1),n);
+                        root_vars = {x, pe*v_mid*imdot, (p-pe)*v_mid*imdot};
                         if(abs(root_vars[i]-grid_vars[i])/grid_spacing[i] - 1 > 0){
                             v_low = v_mid;
                         }
@@ -280,8 +289,8 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                         }
                     }
                     accretion_column.Interpolate(v_high, y_mid);
-                    ascale = pow(1+x/r,n);
-                    root_vars = {x, pe*v_high*ascale, (p-pe)*v_high*ascale};
+                    imdot = pow((r+x)/(r+1),n);
+                    root_vars = {x, pe*v_high*imdot, (p-pe)*v_high*imdot};
                     crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(root_vars-grid_vars)/grid_spacing - 1); // update crossing with the new
                 }
             }// after checking crossing I will have found the earliest grid point in a given segment
@@ -294,8 +303,8 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                 seg--; // repeate search on segment in case
                 v_mid = v_high-1e-8;
                 accretion_column.Interpolate(v_mid, y_mid);
-                ascale = pow(1+x/r,n);
-                grid_vars_r = {x, pe*v_mid*ascale, (p-pe)*v_mid*ascale}; // shift left bound to just after our previous root
+                imdot = pow((r+x)/(r+1),n);
+                grid_vars_r = {x, pe*v_mid*imdot, (p-pe)*v_mid*imdot}; // shift left bound to just after our previous root
             }
         }
     }

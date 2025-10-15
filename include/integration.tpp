@@ -29,7 +29,7 @@ Integrator<model,call>::Integrator(const model& function, const double absolute_
 {}
 
 template <typename model, exec<model> call>
-void Integrator<model,call>::Set_Initial_Step(const double t0, const valarray<double> y0){
+void Integrator<model,call>::Set_Initial_Step(const double& t0, const valarray<double>& y0){
     valarray<double> tol = abs_err + rel_err*abs(y0);
     double h_0 = 1e-2*norm(y0)/norm(k[0]);
     (func->*call)(t0+dir*h_0, y0+dir*h_0*k[0], k[1]);
@@ -48,14 +48,19 @@ void Integrator<model,call>::Initialize(double& t, const double t_end, const val
 }
 
 template <typename model, exec<model> call>
-void Integrator<model,call>::Integrate(double& t, const double t_end, valarray<double>& y){
+int Integrator<model,call>::Integrate(double& t, const double t_end, valarray<double>& y){
     Initialize(t, t_end, y);
     int n_steps=0;
 
     while(dir*(t_end-t) > 0 && n_steps < max_itter){
         h = min(h,dir*(t_end-t));
         Step(t, y);
+        n_steps++;
     }
+    if(n_steps>=max_itter){
+        return 0;
+    }
+    return 1;
 }
 
 template <typename model, exec<model> call>

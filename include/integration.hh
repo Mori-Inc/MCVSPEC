@@ -29,13 +29,13 @@ class Integrator{
     public:
         explicit Integrator(const model&, const double absolute_err=1e-8, const double relative_err=1e-6);
         void Initialize(double&, const double, const valarray<double>&);
-        void Integrate(double&, const double, valarray<double>&);
+        int Integrate(double&, const double, valarray<double>&);
         void Step(double&, valarray<double>&);
         void Dense_Step(double&, valarray<double>&);
         void Interpolate(double, valarray<double>&);
     private:
         void Prepare_Step(const double&, double&, const valarray<double>&, valarray<double>&, double&);
-        void Set_Initial_Step(const double, const valarray<double>);
+        void Set_Initial_Step(const double&, const valarray<double>&);
         void Dense_Output(const double, const double, const valarray<double>, const double);
 };
 
