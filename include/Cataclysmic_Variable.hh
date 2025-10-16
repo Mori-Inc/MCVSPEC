@@ -1,6 +1,7 @@
 #pragma once
 
 #include "constants.hh"
+#include "dipole.hh"
 #include "integration.hh"
 
 class Cataclysmic_Variable{
@@ -19,8 +20,10 @@ class Cataclysmic_Variable{
         // thermal profile
         valarray<double> velocity, altitude, electron_temperature, ion_temperature, electron_density, ion_density, electron_pressure, total_pressure, volume;
         // utilities
+        Dipole geometry;
         int refl;
         double upper_bound, lower_bound;
+
 
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);

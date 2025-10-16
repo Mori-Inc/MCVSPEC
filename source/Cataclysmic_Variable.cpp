@@ -13,7 +13,7 @@ using std::abs;
 
 static double previous_shock_height = 0;
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double corot_rat, double area, double theta, double n, double dist, int reflection):
-    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection)
+    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection), geometry(sin(10*pi/180)*sin(10*pi/180))
 {
     if(inverse_mag_radius>0){
         b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
@@ -88,11 +88,13 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
     const double& v = pos_vel_pres_epres[1];
     const double& p = pos_vel_pres_epres[2];
     const double& pe = pos_vel_pres_epres[3];
-    const double& r = non_dim_radius;
+    const double& rwd = non_dim_radius;
     const double& hs = shock_height;
     const double& n = area_exponent;
 
-    const double mdot = pow((1+r)/(x+r), n);
+    double r, proj_r_w, convergance, metric[3];
+    geometry.update_coordinates(x, r, proj_r_w, convergance, metric);
+    const double mdot = pow((1+rwd)/(x+rwd), n);
     const double dens = mdot/v;
     const double crdens = cbrt(dens);
     const double vff2 = shock_speed*shock_speed;
@@ -101,16 +103,16 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
     const double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(pe*pe/(dens*dens*dens));
     const double gff = gaunt::gaunt_factor(kT);
 
-    const double grav = (hs/vff2)*force_const*dens/((1+x/r)*(1+x/r));
+    const double grav = (hs/vff2)*force_const*dens/((1+x/rwd)*(1+x/rwd));
     const double chi = (1+avg_atomic_charge)/avg_atomic_charge;
     const double exch = (shock_mdot*hs/vff3)*exchange_const*coulomb_log*sqrt(dens*dens*dens*dens*dens/pe)*(p/pe - chi);
     const double cyc = (cooling_ratio/gff)*pe*pe*pow(dens,-3.85)*pow(1+x/r,-8.55-0.425*n);
     const double rad = (shock_mdot*hs/vff3)*bremss_const*gff*sqrt(dens*dens*dens*pe)*(1+cyc);
 
     double dx_ds = 1.5*mdot*crdens*crdens/rad;
-    double dv_ds = 3*mdot/(5*s*dens - 3*v*v*crdens) + 3*mdot*mdot*(3*grav - 5*n*p/(r+x))/(2*rad*crdens*(5*p - 3*mdot*v));
+    double dv_ds = 3*mdot/(5*s*dens - 3*v*v*crdens) + 3*mdot*mdot*(3*grav - 5*n*p/(rwd+x))/(2*rad*crdens*(5*p - 3*mdot*v));
     double dp_ds = -1.5*mdot*crdens*crdens*grav/rad - mdot*dv_ds;
-    double dpe_ds = dens*crdens*crdens*(1 - (1./vff2)*exch/rad) - (5./3.)*pe*(n*dx_ds/(x+r) + dv_ds/v);
+    double dpe_ds = dens*crdens*crdens*(1 - (1./vff2)*exch/rad) - (5./3.)*pe*(n*dx_ds/(x+rwd) + dv_ds/v);
 
     derivs[0] = dx_ds;
     derivs[1] = dv_ds;
@@ -121,19 +123,14 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
 double Cataclysmic_Variable::Get_Landing_Altitude(){
     double t = entropy_boundary;
     valarray<double> y = {1., 0.25, 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
-    int success = accretion_column.Integrate(t, 1e-6, y);
+    accretion_column.Initialize(t, 0, y);
+    while(y[1] > 1e-4){
+        accretion_column.Step(t, y);
+        cout << y[0] << ", " << y[1] << ", " << y[2] << ", " << y[3] << endl;
+    }
     valarray<double> slope(4);
     Flow_Equation(t,  y, slope);
     double landing = y[0] - (slope[0]/slope[1])*y[1];
-
-    if(success != 1){
-        accretion_column.Initialize(t, min(0.25,10*t), y);
-        accretion_column.Step(t,y);
-        Flow_Equation(t,  y, slope);
-        if(abs(landing - (y[0] - (slope[0]/slope[1])*y[1])) > 1e-6){
-            cout << "WARNING: integration failed to complete, error on landing altitude is estimated as " << landing << " +/- " << abs(landing - (y[0] - (slope[0]/slope[1])*y[1])) << endl;
-        }
-    }
     return landing;
 }
 
