@@ -26,10 +26,13 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     double avg_charge_squared = (abundances*atomic_charge*atomic_charge).sum();
     double avg_charge_sqr_over_mass = (abundances*atomic_charge*atomic_charge/atomic_mass).sum()/amu_to_g;
     density_const = avg_atomic_charge/(1 + m_e*avg_atomic_charge/avg_ion_mass);
+    double r, proj_r_w, convergance, metric[3];
+    double w = sqrt(1-geometry.u);
+    geometry.update_coordinates(w, r, proj_r_w, convergance, metric);
 
     force_const = grav_const*mass/(radius*radius);
-    cooling_ratio_const = 8.07e-2*avg_atomic_charge*pow(b_field, 2.85)*pow(avg_ion_mass/density_const,3.85);
-    cooling_ratio_const /= avg_charge_squared*k_b*k_b*pow(accretion_area,0.425);
+    cooling_ratio_const = 8.07e-2*(avg_atomic_charge/(avg_charge_squared*k_b*k_b))*pow(avg_ion_mass/density_const,3.85);
+    cooling_ratio_const *= pow((metric[0]*metric[2])/accretion_area,0.425)*pow(b_field/sqrt(4-3*geometry.u), 2.85);
     coulomb_log_const = 0.5*log(2*m_e/(pi*alpha*c)) + 1.5*log(avg_ion_mass/(hbar*density_const));
     exchange_const = 4*(alpha*hbar*c)*(alpha*hbar*c)*sqrt(2*pi*m_e*pow((density_const/avg_ion_mass),5))*avg_charge_sqr_over_mass;
     bremss_const = sqrt(512*pi/(27*m_e*m_e*m_e))*alpha*alpha*alpha*hbar*hbar;
@@ -89,12 +92,13 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
     const double& p = pos_vel_pres_epres[2];
     const double& pe = pos_vel_pres_epres[3];
     const double& rwd = non_dim_radius;
+    const double& w = x/rwd + 1; // distance along field line in units of WD radii
     const double& hs = shock_height;
     const double& n = area_exponent;
 
     double r, proj_r_w, convergance, metric[3];
-    geometry.update_coordinates(x, r, proj_r_w, convergance, metric);
-    const double mdot = pow((1+rwd)/(x+rwd), n);
+    geometry.update_coordinates(w, r, proj_r_w, convergance, metric);
+    const double mdot = shock_area/(metric[0]*metric[2]);
     const double dens = mdot/v;
     const double crdens = cbrt(dens);
     const double vff2 = shock_speed*shock_speed;
@@ -103,10 +107,10 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
     const double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(pe*pe/(dens*dens*dens));
     const double gff = gaunt::gaunt_factor(kT);
 
-    const double grav = (hs/vff2)*force_const*dens/((1+x/rwd)*(1+x/rwd));
+    const double grav = proj_r_w*metric[1]*(hs/vff2)*force_const*dens/(r*r);
     const double chi = (1+avg_atomic_charge)/avg_atomic_charge;
     const double exch = (shock_mdot*hs/vff3)*exchange_const*coulomb_log*sqrt(dens*dens*dens*dens*dens/pe)*(p/pe - chi);
-    const double cyc = (cooling_ratio/gff)*pe*pe*pow(dens,-3.85)*pow(1+x/r,-8.55-0.425*n);
+    const double cyc = (cooling_ratio/gff)*pe*pe*pow(dens,-3.85)*pow(metric[0]*metric[2],-0.425)*pow((4-3*geometry.u*r)/(r*r*r*r*r*r), 1.425);
     const double rad = (shock_mdot*hs/vff3)*bremss_const*gff*sqrt(dens*dens*dens*pe)*(1+cyc);
 
     double dx_ds = 1.5*mdot*crdens*crdens/rad;

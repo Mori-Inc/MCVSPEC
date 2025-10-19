@@ -8,6 +8,7 @@ struct Dipole{
     double u;
     Dipole(double uu):u(uu){}
 
+    // solves for the relevant coordinate transforms for a dipole geometry with r=1 -> stellar surface
     void update_coordinates(double w, double& r, double& proj_r_w, double& convergance, double metric[3]) const{
         const double canalle_x = (u*u*u*u + 256*w*w/27)/(16384*pow(w,8));
         const double canalle_w = -u*u/(64*w*w*w*w);
@@ -16,6 +17,9 @@ struct Dipole{
         const double ssum = canalle_s_p+canalle_s_m;
         const double sdif = canalle_s_p-canalle_s_m;
         const double canalle_y = sqrt(ssum*ssum + 3*sdif*sdif);
+
+        r = sqrt(canalle_y-canalle_s_p-canalle_s_m) - u/(4*w*w*canalle_y);
+
         const double du = (4*w*w*r*r*r + u);
         const double dr_du = -r/du;
         const double r4 = r*r*r*r;
@@ -24,7 +28,6 @@ struct Dipole{
         const double ts = 1./u + 2*dr_du/r + dr_du_dw/dr_dw;
         const double te = 1./w + 7*dr_dw/(2*r) + dr_du_dw/dr_du;
 
-        r = sqrt(canalle_y-canalle_s_p-canalle_s_m) - u/(4*w*w*canalle_y);
         const double a = r+3+u*dr_du;
         const double b = w*r*dr_du;
         metric[0] = sqrt(r*a*a/(4*u) + 9*r*r*b*b);

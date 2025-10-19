@@ -10,7 +10,7 @@ class Cataclysmic_Variable{
         double mass, radius, b_field, inverse_mag_radius, corotation_ratio, distance;
         double non_dim_radius;
         // input column properties
-        double accretion_rate, accretion_area, metalicity, shock_height, shock_speed, pressure_ratio, incl_angle, area_exponent;
+        double accretion_rate, accretion_area, metalicity, shock_height, shock_speed, shock_area, pressure_ratio, incl_angle, area_exponent;
         valarray<double> abundances; // fractional abundance of elements in accretion column
         // derived column properties
         double avg_ion_mass, avg_atomic_charge;
