@@ -29,14 +29,18 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     double r, proj_r_w, convergance, metric[3];
     double w = sqrt(1-geometry.u);
     geometry.update_coordinates(w, r, proj_r_w, convergance, metric);
+    scaled_mdot = (accretion_rate/accretion_area)*metric[0]*metric[2];
+    free_fall_speed = sqrt(2*grav_const*mass/radius);
 
-    force_const = grav_const*mass/(radius*radius);
-    cooling_ratio_const = 8.07e-2*(avg_atomic_charge/(avg_charge_squared*k_b*k_b))*pow(avg_ion_mass/density_const,3.85);
-    cooling_ratio_const *= pow((metric[0]*metric[2])/accretion_area,0.425)*pow(b_field/sqrt(4-3*geometry.u), 2.85);
-    coulomb_log_const = 0.5*log(2*m_e/(pi*alpha*c)) + 1.5*log(avg_ion_mass/(hbar*density_const));
+    coulomb_log_const = 2*m_e/(pi*alpha*c*hbar*hbar*hbar);
     exchange_const = 4*(alpha*hbar*c)*(alpha*hbar*c)*sqrt(2*pi*m_e*pow((density_const/avg_ion_mass),5))*avg_charge_sqr_over_mass;
+    exchange_const *= scaled_mdot*radius/(free_fall_speed*free_fall_speed*free_fall_speed*free_fall_speed*free_fall_speed);
     bremss_const = sqrt(512*pi/(27*m_e*m_e*m_e))*alpha*alpha*alpha*hbar*hbar;
     bremss_const *= (avg_charge_squared/avg_atomic_charge)*sqrt(pow(density_const/avg_ion_mass,3));
+    bremss_const *= scaled_mdot*radius/(free_fall_speed*free_fall_speed*free_fall_speed);
+    cyclotron_const = 8.07e-2*(avg_atomic_charge/(avg_charge_squared*k_b*k_b))*pow(density_const/avg_ion_mass,-3.85);
+    cyclotron_const *= pow(radius,0.85)*pow(scaled_mdot,-1.85)*pow(free_fall_speed,5.85);
+    cyclotron_const *= pow(b_field, 2.85);
 }
 
 double Cataclysmic_Variable::Get_Accretion_Rate(double luminosity, double mass, double radius, double inverse_mag_radius){
@@ -76,49 +80,58 @@ void Cataclysmic_Variable::Guess_Shock_Height(){
 }
 
 void Cataclysmic_Variable::Update_Shock_Height(double h_s){
-    shock_height = h_s;
-    double rotation_correction = 0.5*corotation_ratio*corotation_ratio*corotation_ratio*inverse_mag_radius;
-    rotation_correction *= (radius+shock_height)*(radius+shock_height)*inverse_mag_radius*inverse_mag_radius - 1.;
-    shock_speed = sqrt(2*grav_const*mass*((1./(radius+shock_height)) - inverse_mag_radius + rotation_correction));
-    shock_mdot = accretion_rate/(accretion_area*pow(1+shock_height/radius, area_exponent));
-    non_dim_radius = radius/shock_height;
-    cooling_ratio = cooling_ratio_const*pow(shock_speed,5.85)/pow(shock_mdot, 1.85);
+    shock_height = h_s; // h_s is the radial distance away from surface, not distance along field line
+    const double r_s = 1. + h_s/radius;
+    const double w_s = sqrt((1-geometry.u*r_s)/(r_s*r_s*r_s*r_s));
+    double r, proj_r_w, convergance, metric[3];
+    geometry.update_coordinates(w_s, r, proj_r_w, convergance, metric);
+
+    const double ir_m = radius*inverse_mag_radius;
+    double reduction_factor = 1;
+    if(inverse_mag_radius > 0){
+        reduction_factor = 1. - 0.5/pow(1./corotation_ratio + 0.53/ir_m - 0.38, 3.7 + 0.44/ir_m);
+    }
+
+    const double r_c = 1./(corotation_ratio*ir_m);
+    const double v_s = 0.25*sqrt(reduction_factor*(1./r_s - ir_m - 0.5*(1./(ir_m*ir_m) - h_s*h_s)/(r_c*r_c*r_c)));
+    const double mdot_s = 1./(metric[0]*metric[2]);
+    const double p_s = 3*mdot_s*v_s;
+    const double pe_s = p_s*(1 + 1/pressure_ratio);
 }
 
 void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& pos_vel_pres_epres, valarray<double>& derivs) const{
     const double& s = entropy;
-    const double& x = pos_vel_pres_epres[0];
+    const double& w = pos_vel_pres_epres[0];
     const double& v = pos_vel_pres_epres[1];
     const double& p = pos_vel_pres_epres[2];
     const double& pe = pos_vel_pres_epres[3];
-    const double& rwd = non_dim_radius;
-    const double& w = x/rwd + 1; // distance along field line in units of WD radii
-    const double& hs = shock_height;
-    const double& n = area_exponent;
-
     double r, proj_r_w, convergance, metric[3];
     geometry.update_coordinates(w, r, proj_r_w, convergance, metric);
-    const double mdot = shock_area/(metric[0]*metric[2]);
+    const double area = metric[0]*metric[2];
+
+    const double mdot = 1./area;
     const double dens = mdot/v;
-    const double crdens = cbrt(dens);
-    const double vff2 = shock_speed*shock_speed;
-    const double vff3 = shock_speed*shock_speed*shock_speed;
-    const double kT = (avg_ion_mass/density_const)*vff2*pe*v/mdot;
-    const double coulomb_log = coulomb_log_const + 2.5*log(shock_speed) - 0.5*log(shock_mdot) + 0.5*log(pe*pe/(dens*dens*dens));
-    const double gff = gaunt::gaunt_factor(kT);
-
-    const double grav = proj_r_w*metric[1]*(hs/vff2)*force_const*dens/(r*r);
+    const double dens3 = dens*dens*dens;
+    const double dens5 = dens*dens*dens*dens*dens;
     const double chi = (1+avg_atomic_charge)/avg_atomic_charge;
-    const double exch = (shock_mdot*hs/vff3)*exchange_const*coulomb_log*sqrt(dens*dens*dens*dens*dens/pe)*(p/pe - chi);
-    const double cyc = (cooling_ratio/gff)*pe*pe*pow(dens,-3.85)*pow(metric[0]*metric[2],-0.425)*pow((4-3*geometry.u*r)/(r*r*r*r*r*r), 1.425);
-    const double rad = (shock_mdot*hs/vff3)*bremss_const*gff*sqrt(dens*dens*dens*pe)*(1+cyc);
+    const double b_scale = sqrt((4-3*geometry.u*r)/(4-3*geometry.u))/(r*r*r);
 
-    double dx_ds = 1.5*mdot*crdens*crdens/rad;
-    double dv_ds = 3*mdot/(5*s*dens - 3*v*v*crdens) + 3*mdot*mdot*(3*grav - 5*n*p/(rwd+x))/(2*rad*crdens*(5*p - 3*mdot*v));
-    double dp_ds = -1.5*mdot*crdens*crdens*grav/rad - mdot*dv_ds;
-    double dpe_ds = dens*crdens*crdens*(1 - (1./vff2)*exch/rad) - (5./3.)*pe*(n*dx_ds/(x+rwd) + dv_ds/v);
+    const double ne = (scaled_mdot/free_fall_speed)*density_const*dens/avg_ion_mass; // cgs
+    const double kT = scaled_mdot*free_fall_speed*pe/ne; // cgs
+    const double gff = gaunt::gaunt_factor(kT);
+    const double coulomb_log = 0.5*log(coulomb_log_const*kT*kT/ne);
 
-    derivs[0] = dx_ds;
+    const double grav = mdot*proj_r_w/(2*r*r);
+    const double cyc = (cyclotron_const/gff)*pe*pe*pow(b_scale/dens, 2.85)/(dens*pow(area,0.425));
+    const double rad = bremss_const*gff*sqrt(pe*dens3)*(1+cyc);
+    const double exch = exchange_const*coulomb_log*sqrt(dens5/pe)*(p/pe - chi);
+
+    double dw_ds = -1.5*v*p/(metric[1]*s*rad);
+    double dv_ds = (3*v*p/s)*(1. + 1.5*grav/rad + 2.5*p*v*convergance/(metric[1]*rad));
+    double dp_ds = -1.5*p*grav/(s*rad) - mdot*dv_ds;
+    double dpe_ds = (p/s)*(1-exch/rad) + 2.5*v*p*pe*convergance/(s*metric[1]*rad) - 5*pe*dv_ds/(3*v);
+
+    derivs[0] = dw_ds;
     derivs[1] = dv_ds;
     derivs[2] = dp_ds;
     derivs[3] = dpe_ds;
