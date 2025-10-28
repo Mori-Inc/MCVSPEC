@@ -78,6 +78,7 @@ if(BUILD_XSMODEL)
                     ${CMAKE_SOURCE_DIR}/include/constants.hh;
                     ${CMAKE_SOURCE_DIR}/include/tableau.hh;
                     ${CMAKE_SOURCE_DIR}/include/gaunt.hh;
+                    ${CMAKE_SOURCE_DIR}/include/dipole.hh;
                     ${MR_HEADER_PATH})
 
     foreach(FILE IN LISTS SOURCE_FILES MODEL_FILES HEADER_FILES)

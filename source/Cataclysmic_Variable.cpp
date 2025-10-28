@@ -12,8 +12,8 @@ using std::endl;
 using std::abs;
 
 static double previous_shock_height = 0;
-Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double corot_rat, double area, double theta, double n, double dist, int reflection):
-    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), area_exponent(n),  refl(reflection), geometry(sin(10*pi/180)*sin(10*pi/180))
+Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double corot_rat, double area, double theta, double dist, int reflection):
+    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), pressure_ratio(.75), incl_angle(theta), refl(reflection), geometry(sin(10*pi/180)*sin(10*pi/180))
 {
     if(inverse_mag_radius>0){
         b_field = sqrt(32*accretion_rate*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
@@ -26,10 +26,11 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     double avg_charge_squared = (abundances*atomic_charge*atomic_charge).sum();
     double avg_charge_sqr_over_mass = (abundances*atomic_charge*atomic_charge/atomic_mass).sum()/amu_to_g;
     density_const = avg_atomic_charge/(1 + m_e*avg_atomic_charge/avg_ion_mass);
-    double r, proj_r_w, convergance, metric[3];
+    double r, dr_dw, proj_r_w, convergance, metric[3];
     double w = sqrt(1-geometry.u);
-    geometry.update_coordinates(w, r, proj_r_w, convergance, metric);
-    scaled_mdot = (accretion_rate/accretion_area)*metric[0]*metric[2];
+    geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
+    area_scale = accretion_area/metric[0]*metric[2];
+    scaled_mdot = accretion_rate/area_scale;
     free_fall_speed = sqrt(2*grav_const*mass/radius);
 
     coulomb_log_const = 2*m_e/(pi*alpha*c*hbar*hbar*hbar);
@@ -73,18 +74,18 @@ void Cataclysmic_Variable::Guess_Shock_Height(){
     }
     else{
         double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
-        shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
+        double shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
         Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*1.2*accretion_rate));
-        Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*1.2*accretion_rate));
+        Update_Shock_Height(pow(v_s*free_fall_speed,3.)*integral*accretion_area/(2*bremss_const*1.2*accretion_rate));
     }
 }
 
 void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     shock_height = h_s; // h_s is the radial distance away from surface, not distance along field line
     const double r_s = 1. + h_s/radius;
-    const double w_s = sqrt((1-geometry.u*r_s)/(r_s*r_s*r_s*r_s));
-    double r, proj_r_w, convergance, metric[3];
-    geometry.update_coordinates(w_s, r, proj_r_w, convergance, metric);
+    w_s = sqrt((1-geometry.u*r_s)/(r_s*r_s*r_s*r_s));
+    double r, dr_dw, proj_r_w, convergance, metric[3];
+    geometry.update_coordinates(w_s, r, dr_dw, proj_r_w, convergance, metric);
 
     const double ir_m = radius*inverse_mag_radius;
     double reduction_factor = 1;
@@ -93,10 +94,11 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     }
 
     const double r_c = 1./(corotation_ratio*ir_m);
-    const double v_s = 0.25*sqrt(reduction_factor*(1./r_s - ir_m - 0.5*(1./(ir_m*ir_m) - h_s*h_s)/(r_c*r_c*r_c)));
+    v_s = 0.25*sqrt(reduction_factor*(1./r_s - ir_m - 0.5*(1./(ir_m*ir_m) - h_s*h_s)/(r_c*r_c*r_c)));
     const double mdot_s = 1./(metric[0]*metric[2]);
-    const double p_s = 3*mdot_s*v_s;
-    const double pe_s = p_s*(1 + 1/pressure_ratio);
+    p_s = 3*mdot_s*v_s;
+    pe_s = p_s*(1 + 1/pressure_ratio);
+    s_s = p_s*pow(v_s/mdot_s, 5./3.);
 }
 
 void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& pos_vel_pres_epres, valarray<double>& derivs) const{
@@ -105,8 +107,8 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
     const double& v = pos_vel_pres_epres[1];
     const double& p = pos_vel_pres_epres[2];
     const double& pe = pos_vel_pres_epres[3];
-    double r, proj_r_w, convergance, metric[3];
-    geometry.update_coordinates(w, r, proj_r_w, convergance, metric);
+    double r, dr_dw, proj_r_w, convergance, metric[3];
+    geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
     const double area = metric[0]*metric[2];
 
     const double mdot = 1./area;
@@ -138,17 +140,18 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
 }
 
 double Cataclysmic_Variable::Get_Landing_Altitude(){
-    double t = entropy_boundary;
-    valarray<double> y = {1., 0.25, 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
+    double t = s_s;
+    valarray<double> y = {w_s, v_s, p_s, pe_s};
     accretion_column.Initialize(t, 0, y);
     while(y[1] > 1e-4){
         accretion_column.Step(t, y);
-        cout << y[0] << ", " << y[1] << ", " << y[2] << ", " << y[3] << endl;
     }
     valarray<double> slope(4);
     Flow_Equation(t,  y, slope);
-    double landing = y[0] - (slope[0]/slope[1])*y[1];
-    return landing;
+    double r, dr_dw, proj_r_w, convergance, metric[3];
+    geometry.update_coordinates(y[0], r, dr_dw, proj_r_w, convergance, metric);
+    double landing = r - dr_dw*slope[0]*t;
+    return landing - 1;
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
@@ -234,18 +237,16 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     // interpolate between each point in the RK grid to find a set of velocities to evaluate our integral at
 
     // determine de-dimensionalized grid size
-    const double kTe_const = erg_to_kev*avg_ion_mass*shock_speed*shock_speed/density_const;
+    const double kTe_const = erg_to_kev*free_fall_speed*free_fall_speed*avg_ion_mass/density_const;
     const double kTi_const = avg_atomic_charge*kTe_const;
     const double dkTe = kT_grid_spacing/kTe_const;
     const double dkTi = kT_grid_spacing/kTi_const;
     const valarray<double> grid_spacing = {altitude_grid_spacing, dkTe, dkTi};
-    const double& r = non_dim_radius;
-    const double& n = area_exponent;
 
     // vars for integration
     double s = entropy_boundary;
-    valarray<double> y = {1., 0.25, 0.75, 0.75*(pressure_ratio/(pressure_ratio+1))};
-    accretion_column.Initialize(s, 1e-8, y);
+    valarray<double> y = {w_s, v_s, p_s, pe_s};
+    accretion_column.Initialize(s, 0, y);
     double s_old = s;
     double ds;
 
@@ -256,9 +257,11 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     const double& v = y_mid[1];
     const double& p = y_mid[2];
     const double& pe = y_mid[3];
-    double imdot = pow((r+x)/(r+1),n);
-    grid_vars_r = {x, pe*v*imdot, (p-pe)*v*imdot};
-    grid_vars = {x, pe*v*imdot, (p-pe)*v*imdot};
+    double r, dr_dw, proj_r_w, convergance, metric[3];
+    geometry.update_coordinates(y[0], r, dr_dw, proj_r_w, convergance, metric);
+    double area = metric[0]*metric[2];
+    grid_vars_r = {x, pe*v*area, (p-pe)*v*area};
+    grid_vars = {x, pe*v*area, (p-pe)*v*area};
     // vars for root finding
     double s_high, s_low, s_mid;
     valarray<double> root_vars(3);
@@ -281,8 +284,9 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
             s_mid = s_old - ds*(seg+1);
             accretion_column.Interpolate(s_mid, y_mid);
-            imdot = pow((r+x)/(r+1),n);
-            grid_vars_r = {x, pe*v*imdot, (p-pe)*v*imdot};
+            geometry.update_coordinates(y_mid[0], r, dr_dw, proj_r_w, convergance, metric);
+            area = metric[0]*metric[2];
+            grid_vars_r = {x, pe*v*area, (p-pe)*v*area};
 
             crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(grid_vars_r-grid_vars)/grid_spacing - 1);
 
@@ -294,8 +298,9 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                     while(s_high-s_low > 1e-8){
                         s_mid = (s_high+s_low)/2;
                         accretion_column.Interpolate(s_mid, y_mid);
-                        imdot = pow((r+x)/(r+1),n);
-                        root_vars = {x, pe*v*imdot, (p-pe)*v*imdot};
+                        geometry.update_coordinates(y_mid[0], r, dr_dw, proj_r_w, convergance, metric);
+                        area = metric[0]*metric[2];
+                        root_vars = {x, pe*v*area, (p-pe)*v*area};
                         if(abs(root_vars[i]-grid_vars[i])/grid_spacing[i] - 1 > 0){
                             s_low = s_mid;
                         }
@@ -304,8 +309,9 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                         }
                     }
                     accretion_column.Interpolate(s_high, y_mid);
-                    imdot = pow((r+x)/(r+1),n);
-                    root_vars = {x, pe*v*imdot, (p-pe)*v*imdot};
+                    geometry.update_coordinates(y_mid[0], r, dr_dw, proj_r_w, convergance, metric);
+                    area = metric[0]*metric[2];
+                    root_vars = {x, pe*v*area, (p-pe)*v*area};
                     crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(root_vars-grid_vars)/grid_spacing - 1); // update crossing with the new
                 }
             }// after checking crossing I will have found the earliest grid point in a given segment
@@ -318,8 +324,9 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                 seg--; // repeate search on segment in case
                 s_mid = s_high-1e-8;
                 accretion_column.Interpolate(s_mid, y_mid);
-                imdot = pow((r+x)/(r+1),n);
-                grid_vars_r = {x, pe*v*imdot, (p-pe)*v*imdot}; // shift left bound to just after our previous root
+                geometry.update_coordinates(y_mid[0], r, dr_dw, proj_r_w, convergance, metric);
+                area = metric[0]*metric[2];
+                grid_vars_r = {x, pe*v*area, (p-pe)*v*area}; // shift left bound to just after our previous root
             }
         }
     }
@@ -334,39 +341,40 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     ion_temperature.resize(n_points);
     volume.resize(n_points);
 
-    double mdot;
+    double mdot, a, b;
 
-    volume[0] = pow(1+grid[0][0]/r, n+1);
     for(uint i=0; i<n_points; i++){
-        altitude[i] = grid[i][0]*shock_height;
-        velocity[i] = grid[i][1]*shock_speed;
-        total_pressure[i] = shock_mdot*shock_speed*grid[i][2];
-        electron_pressure[i] = shock_mdot*shock_speed*grid[i][3];
-        mdot = (accretion_rate/accretion_area)*pow(1+altitude[i]/radius,-n);
+        geometry.update_coordinates(grid[i][0], r, dr_dw, proj_r_w, convergance, metric);
+        altitude[i] = radius*(r-1);
+        velocity[i] = grid[i][1]*free_fall_speed;
+        total_pressure[i] = scaled_mdot*free_fall_speed*grid[i][2];
+        electron_pressure[i] = scaled_mdot*free_fall_speed*grid[i][3];
+        mdot = scaled_mdot/(metric[0]*metric[2]);
         electron_density[i] = (mdot/velocity[i])*density_const/avg_ion_mass;
         ion_density[i] = electron_density[i]/avg_atomic_charge;
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
-        ion_temperature[i] = erg_to_kev*avg_atomic_charge*(total_pressure[i]-electron_pressure[i])/electron_density[i];
-        if(i==n_points-1){
-            break;
-        }
-        volume[i] -= pow(1+(grid[i][0]+grid[i+1][0])/(2*r), n+1);
-        volume[i] *= accretion_area*radius/(n+1);
-        volume[i+1] = pow(1+(grid[i+1][0]+grid[i][0])/(2*r), n+1);
-    }
-    volume[n_points-1] = (accretion_area*radius/(n+1))*(pow(1+(grid[n_points-1][0]+grid[n_points-2][0])/(2*r), n+1)-1);
+        ion_temperature[i] = erg_to_kev*(total_pressure[i]-electron_pressure[i])/ion_density[i];
 
-    double dens, gff, cyc, brems, bremss_weight=0;
-    cyclotron_ratio = 0;
-    for(uint i=0; i<n_points; i++){
-        gff = gaunt::gaunt_factor(electron_temperature[i]/erg_to_kev);
-        dens = pow((1+r)/(grid[i][0]+r), n)/grid[i][1];
-        cyc = (cooling_ratio/gff)*grid[i][3]*grid[i][3]*pow(dens,-3.85)*pow(1+grid[i][0]/r,-8.55-0.425*n);
-        brems = volume[i]*gff*sqrt(dens*dens*dens*grid[i][3]);
-        cyclotron_ratio += brems*cyc;
-        bremss_weight += brems*(1+cyc);
+        if(i==0){
+            a = grid[i][0];
+        }
+        else{
+            a = (grid[i-1][0] + grid[i][0])/2;
+        }
+        if(i==n_points-1){
+            b = grid[i][0];
+        }
+        else{
+            b = (grid[i][0] + grid[i+1][0])/2;
+        }
+        geometry.update_coordinates(a, r, dr_dw, proj_r_w, convergance, metric);
+        volume[i] = metric[0]*metric[1]*metric[2];
+        geometry.update_coordinates(b, r, dr_dw, proj_r_w, convergance, metric);
+        volume[i] += metric[0]*metric[1]*metric[2];
+        geometry.update_coordinates((a+b)/2, r, dr_dw, proj_r_w, convergance, metric);
+        volume[i] += 4*metric[0]*metric[1]*metric[2];
+        volume[i] *= radius*area_scale*(b - a)/6;
     }
-    cyclotron_ratio /= bremss_weight;
 }
 
 void Cataclysmic_Variable::Print_Properties(){
@@ -383,6 +391,4 @@ void Cataclysmic_Variable::Print_Properties(){
     cout << " accretion rate:     " << shock_mdot << "-->" << accretion_rate/accretion_area << " g/cm2/s" << endl;
     cout << " shock height:       " << shock_height/radius << " (h/R_wd)" << endl;
     cout << " shock temperature:  " << electron_temperature[0] << " keV" << endl;
-    cout << " cooling ratio:      " << cooling_ratio << endl;
-    cout << " cycl to brems flux: " << cyclotron_ratio << endl;
 }

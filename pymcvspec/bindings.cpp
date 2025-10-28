@@ -8,8 +8,8 @@ namespace py = pybind11;
 
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
-        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double metals, double area, double theta, double n, double dist, int reflection):
-            Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,theta,n,dist,reflection)
+        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double metals, double area, double theta, double dist, int reflection):
+            Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,theta,dist,reflection)
         {
             metalicity = metals;
             Set_Abundances(metals);
@@ -60,9 +60,6 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         py::array_t<double> Get_Electron_Pressure(){
             return Valarray_to_Numpy(&electron_pressure);
         }
-        double Get_Cyclotron_Ratio(){
-            return cyclotron_ratio;
-        }
         double Get_Radius(){
             return radius;
         }
@@ -78,10 +75,10 @@ PYBIND11_MODULE(_pymcvspec, module) {
     module.def("_mass_to_radius", &Cataclysmic_Variable::Get_Radius, "Returns the radius (cm) for a corresponding WD mass (g)");
     module.def("_luminosity_to_mdot", &Cataclysmic_Variable::Get_Accretion_Rate, "Returns the radius (cm) for a corresponding WD mass (g)");
     py::class_<Py_Cataclysmic_Variable>(module, "_cataclysmic_variable", py::module_local())
-        .def(py::init<double,double,double,double,double,double,double,double,double,double,double,int>(),
+        .def(py::init<double,double,double,double,double,double,double,double,double,double,int>(),
             py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
             py::arg("mdot") = 1e15, py::arg("inv_r_m") = 0., py::arg("r_m_ratio") = 1., py::arg("metalicity") = 1.,
-            py::arg("area") = 1e15, py::arg("cos_incl_angle") = 0.5, py::arg("area_exp") = 0,
+            py::arg("area") = 1e15, py::arg("cos_incl_angle") = 0.5,
             py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("set_shock_height", &Py_Cataclysmic_Variable::Update_Shock_Height)
         .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
@@ -94,7 +91,6 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("get_ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
         .def("get_electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
         .def("get_total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
-        .def("get_cyclotron_ratio", &Py_Cataclysmic_Variable::Get_Cyclotron_Ratio)
         .def("get_radius", &Py_Cataclysmic_Variable::Get_Radius)
         .def("get_m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
         .def("get_shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)

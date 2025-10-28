@@ -12,14 +12,13 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     double fractional_area = params[3]; //fractional accretion area
     double col_abund = params[4]; // accretion column abundance [solar abundances]
     double cos_incl = params[5]; // cos inclination angle
-    double area_exponent = params[6];
-    double source_distance = params[7]*pc_to_cm; // source distnace [cm]
-    int reflection_sel = params[8]; // how to apply reflection 0 = off, 1 = on
+    double source_distance = params[6]*pc_to_cm; // source distnace [cm]
+    int reflection_sel = params[7]; // how to apply reflection 0 = off, 1 = on
 
     double radius = Cataclysmic_Variable::Get_Radius(mass);
     double area = fractional_area*4*pi*radius*radius;
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, 0);
-    XS_Cataclysmic_Variable polar(mass, radius, b_field, mdot, 0, 0, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
+    XS_Cataclysmic_Variable polar(mass, radius, b_field, mdot, 0, 0, col_abund, area, cos_incl, source_distance, reflection_sel);
     polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
     polar.Print_Properties();
 }
@@ -36,13 +35,12 @@ void PolarspecArea(const RealArray& energy, const RealArray& params, int spectru
     double area = params[3]*1e15; //fractional accretion area
     double col_abund = params[4]; // accretion column abundance [solar abundances]
     double cos_incl = params[5]; // cos inclination angle
-    double area_exponent = params[6];
-    double source_distance = params[7]*pc_to_cm; // source distnace [cm]
-    int reflection_sel = params[8]; // how to apply reflection 0 = off, 1 = on
+    double source_distance = params[6]*pc_to_cm; // source distnace [cm]
+    int reflection_sel = params[7]; // how to apply reflection 0 = off, 1 = on
 
     double radius = Cataclysmic_Variable::Get_Radius(mass);
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, 0);
-    XS_Cataclysmic_Variable polar(mass, radius, b_field, mdot, 0, 0, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
+    XS_Cataclysmic_Variable polar(mass, radius, b_field, mdot, 0, 0, col_abund, area, cos_incl, source_distance, reflection_sel);
     polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
     polar.Print_Properties();
 }

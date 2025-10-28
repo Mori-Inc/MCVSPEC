@@ -14,9 +14,8 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double fractional_area = params[4]; //fractional accretion area
     double col_abund = params[5]; // accretion column abundance [solar abundances]
     double cos_incl = params[6]; // cos inclination angle
-    double area_exponent = params[7];
-    double source_distance = params[8]*pc_to_cm; // source distnace [cm]
-    int reflection_sel = params[9]; // how to apply reflection 0 = off, 1 = on
+    double source_distance = params[7]*pc_to_cm; // source distnace [cm]
+    int reflection_sel = params[8]; // how to apply reflection 0 = off, 1 = on
 
     double mag_radius = r_m_ratio*cbrt(grav_const*mass*p_spin*p_spin/(4*pi*pi)); // spin equilibrium
     double inverse_mag_radius = 1./mag_radius;
@@ -25,7 +24,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, inverse_mag_radius);
     double b_field = sqrt(32*mdot*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
 
-    XS_Cataclysmic_Variable intermediate_polar(mass, radius, b_field, mdot, inverse_mag_radius, r_m_ratio, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
+    XS_Cataclysmic_Variable intermediate_polar(mass, radius, b_field, mdot, inverse_mag_radius, r_m_ratio, col_abund, area, cos_incl, source_distance, reflection_sel);
     intermediate_polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
     intermediate_polar.Print_Properties();
 }
@@ -43,9 +42,8 @@ void IPspecArea(const RealArray& energy, const RealArray& params, int spectrum_n
     double area = params[4]*1e15; //accretion area [cm^2]
     double col_abund = params[5]; // accretion column abundance [solar abundances]
     double cos_incl = params[6]; // cos inclination angle
-    double area_exponent = params[7];
-    double source_distance = params[8]*pc_to_cm; // source distnace [cm]
-    int reflection_sel = params[9]; // how to apply reflection 0 = off, 1 = on
+    double source_distance = params[7]*pc_to_cm; // source distnace [cm]
+    int reflection_sel = params[8]; // how to apply reflection 0 = off, 1 = on
 
     double mag_radius = r_m_ratio*cbrt(grav_const*mass*p_spin*p_spin/(4*pi*pi));
     double inverse_mag_radius = 1./mag_radius;
@@ -53,7 +51,7 @@ void IPspecArea(const RealArray& energy, const RealArray& params, int spectrum_n
     double mdot = Cataclysmic_Variable::Get_Accretion_Rate(luminosity, mass, radius, inverse_mag_radius);
     double b_field = sqrt(32*mdot*sqrt(grav_const*mass/pow(inverse_mag_radius,7)))/(radius*radius*radius);
 
-    XS_Cataclysmic_Variable intermediate_polar(mass, radius, b_field, mdot, inverse_mag_radius, r_m_ratio, col_abund, area, cos_incl, area_exponent, source_distance, reflection_sel);
+    XS_Cataclysmic_Variable intermediate_polar(mass, radius, b_field, mdot, inverse_mag_radius, r_m_ratio, col_abund, area, cos_incl, source_distance, reflection_sel);
     intermediate_polar.XS_Spectrum(energy, spectrum_num, flux, init_string);
     intermediate_polar.Print_Properties();
 }
