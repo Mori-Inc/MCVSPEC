@@ -25,7 +25,7 @@ const double amu_to_g =  1.6605390689252e-24; // mass of amu in grams
 const double pc_to_cm = 3.0856775814913673e18;
 const double ryd_to_erg = 2.1798723611035845e-11; // rydberg energy unit in ergs
 // constants of the model
-const double h_s_tolerance = 0.1; // cm
+const double h_s_tolerance = 1e-8; // cm
 const double entropy_boundary = 0.1875/cbrt(16.);
 //const double gaunt_factor = 1.2;
 const double kT_grid_spacing = 0.5; // keV

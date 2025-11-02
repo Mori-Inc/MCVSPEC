@@ -23,12 +23,13 @@ class Cataclysmic_Variable{
         // utilities
         int refl;
         Dipole geometry;
-        double upper_bound, lower_bound;
+        double upper_bound, lower_bound, upper_landing, lower_landing;
 
 
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,int);
 
+        void Bracket_Shock_Height();
         void Shock_Height_Shooting();
         void Build_Column_Profile();
         void Print_Properties();

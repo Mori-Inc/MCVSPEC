@@ -5,8 +5,8 @@
 using std::valarray;
 
 struct Dipole{
-    double u;
-    Dipole(double uu):u(uu){}
+    double u, w_0;
+    Dipole(double uu):u(uu), w_0(sqrt(1-uu)){}
 
     // solves for the relevant coordinate transforms for a dipole geometry with r=1 -> stellar surface
     void update_coordinates(double w, double& r, double& dr_dw, double& proj_r_w, double& convergance, double metric[3]) const{
@@ -24,17 +24,19 @@ struct Dipole{
         const double dr_du = -r/du;
         const double r4 = r*r*r*r;
         dr_dw = -2*w*r4/du;
-        const double dr_du_dw = -(dr_dw + dr_du*(8*w*r*r*r + 12*w*w*r*r*dr_dw))/(4*w*w*r*r*r + u);
+        const double dr_du_dw = -(dr_dw + dr_du*(8*w*r*r*r + 12*w*w*r*r*dr_dw))/du;
         const double ts = 1./u + 2*dr_du/r + dr_du_dw/dr_dw;
         const double te = 1./w + 7*dr_dw/(2*r) + dr_du_dw/dr_du;
 
-        const double a = r+3+u*dr_du;
+        const double a = r+3*u*dr_du;
         const double b = w*r*dr_du;
-        metric[0] = sqrt(r*a*a/(4*u) + 9*r*r*b*b);
         const double c = r+3*w*dr_dw;
+        metric[0] = sqrt(r*a*a/(4*u) + 9*r*r*b*b);
         metric[1] = sqrt(r4*c*c + 2.25*u*r*dr_dw*dr_dw);
         metric[2] = sqrt(u*r*r*r);
-        proj_r_w = (3*u*r - 2)*(w*r4 - r)/(metric[1]*(4*w*w*r*r*r + u));
+        //proj_r_w = (3*u*r - 2)*(w*r4 - r)/(metric[1]*(4*w*w*r*r*r + u));
+        //proj_r_w = -dr_dw/metric[1];
+        proj_r_w = 0;
         convergance = 3*u*r*r4*(0.25*ts*dr_dw*(1. + 3*dr_du*u/r) + 3*te*b*b)/(metric[0]*metric[0]*metric[2]*metric[2]);
     }
 };

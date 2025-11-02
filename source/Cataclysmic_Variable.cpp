@@ -29,7 +29,7 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     double r, dr_dw, proj_r_w, convergance, metric[3];
     double w = sqrt(1-geometry.u);
     geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
-    area_scale = accretion_area/metric[0]*metric[2];
+    area_scale = accretion_area/(metric[0]*metric[2]);
     scaled_mdot = accretion_rate/area_scale;
     free_fall_speed = sqrt(2*grav_const*mass/radius);
 
@@ -40,8 +40,8 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     bremss_const *= (avg_charge_squared/avg_atomic_charge)*sqrt(pow(density_const/avg_ion_mass,3));
     bremss_const *= scaled_mdot*radius/(free_fall_speed*free_fall_speed*free_fall_speed);
     cyclotron_const = 8.07e-2*(avg_atomic_charge/(avg_charge_squared*k_b*k_b))*pow(density_const/avg_ion_mass,-3.85);
-    cyclotron_const *= pow(radius,0.85)*pow(scaled_mdot,-1.85)*pow(free_fall_speed,5.85);
-    cyclotron_const *= pow(b_field, 2.85);
+    cyclotron_const *= pow(scaled_mdot,-1.85)*pow(free_fall_speed,5.85);
+    cyclotron_const *= pow(area_scale,-0.425)*pow(b_field/sqrt(4-3*geometry.u), 2.85);
 }
 
 double Cataclysmic_Variable::Get_Accretion_Rate(double luminosity, double mass, double radius, double inverse_mag_radius){
@@ -73,31 +73,35 @@ void Cataclysmic_Variable::Guess_Shock_Height(){
         Update_Shock_Height(previous_shock_height);
     }
     else{
-        double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
-        double shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
-        Update_Shock_Height(pow(shock_speed,3.)*integral*accretion_area/(2*bremss_const*1.2*accretion_rate));
-        Update_Shock_Height(pow(v_s*free_fall_speed,3.)*integral*accretion_area/(2*bremss_const*1.2*accretion_rate));
+        const double integral = (39.*sqrt(3.) - 20*pi)/96.; // value of integral from EQ 7a of Wu 1994 DOI: 10.1086/174103
+        const double shock_speed = sqrt(2*grav_const*mass*((1./radius) - inverse_mag_radius));
+        const double c_br = bremss_const*free_fall_speed*free_fall_speed*free_fall_speed/(scaled_mdot*radius);
+        double h_s = (pow(shock_speed,3.)*integral*accretion_area/(2*c_br*accretion_rate))/radius;
+        Update_Shock_Height(geometry.w_0-h_s);
+        h_s = (pow(v_s*free_fall_speed,3.)*integral*accretion_area/(2*c_br*accretion_rate))/radius;
+        Update_Shock_Height(geometry.w_0-h_s);
     }
 }
 
 void Cataclysmic_Variable::Update_Shock_Height(double h_s){
-    shock_height = h_s; // h_s is the radial distance away from surface, not distance along field line
-    const double r_s = 1. + h_s/radius;
-    w_s = sqrt((1-geometry.u*r_s)/(r_s*r_s*r_s*r_s));
-    double r, dr_dw, proj_r_w, convergance, metric[3];
-    geometry.update_coordinates(w_s, r, dr_dw, proj_r_w, convergance, metric);
+    w_s = h_s;
+    double r_s, dr_dw, proj_r_w, convergance, metric[3];
+    geometry.update_coordinates(w_s, r_s, dr_dw, proj_r_w, convergance, metric);
+    shock_height = (r_s-1)*radius;;
 
-    const double ir_m = radius*inverse_mag_radius;
-    double reduction_factor = 1;
+    v_s = 1./r_s;
     if(inverse_mag_radius > 0){
-        reduction_factor = 1. - 0.5/pow(1./corotation_ratio + 0.53/ir_m - 0.38, 3.7 + 0.44/ir_m);
+        const double ir_m = radius*inverse_mag_radius;
+        const double r_c = 1./(corotation_ratio*ir_m);
+        const double reduction_factor = 1. - 0.5/pow(1./corotation_ratio + 0.53/ir_m - 0.38, 3.7 + 0.44/ir_m);
+        v_s -= ir_m + 0.5*(1./(ir_m*ir_m) - h_s*h_s)/(r_c*r_c*r_c);
+        v_s *= reduction_factor;
     }
+    v_s = 0.25*sqrt(v_s);
 
-    const double r_c = 1./(corotation_ratio*ir_m);
-    v_s = 0.25*sqrt(reduction_factor*(1./r_s - ir_m - 0.5*(1./(ir_m*ir_m) - h_s*h_s)/(r_c*r_c*r_c)));
     const double mdot_s = 1./(metric[0]*metric[2]);
     p_s = 3*mdot_s*v_s;
-    pe_s = p_s*(1 + 1/pressure_ratio);
+    pe_s = p_s/(1 + 1/pressure_ratio);
     s_s = p_s*pow(v_s/mdot_s, 5./3.);
 }
 
@@ -116,7 +120,7 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
     const double dens3 = dens*dens*dens;
     const double dens5 = dens*dens*dens*dens*dens;
     const double chi = (1+avg_atomic_charge)/avg_atomic_charge;
-    const double b_scale = sqrt((4-3*geometry.u*r)/(4-3*geometry.u))/(r*r*r);
+    const double b_scale = sqrt(4-3*geometry.u*r)/(r*r*r);
 
     const double ne = (scaled_mdot/free_fall_speed)*density_const*dens/avg_ion_mass; // cgs
     const double kT = scaled_mdot*free_fall_speed*pe/ne; // cgs
@@ -140,63 +144,78 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
 }
 
 double Cataclysmic_Variable::Get_Landing_Altitude(){
-    double t = s_s;
+    // return signed distance from WD surface in w
+    double s = s_s;
     valarray<double> y = {w_s, v_s, p_s, pe_s};
-    accretion_column.Initialize(t, 0, y);
-    while(y[1] > 1e-4){
-        accretion_column.Step(t, y);
+    accretion_column.Initialize(s, 0, y);
+    while(y[1]/v_s > 1e-2){
+        accretion_column.Step(s, y);
     }
+    double error = 1;
     valarray<double> slope(4);
-    Flow_Equation(t,  y, slope);
+    Flow_Equation(s,  y, slope);
+    double s_prev = s;
+    double dw_prev = slope[0];
+
+    while(error > 1e-8){
+        accretion_column.Step(s, y);
+        Flow_Equation(s,  y, slope);
+        error = 0.5*abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extroplation on w
+        s_prev = s;
+        dw_prev = slope[0];
+    }
+    accretion_column.Step(s, y);
+    Flow_Equation(s,  y, slope);
+    double landing = y[0] - slope[0]*s;
+
+    return landing - geometry.w_0;
+}
+
+void Cataclysmic_Variable::Bracket_Shock_Height(){
+    double w = sqrt(1-geometry.u);
     double r, dr_dw, proj_r_w, convergance, metric[3];
-    geometry.update_coordinates(y[0], r, dr_dw, proj_r_w, convergance, metric);
-    double landing = r - dr_dw*slope[0]*t;
-    return landing - 1;
+    geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
+
+    upper_bound = w + 1e-6/dr_dw; // one bound is small perturbation above surface
+    Update_Shock_Height(upper_bound);
+    upper_landing = Get_Landing_Altitude();
+    if(upper_landing < 0){
+        while(upper_landing < 0){
+            lower_bound = upper_bound;
+            lower_landing = upper_landing;
+            upper_bound += 1e-6/dr_dw;
+            Update_Shock_Height(upper_bound);
+            upper_landing = Get_Landing_Altitude();
+        }
+        return;
+    }
+    double d = 4;
+    lower_bound = w/d;
+    Update_Shock_Height(lower_bound);
+    lower_landing = Get_Landing_Altitude();
+    if(lower_landing > 0){
+        while(lower_landing > 0){
+            upper_bound = lower_bound;
+            upper_landing = lower_landing;
+            d += 1;
+            lower_bound = w/d;
+            Update_Shock_Height(lower_bound);
+            lower_landing = Get_Landing_Altitude();
+        }
+        return;
+    }
 }
 
 void Cataclysmic_Variable::Shock_Height_Shooting(){
-    Update_Shock_Height(shock_height);
-    upper_bound = shock_height;
-    lower_bound = shock_height;
-    double xf_upper = Get_Landing_Altitude();
-    double xf_lower = xf_upper;
-    if(xf_upper<0){
-        upper_bound *= 1.2;
-        Update_Shock_Height(upper_bound);
-        xf_upper = Get_Landing_Altitude();
-        while(xf_upper<0){
-            lower_bound = upper_bound;
-            xf_lower = xf_upper;
-            upper_bound *= 1.2;
-            Update_Shock_Height(upper_bound);
-            xf_upper = Get_Landing_Altitude();
-        }
-    }
-    else if(xf_lower>0){
-        lower_bound *= 0.8;
-        Update_Shock_Height(lower_bound);
-        xf_lower = Get_Landing_Altitude();
-        while(xf_lower>0){
-            upper_bound = lower_bound;
-            xf_upper = xf_lower;
-            lower_bound *= 0.8;
-            Update_Shock_Height(lower_bound);
-            xf_lower = Get_Landing_Altitude();
-        }
-    }
-    else{
-        return;
-    }
-
+    Bracket_Shock_Height();
     double k1 = 0.2/(upper_bound-lower_bound);
     double n0 = 1;
     double nmax = log2((upper_bound-lower_bound)/(2*h_s_tolerance)) + n0;
     int i=0;
     double new_bound, new_altitude, midpoint, regula_falsi, truncation, projection, dir;
-
-    while(upper_bound-lower_bound > 2*h_s_tolerance){
+    while(upper_bound-lower_bound > h_s_tolerance){
         midpoint = (upper_bound+lower_bound)/2;
-        regula_falsi = (xf_upper*lower_bound - xf_lower*upper_bound)/(xf_lower-xf_upper);
+        regula_falsi = (upper_landing*lower_bound - lower_landing*upper_bound)/(lower_landing-upper_landing);
         dir = (0. < (midpoint-regula_falsi)) - ((midpoint-regula_falsi) < 0.);
         truncation = k1*(upper_bound-lower_bound)*(upper_bound-lower_bound); // k2 = 2
 
@@ -216,11 +235,11 @@ void Cataclysmic_Variable::Shock_Height_Shooting(){
         new_altitude = Get_Landing_Altitude();
         if(new_altitude>0){
             upper_bound = new_bound;
-            xf_upper = new_altitude;
+            upper_landing = new_altitude;
         }
         else if(new_altitude<0){
             lower_bound = new_bound;
-            xf_lower = new_altitude;
+            lower_landing = new_altitude;
         }
         else{
             upper_bound = new_altitude;
@@ -272,8 +291,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
     int seg;
     bool root_found=false;
-
-    while(s>1e-8 && grid_vars[2] > 0.5*dkTe){
+    while(s>1e-8 && grid_vars[1] > 0.5*dkTe){
         s_old = s;
         accretion_column.Dense_Step(s, y);
         ds = (s_old-s)/16.;
