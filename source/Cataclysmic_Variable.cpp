@@ -127,7 +127,7 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
     const double gff = gaunt::gaunt_factor(kT);
     const double coulomb_log = 0.5*log(coulomb_log_const*kT*kT/ne);
 
-    const double grav = mdot*proj_r_w/(2*r*r);
+    const double grav = -0.5*proj_r_w*mdot/(r*r);
     const double cyc = (cyclotron_const/gff)*pe*pe*pow(b_scale/dens, 2.85)/(dens*pow(area,0.425));
     const double rad = bremss_const*gff*sqrt(pe*dens3)*(1+cyc);
     const double exch = exchange_const*coulomb_log*sqrt(dens5/pe)*(p/pe - chi);
