@@ -19,6 +19,11 @@ const double alpha = 7.2973525643e-3;
 const valarray<double> atomic_charge = {1,2,6,7,8,10,12,13,14,16,18,20,26,28}; // charges of elements in abundances array
 const valarray<double> atomic_mass = {1.007975,4.002602,12.0106,14.006855,15.9994,20.17976,24.3055,
                                 26.98153843,28.085,32.0675,39.8775,40.0784,55.8452,58.69344};
+const double bremss_coeff = sqrt(512*pi/(27.*m_e*m_e*m_e))*alpha*alpha*alpha*hbar*hbar; // cgs bremms constant for hydrogen plasma
+const double cyclotron_coeff = 8.07e-2/(k_b*k_b);
+const double exchange_coeff = 4*alpha*alpha*hbar*hbar*c*c*sqrt(2*pi*m_e);
+const double coulomb_log_coeff = 2*m_e/(pi*alpha*c*hbar*hbar*hbar);
+
 // conversion factors
 const double erg_to_kev = 6.241509074461e8;
 const double amu_to_g =  1.6605390689252e-24; // mass of amu in grams

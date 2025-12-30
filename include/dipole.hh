@@ -5,8 +5,17 @@
 using std::valarray;
 
 struct Dipole{
-    double u, w_0;
-    Dipole(double uu):u(uu), w_0(sqrt(1-uu)){}
+    double u, w_0, a_0, dr_dw_0;
+    Dipole(double uu):u(uu), w_0(sqrt(1-uu)){
+        double r, proj, conv, metric[3];
+        update_coordinates(w_0, r, dr_dw_0, proj, conv, metric);
+        a_0 = metric[0]*metric[1];
+    }
+
+    void set_bounds(double& upper_bound, double& lower_bound){
+        upper_bound = w_0 + 1e-6/dr_dw_0;
+        lower_bound = w_0/4;
+    }
 
     // solves for the relevant coordinate transforms for a dipole geometry with r=1 -> stellar surface
     void update_coordinates(double w, double& r, double& dr_dw, double& proj_r_w, double& convergance, double metric[3]) const{
