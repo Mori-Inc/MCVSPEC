@@ -4,6 +4,8 @@
 #include "Cataclysmic_Variable.hh"
 #include "constants.hh"
 
+#include <iostream>
+
 namespace py = pybind11;
 
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {

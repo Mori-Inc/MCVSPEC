@@ -45,8 +45,8 @@ class cataclysmic_variable:
             accretion_rate.to_value(u.g/u.s),
             irm.to_value(1/u.cm),
             mag_radius_ratio,
-            metalicity,
             accretion_area.to_value(u.cm**2),
+            metalicity,
             cos_inclination_angle,
             distance.to_value(u.cm),
             1,
@@ -77,7 +77,7 @@ class cataclysmic_variable:
             # when no arf is set the arf defaults to 1 cm^2
             # so I assign units here of emissivity instead
             # If an arf was set one would need to first divide by the arf to get back to the appropriate norm
-            flux += session.return_spectrum(kT.to_value(u.keV))*(u.cm**3)/u.s/energy_bins.unit)*n_e*n_i*vol/(4 * np.pi * self.distance**2)
+            flux += session.return_spectrum(kT.to_value(u.keV))*((u.cm**3)/u.s/energy_bins.unit)*n_e*n_i*vol/(4 * np.pi * self.distance**2)
         return flux.to(1/u.s/u.keV/u.cm**2)
 
 
