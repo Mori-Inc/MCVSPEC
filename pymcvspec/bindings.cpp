@@ -8,25 +8,24 @@ namespace py = pybind11;
 
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
-        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double metals, double area, double theta, double dist, int reflection):
-            Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,theta,dist,reflection)
+        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double area, double metals, double theta, double dist, int reflection):
+            Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,metals,theta,dist,reflection)
         {
-            metalicity = metals;
-            Set_Abundances(metals);
+            Set_Abundances();
             Guess_Shock_Height();
             Shock_Height_Shooting();
             Build_Column_Profile();
         }
-        void Set_Abundances(const double m) override{
+        void Set_Abundances() override{
             abundances.resize(atomic_charge.size());
-            abundances = {1.00e+00, 9.77e-02, m*3.63e-04, m*1.12e-04, m*8.51e-04, m*1.23e-04,
-                          m*3.80e-05, m*2.95e-06, m*3.55e-05, m*1.62e-05, m*3.63e-06, m*2.29e-06,
-                          m*4.68e-05, m*1.78e-06}; // taken from Anders & Grevesse (1989) DOI: 10.1016/0016-7037(89)90286-X
+            abundances = {1.00e+00, 9.77e-02, 3.63e-04, 1.12e-04, 8.51e-04, 1.23e-04,
+                          3.80e-05, 2.95e-06, 3.55e-05, 1.62e-05, 3.63e-06, 2.29e-06,
+                          4.68e-05, 1.78e-06}; // taken from Anders & Grevesse (1989) DOI: 10.1016/0016-7037(89)90286-X
+            for(uint i=2; i<abundances.size(); i++){
+                abundances[i] *= metalicity;
+            }
             abundances = abundances/abundances.sum();
             Set_Cooling_Constants();
-        }
-        void Set_Pressure_Ratio(double sigma_s){
-            pressure_ratio = sigma_s;
         }
         py::array_t<double> Valarray_to_Numpy(valarray<double>* arr){
             py::array_t<double> array(arr->size());
@@ -60,6 +59,9 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         py::array_t<double> Get_Electron_Pressure(){
             return Valarray_to_Numpy(&electron_pressure);
         }
+        py::array_t<double> Get_Volume(){
+            return Valarray_to_Numpy(&volume);
+        }
         double Get_Radius(){
             return radius;
         }
@@ -81,7 +83,6 @@ PYBIND11_MODULE(_pymcvspec, module) {
             py::arg("area") = 1e15, py::arg("cos_incl_angle") = 0.5,
             py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def("set_shock_height", &Py_Cataclysmic_Variable::Update_Shock_Height)
-        .def("set_pressure_ratio", &Py_Cataclysmic_Variable::Set_Pressure_Ratio)
         .def("get_landing", &Py_Cataclysmic_Variable::Get_Landing_Altitude)
         .def("get_altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("get_velocity", &Py_Cataclysmic_Variable::Get_Velocity)
@@ -91,6 +92,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("get_ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
         .def("get_electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
         .def("get_total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
+        .def("get_volume", &Py_Cataclysmic_Variable::Get_Volume)
         .def("get_radius", &Py_Cataclysmic_Variable::Get_Radius)
         .def("get_m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
         .def("get_shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)

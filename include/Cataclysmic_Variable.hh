@@ -14,7 +14,7 @@ class Cataclysmic_Variable{
         // derived column properties
         double avg_ion_mass, avg_atomic_charge, density_const, exchange_const, bremss_const, cyclotron_const;
         // boundary conditions
-        double w_s, x_s, v_s, d_s, s_s;
+        double w_s, x_s, v_s, pe_s, s_s;
         // thermal profile
         valarray<double> velocity, altitude, electron_temperature, ion_temperature, electron_density, ion_density, electron_pressure, total_pressure, volume;
         // utilities

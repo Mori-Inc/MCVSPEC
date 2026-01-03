@@ -8,5 +8,5 @@ class XS_Cataclysmic_Variable : public Cataclysmic_Variable {
         XS_Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);
         void XS_Spectrum(const RealArray&, const int, RealArray&, const string&);
     protected:
-        void Set_Abundances(double) override;
+        void Set_Abundances() override;
 };

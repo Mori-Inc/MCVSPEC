@@ -2,17 +2,16 @@
 #include <XSFunctions/Utilities/FunctionUtility.h>
 #include <funcWrappers.h>
 
-XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double metals, double area, double theta, double dist, int reflection):
-    Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,theta,dist,reflection)
+XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double area, double metals, double theta, double dist, int reflection):
+    Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,metals,theta,dist,reflection)
 {
-    metalicity = metals;
-    Set_Abundances(metals);
+    Set_Abundances();
     Guess_Shock_Height();
     Shock_Height_Shooting();
     Build_Column_Profile();
 }
 
-void XS_Cataclysmic_Variable::Set_Abundances(double metalicity){
+void XS_Cataclysmic_Variable::Set_Abundances(){
     abundances.resize(atomic_charge.size());
     abundances[0] = FunctionUtility::getAbundance(atomic_charge[0]);
 
