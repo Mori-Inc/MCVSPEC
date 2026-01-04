@@ -82,13 +82,14 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     double r_s, dr_dw, proj_r_w, convergance, metric[3];
     geometry.update_coordinates(w_s, r_s, dr_dw, proj_r_w, convergance, metric);
     shock_height = (r_s-1)*radius;
+    double mdot = 1./(metric[0]*metric[2]);
 
     double vff = sqrt(1./r_s - radius*inverse_mag_radius);
 
     x_s = vff;
     v_s = vff/4;
-    pe_s = (pressure_ratio/(pressure_ratio+1))*(x_s-v_s)/metric[0]*metric[2];
-    s_s = (x_s-v_s)*cbrt(v_s*v_s*v_s*v_s*v_s/(metric[0]*metric[0]*metric[2]*metric[2]));
+    pe_s = (pressure_ratio/(pressure_ratio+1))*mdot*(x_s-v_s);
+    s_s = (x_s-v_s)*cbrt(v_s*v_s*v_s*v_s*v_s/(mdot*mdot));
 }
 
 void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& state, valarray<double>& derivs) const{
