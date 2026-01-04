@@ -9,7 +9,7 @@ struct Dipole{
     Dipole(double uu):u(uu), w_0(sqrt(1-uu)){
         double r, proj, conv, metric[3];
         update_coordinates(w_0, r, dr_dw_0, proj, conv, metric);
-        a_0 = metric[0]*metric[1];
+        a_0 = metric[0]*metric[2];
     }
 
     void set_bounds(double& upper_bound, double& lower_bound){
@@ -36,15 +36,15 @@ struct Dipole{
         const double r3 = r2*r;
         const double r4 = r2*r2;
 
-        const double du = 4*w2*r3 + u;
-        const double dr_du = -r/du;
-        dr_dw = -2*w*r4/du;
-        const double dr_du_dw = -(dr_dw + dr_du*(8*w*r3 + 12*w2*r2*dr_dw))/du;
+        const double dr = 1./(4*w2*r3 + u);
+        const double dr_du = -r*dr;
+        dr_dw = -2*w*r4*dr;
+        const double dr_du_dw = -(dr_dw + dr_du*(8*w*r3 + 12*w2*r2*dr_dw))*dr;
 
         const double a = r+3*u*dr_du;
         const double b = 3*w*r2*dr_du;
         const double c = r+3*w*dr_dw;
-        metric[0] = sqrt((r/(4*u))*a*a + b*b);
+        metric[0] = sqrt(r*a*a/(4*u) + b*b);
         metric[1] = sqrt(r4*c*c + 2.25*u*r*dr_dw*dr_dw);
         metric[2] = sqrt(u*r3);
 

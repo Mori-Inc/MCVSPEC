@@ -42,7 +42,7 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
         else{
             CXX_tapec(energy, apec_parameters, spectrum_num, apec_flux, flux_error, init_string);
         }
-        apec_flux *= volume[i]*ion_density[i]*electron_density[i]*1e-14;
+        apec_flux *= volume[i]*electron_density[i]*(electron_density[i]/avg_atomic_charge)*1e-14;
         apec_flux /= 4*pi*distance*distance;
         flux += apec_flux;
 

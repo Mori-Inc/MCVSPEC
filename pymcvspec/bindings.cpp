@@ -52,8 +52,8 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         py::array_t<double> Get_Electron_Density(){
             return Valarray_to_Numpy(&electron_density);
         }
-        py::array_t<double> Get_Ion_Density(){
-            return Valarray_to_Numpy(&ion_density);
+        py::array_t<double> Get_Density(){
+            return Valarray_to_Numpy(&density);
         }
         py::array_t<double> Get_Total_Pressure(){
             return Valarray_to_Numpy(&total_pressure);
@@ -73,6 +73,9 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         double Get_Shock_Height(){
             return shock_height;
         }
+        double Get_Avg_Atomic_Charge(){
+            return avg_atomic_charge;
+        }
 };
 
 PYBIND11_MODULE(_pymcvspec, module) {
@@ -91,13 +94,14 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("get_electron_temperature", &Py_Cataclysmic_Variable::Get_Electron_Temperature)
         .def("get_ion_temperature", &Py_Cataclysmic_Variable::Get_Ion_Temperature)
         .def("get_electron_density", &Py_Cataclysmic_Variable::Get_Electron_Density)
-        .def("get_ion_density", &Py_Cataclysmic_Variable::Get_Ion_Density)
+        .def("get_density", &Py_Cataclysmic_Variable::Get_Density)
         .def("get_electron_pressure", &Py_Cataclysmic_Variable::Get_Electron_Pressure)
         .def("get_total_pressure", &Py_Cataclysmic_Variable::Get_Total_Pressure)
         .def("get_volume", &Py_Cataclysmic_Variable::Get_Volume)
         .def("get_radius", &Py_Cataclysmic_Variable::Get_Radius)
         .def("get_m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
         .def("get_shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
+        .def("get_avg_charge", &Py_Cataclysmic_Variable::Get_Avg_Atomic_Charge)
         .def("print", &Py_Cataclysmic_Variable::Print_Properties);
 
 }

@@ -16,7 +16,7 @@ class Cataclysmic_Variable{
         // boundary conditions
         double w_s, x_s, v_s, pe_s, s_s;
         // thermal profile
-        valarray<double> velocity, altitude, electron_temperature, ion_temperature, electron_density, ion_density, electron_pressure, total_pressure, volume;
+        valarray<double> altitude, volume, velocity, density, total_pressure, electron_pressure, electron_density, electron_temperature, ion_temperature;
         // utilities
         const int refl;
         Dipole geometry;

@@ -51,13 +51,13 @@ class cataclysmic_variable:
             distance.to_value(u.cm),
             1,
         )
-
+        self.zbar = self.cpp_impl.get_avg_charge()
         self.altitude = self.cpp_impl.get_altitude()*u.cm
         self.velocity = self.cpp_impl.get_velocity()*u.cm/u.s
         self.electron_temperature = self.cpp_impl.get_electron_temperature()*u.keV
         self.ion_temperature = self.cpp_impl.get_ion_temperature()*u.keV
         self.electron_density = self.cpp_impl.get_electron_density()/u.cm**3
-        self.ion_density = self.cpp_impl.get_ion_density()/u.cm**3
+        self.density = self.cpp_impl.get_density()*u.g/u.cm**3
         self.total_pressure = self.cpp_impl.get_total_pressure()*u.dyne/u.cm**2
         self.electron_pressure = self.cpp_impl.get_electron_pressure()*u.dyne/u.cm**2
         self.volume = self.cpp_impl.get_volume()*u.cm**3
@@ -70,7 +70,7 @@ class cataclysmic_variable:
         for kT, n_e, n_i, vol in zip(
             self.electron_temperature,
             self.electron_density,
-            self.ion_density,
+            self.electron_density/self.zbar,
             self.volume,
         ):
             # note: pyatomdb returns a spectrum which is normalized to emissivity*effective area

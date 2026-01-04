@@ -88,7 +88,7 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     x_s = vff;
     v_s = vff/4;
     pe_s = (pressure_ratio/(pressure_ratio+1))*(x_s-v_s)/metric[0]*metric[2];
-    s_s = 0.75*vff*cbrt(v_s*v_s*v_s*v_s*v_s/(metric[0]*metric[0]*metric[2]*metric[2]));
+    s_s = (x_s-v_s)*cbrt(v_s*v_s*v_s*v_s*v_s/(metric[0]*metric[0]*metric[2]*metric[2]));
 }
 
 void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& state, valarray<double>& derivs) const{
@@ -120,13 +120,12 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
     const double rad = bremss_const*gff*sqrt(pe*dens3)*(1+cyc);
     const double exch = exchange_const*coulomb_log*sqrt(dens5/pe)*(p/pe - chi);
 
-    const double common_factor = 1.5*p/s;
+    const double common_factor = -p/s;
 
-    double dw_ds = -common_factor*v/(metric[1]*rad);
-    double dx_ds = -common_factor*(grav/rad + v*(x-v)*convergance/(metric[1]*rad));
-    double dv_ds = (common_factor*v/(5*x - 8*v))*(2./mdot + 3*grav/rad + 5*v*(x-v)*convergance/(metric[1]*rad));
-    double dp_ds = -common_factor*(2*(exch/rad)/3 + (5*pe/(5*x - 8*v))*(2./(3.*mdot) + grav/rad + v*v*convergance/(metric[1]*rad)));
-
+    double dw_ds = 1.5*common_factor*v/(metric[1]*rad);
+    double dx_ds = 1.5*common_factor*(grav/rad + v*(x-v)*convergance/(metric[1]*rad));
+    double dv_ds = -1.5*(common_factor*v/(5*x - 8*v))*(2./mdot + 3*grav/rad + 5*v*(x-v)*convergance/(metric[1]*rad));
+    double dp_ds = common_factor*(exch/rad - 1 + (5*pe/(5*x - 8*v))*(1.5*grav/rad + 1.5*(v*v/metric[1])*convergance/rad + 1./mdot));
 
     derivs[0] = dw_ds;
     derivs[1] = dx_ds;
@@ -239,7 +238,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
     const double dkTe = (kT_grid_spacing/erg_to_kev)*density_const/(avg_ion_mass*vel_conv*vel_conv);
     const double dkTi = dkTe/avg_atomic_charge;
-    const valarray<double> grid_spacing = {altitude_grid_spacing, dkTe, dkTi};
+    const valarray<double> grid_spacing = {altitude_grid_spacing, dkTi, dkTe};
 
     // vars for integration
     double s = s_s;
@@ -259,15 +258,15 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     double r, dr_dw, proj_r_w, convergance, metric[3];
     geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
 
-    auto kT_e = [v,pe,metric](){
-        return pe*v/(metric[0]*metric[2]);
+    auto kT_e = [&v,&pe,&metric](){
+        return v*pe*metric[0]*metric[2];
     };
 
-    auto kT_i = [x,v,pe,metric](){
-        return v*(x-v-pe/(metric[0]*metric[2]));
+    auto kT_i = [&x,&v,&pe,&metric](){
+        return v*(x-v-pe*metric[0]*metric[2]);
     };
-    grid_vars_r = {w, kT_e(), kT_i()};
-    grid_vars = {w, kT_e(), kT_i()};
+    grid_vars_r = {w, kT_i(), kT_e()};
+    grid_vars = {w, kT_i(), kT_e()};
     // vars for root finding
     double s_high, s_low, s_mid;
     valarray<double> root_vars(3);
@@ -278,7 +277,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
     int seg;
     bool root_found=false;
-    while(s>1e-8 && grid_vars[1] > 0.5*dkTe){
+    while(s>1e-8 && grid_vars[1] > dkTe){
         s_old = s;
         accretion_column.Dense_Step(s, y);
         ds = (s_old-s)/16.;
@@ -286,13 +285,11 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
         while(seg<16){
             grid_vars_l = grid_vars_r;
-
             s_mid = s_old - ds*(seg+1);
             accretion_column.Interpolate(s_mid, y_mid);
             geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
-            grid_vars_r = {w, kT_e(), kT_i()};
+            grid_vars_r = {w, kT_i(), kT_e()};
             crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(grid_vars_r-grid_vars)/grid_spacing - 1);
-
             for(uint i=0; i<crossing.size(); i++){
                 if(crossing[i]<0){
                     root_found = true;
@@ -302,7 +299,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                         s_mid = (s_high+s_low)/2;
                         accretion_column.Interpolate(s_mid, y_mid);
                         geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
-                        root_vars = {w, kT_e(), kT_i()};
+                        root_vars = {w, kT_i(), kT_e()};
                         if(abs(root_vars[i]-grid_vars[i])/grid_spacing[i] - 1 > 0){
                             s_low = s_mid;
                         }
@@ -312,7 +309,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                     }
                     accretion_column.Interpolate(s_high, y_mid);
                     geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
-                    root_vars = {w, kT_e(), kT_i()};
+                    root_vars = {w, kT_i(), kT_e()};
                     crossing = (abs(grid_vars_l-grid_vars)/grid_spacing - 1)*(abs(root_vars-grid_vars)/grid_spacing - 1); // update crossing with the new
                 }
             }// after checking crossing I will have found the earliest grid point in a given segment
@@ -326,7 +323,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
                 s_mid = s_high-1e-8;
                 accretion_column.Interpolate(s_mid, y_mid);
                 geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
-                grid_vars_r = {w, kT_e(), kT_i()}; // shift left bound to just after our previous root
+                grid_vars_r = {w, kT_i(), kT_e()}; // shift left bound to just after our previous root
             }
         }
     }
@@ -336,7 +333,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     total_pressure.resize(n_points);
     electron_pressure.resize(n_points);
     electron_density.resize(n_points);
-    ion_density.resize(n_points);
+    density.resize(n_points);
     electron_temperature.resize(n_points);
     ion_temperature.resize(n_points);
     volume.resize(n_points);
@@ -352,10 +349,10 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         mdot = 1./(metric[0]*metric[2]);
         total_pressure[i] = (energy_conv/volume_conv)*mdot*(grid[i][1]-grid[i][2]);
         electron_pressure[i] = (energy_conv/volume_conv)*grid[i][3];
-        electron_density[i] = (density_const/avg_ion_mass)*density_conv*grid[i][2]/mdot;
-        ion_density[i] = electron_density[i]/avg_atomic_charge;
+        density[i] = density_conv*mdot/grid[i][2];
+        electron_density[i] = (density_const/avg_ion_mass)*density[i];
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
-        ion_temperature[i] = erg_to_kev*(total_pressure[i]-electron_pressure[i])/ion_density[i];
+        ion_temperature[i] = erg_to_kev*(total_pressure[i]-electron_pressure[i])/(electron_density[i]/avg_atomic_charge);
         if(i==0){
             a = grid[i][0];
         }
