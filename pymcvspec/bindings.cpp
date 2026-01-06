@@ -1,8 +1,11 @@
+#include <cstddef>
+#include <pybind11/buffer_info.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include "Cataclysmic_Variable.hh"
 #include "constants.hh"
+#include "dipole.hh"
 
 #include <iostream>
 
@@ -104,4 +107,12 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("get_avg_charge", &Py_Cataclysmic_Variable::Get_Avg_Atomic_Charge)
         .def("print", &Py_Cataclysmic_Variable::Print_Properties);
 
+    py::class_<Dipole>(module, "_dipole", py::module_local())
+        .def(py::init<double>(),py::arg("u")=0.03)
+        .def("update_geo", [](Dipole& self, double w, double& r, double& dr_dw, double& proj_r_w, double& convergance, py::array_t<double> metric){
+            py::buffer_info buf = metric.request();
+            double* ptr = static_cast<double*>(buf.ptr);
+            self.update_coordinates(w, r, dr_dw, proj_r_w, convergance, ptr);
+            return py::make_tuple(r, dr_dw, proj_r_w, convergance);
+        });
 }

@@ -7,16 +7,14 @@
 #include <iostream>
 #include <valarray>
 
-#include <unistd.h>
-
 using std::cout;
 using std::endl;
 using std::abs;
 
 static double previous_shock_height = 0;
-Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double corot_rat, double area, double abund, double theta, double dist, int reflection):
+Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metalicity(abund),
-    pressure_ratio(.75), incl_angle(theta), refl(reflection), geometry(sin(10*pi/180)*sin(10*pi/180)),
+    pressure_ratio(.2), incl_angle(theta), refl(reflection), geometry(sin(1*pi/180)*sin(1*pi/180)),
     length_conv(radius), vel_conv(sqrt(2*grav_const*mass/radius)), time_conv(length_conv/vel_conv), volume_conv(length_conv*length_conv*length_conv),
     mass_conv((geometry.a_0*accretion_rate/accretion_area)*volume_conv/vel_conv),
     energy_conv(mass_conv*vel_conv*vel_conv), density_conv(mass_conv/volume_conv)
@@ -34,9 +32,12 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     bremss_const /= energy_conv*length_conv*length_conv/(mass_conv*mass_conv);
     cyclotron_const = cyclotron_coeff*(avg_atomic_charge/avg_charge_squared)*pow(density_const/avg_ion_mass,-3.85);
     cyclotron_const *= pow(b_field/sqrt(4-3*geometry.u), 2.85)*pow(accretion_area/geometry.a_0,-0.425);
-    cyclotron_const /= pow(mass_conv,5.275)*pow(length_conv,-2.275)*pow(time_conv,-2.85)/(energy_conv*energy_conv);
+    cyclotron_const *= vel_conv*vel_conv*vel_conv*vel_conv/pow(density_conv, 1.85);
     exchange_const = exchange_coeff*avg_charge_sqr_over_mass*pow(density_const/avg_ion_mass, 2.5);
     exchange_const /= energy_conv*energy_conv*length_conv*length_conv/(mass_conv*mass_conv*mass_conv);
+    cout << exchange_const/bremss_const << endl;
+    cout << exchange_const << endl;
+    cout << bremss_const << endl;
 }
 
 double Cataclysmic_Variable::Get_Accretion_Rate(double luminosity, double mass, double radius, double inverse_mag_radius){
@@ -89,7 +90,7 @@ void Cataclysmic_Variable::Update_Shock_Height(double h_s){
     x_s = vff;
     v_s = vff/4;
     pe_s = (pressure_ratio/(pressure_ratio+1))*mdot*(x_s-v_s);
-    s_s = (x_s-v_s)*cbrt(v_s*v_s*v_s*v_s*v_s/(mdot*mdot));
+    s_s = mdot*(x_s-v_s)*pow(v_s/mdot, 5./3.);
 }
 
 void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& state, valarray<double>& derivs) const{
@@ -101,32 +102,32 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const valarray<double>& 
 
     double r, dr_dw, proj_r_w, convergance, metric[3];
     geometry.update_coordinates(w, r, dr_dw, proj_r_w, convergance, metric);
-    const double area = metric[0]*metric[2];
 
+    const double area = metric[0]*metric[2];
     const double mdot = 1./area;
     const double p = mdot*(x-v);
     const double dens = mdot/v;
     const double dens3 = dens*dens*dens;
-    const double dens5 = dens*dens*dens*dens*dens;
+    const double dens5 = dens3*dens*dens;
     const double chi = (1+avg_atomic_charge)/avg_atomic_charge;
     const double b_scale = sqrt(4-3*geometry.u*r)/(r*r*r);
 
-    const double kT_cgs = (avg_ion_mass/density_const)*vel_conv*vel_conv*pe/dens;
-    const double ne_cgs = density_conv*density_const*dens/avg_ion_mass;
+    const double ne_cgs = (density_conv*dens)*density_const/avg_ion_mass;
+    const double kT_cgs = (energy_conv/volume_conv)*pe/ne_cgs;
     const double gff = gaunt::gaunt_factor(kT_cgs);
     const double coulomb_log = 0.5*log(coulomb_log_coeff*kT_cgs*kT_cgs/ne_cgs);
-
     const double grav = -0.5*proj_r_w/(r*r);
     const double cyc = (cyclotron_const/gff)*pe*pe*pow(b_scale/dens, 2.85)/(dens*pow(area,0.425));
     const double rad = bremss_const*gff*sqrt(pe*dens3)*(1+cyc);
     const double exch = exchange_const*coulomb_log*sqrt(dens5/pe)*(p/pe - chi);
 
-    const double common_factor = -p/s;
+    const double common_factor = p/s;
+    const double geo_factor = convergance*v*(x-v)/(metric[1]*rad);
 
-    double dw_ds = 1.5*common_factor*v/(metric[1]*rad);
-    double dx_ds = 1.5*common_factor*(grav/rad + v*(x-v)*convergance/(metric[1]*rad));
-    double dv_ds = -1.5*(common_factor*v/(5*x - 8*v))*(2./mdot + 3*grav/rad + 5*v*(x-v)*convergance/(metric[1]*rad));
-    double dp_ds = common_factor*(exch/rad - 1 + (5*pe/(5*x - 8*v))*(1.5*grav/rad + 1.5*(v*v/metric[1])*convergance/rad + 1./mdot));
+    double dw_ds = -1.5*common_factor*v/(metric[1]*rad);
+    double dx_ds = -1.5*common_factor*(grav/rad + geo_factor);
+    double dv_ds = (1.5*common_factor*v/(5*x - 8*v))*(2./mdot + 3*grav/rad + 5*geo_factor);
+    double dp_ds = common_factor*(1 - exch/rad - (5*pe/(5*x - 8*v))*(1./mdot + 1.5*(grav + convergance*v*v/metric[1])/rad));
 
     derivs[0] = dw_ds;
     derivs[1] = dx_ds;
@@ -139,8 +140,8 @@ double Cataclysmic_Variable::Get_Landing_Altitude(){
     double s = s_s;
     valarray<double> y = {w_s, x_s, v_s, pe_s};
     accretion_column.Initialize(s, 0, y);
-    while(y[2]/v_s > 1e-2){
-        accretion_column.Step(s, y);
+    while(s/s_s > 1e-2){
+         accretion_column.Step(s, y);
     }
     double error = 1;
     valarray<double> slope(4);
@@ -148,8 +149,11 @@ double Cataclysmic_Variable::Get_Landing_Altitude(){
     double s_prev = s;
     double dw_prev = slope[0];
 
+    double r, dr_dw, proj_r_w, convergance, metric[3];
+
     while(error > 1e-8){
         accretion_column.Step(s, y);
+        geometry.update_coordinates(y[0], r, dr_dw, proj_r_w, convergance, metric);
         Flow_Equation(s,  y, slope);
         error = 0.5*abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extroplation on w
         s_prev = s;
@@ -181,7 +185,7 @@ void Cataclysmic_Variable::Bracket_Shock_Height(){
         while(lower_landing > 0){
             upper_bound = lower_bound;
             upper_landing = lower_landing;
-            lower_bound = lower_bound/2;
+            lower_bound = lower_bound/1.1;
             Update_Shock_Height(lower_bound);
             lower_landing = Get_Landing_Altitude();
         }
@@ -387,8 +391,9 @@ void Cataclysmic_Variable::Print_Properties(){
         cout << " R_m/R:              " << (1./inverse_mag_radius)/radius << endl;
     }
     cout << " accretion rate:     " << accretion_rate << " g/s" << endl;
-    cout << " accretion rate:     " << accretion_rate/accretion_area << " g/cm2/s" << endl;
+    cout << " accretion rate:     " << density[0]*velocity[0] << " --> " <<  density[density.size()-1]*velocity[velocity.size()-1] << " g/cm2/s" << endl;
     cout << " shock height:       " << shock_height/radius << " (h/R_wd)" << endl;
+    cout << " shock height:       " << shock_height << " cm" << endl;
     cout << " shock temperature:  " << electron_temperature[0] << " keV" << endl;
     cout << " density:            " <<  electron_density[0] << " --> " << electron_density[electron_density.size()-1] <<  " e-/cm3" << endl;
 }

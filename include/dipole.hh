@@ -13,8 +13,9 @@ struct Dipole{
     }
 
     void set_bounds(double& upper_bound, double& lower_bound){
-        upper_bound = w_0 + 1e-6/dr_dw_0;
-        lower_bound = w_0/4;
+        const double r_max = 1.25;
+        upper_bound = 1.;
+        lower_bound = sqrt(1-u*r_max)/(r_max*r_max);
     }
 
     // solves for the relevant coordinate transforms for a dipole geometry with r=1 -> stellar surface
@@ -34,12 +35,11 @@ struct Dipole{
         r = sqrt(canalle_y-canalle_sp-canalle_sm) - u/(4*w2*canalle_y);
         const double r2 = r*r;
         const double r3 = r2*r;
-        const double r4 = r2*r2;
+        const double r4 = r3*r;
 
         const double dr = 1./(4*w2*r3 + u);
         const double dr_du = -r*dr;
         dr_dw = -2*w*r4*dr;
-        const double dr_du_dw = -(dr_dw + dr_du*(8*w*r3 + 12*w2*r2*dr_dw))*dr;
 
         const double a = r+3*u*dr_du;
         const double b = 3*w*r2*dr_du;
@@ -48,11 +48,8 @@ struct Dipole{
         metric[1] = sqrt(r4*c*c + 2.25*u*r*dr_dw*dr_dw);
         metric[2] = sqrt(u*r3);
 
-        proj_r_w = dr_dw/metric[1];
+        proj_r_w = (r/(2*metric[1]))*(2*w*r4 + (3*u + 6*w2*r3)*dr_dw);
 
-        const double ts = 1./u + 2*dr_du/r + dr_du_dw/dr_dw;
-        const double te = 1./w + 3.5*dr_dw/r + dr_du_dw/dr_du;
-        convergance = (3*u*r*r4/(metric[0]*metric[0]*metric[2]*metric[2]));
-        convergance *= (dr_dw/4)*(1 + 3*dr_du*u/r)*ts + 3*(w2*r2*dr_du*dr_du)*te;
+        convergance = -3*w*r3*(8*w2*r3 + 3*u)/(16*w4*r4*r2 + 8*w2*r3*u + u*u);
     }
 };
