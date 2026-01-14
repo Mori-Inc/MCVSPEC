@@ -8,18 +8,40 @@
 #include "dipole.hh"
 
 #include <iostream>
+#include <valarray>
 
 namespace py = pybind11;
 
+py::array_t<double> Valarray_to_Numpy(valarray<double>* arr){
+    py::array_t<double> array(arr->size());
+    py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
+    for(int i = 0; i < arr->size(); i++){
+        np_array(i) = (*arr)[i];
+    }
+    return array;
+}
+
+valarray<double> Numpy_to_Valarray(const py::array_t<double, py::array::c_style | py::array::forcecast>& arr){
+    py::buffer_info buffer = arr.request();
+    const size_t len = static_cast<size_t>(buffer.shape[0]);
+    const double* arr_ptr = static_cast<const double*>(buffer.ptr);
+
+    std::valarray<double> array(len);
+    for (uint i=0; i<len; i++){
+        array[i] = arr_ptr[i];
+    }
+    return array;
+}
+
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
-        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double inv_r_m, double r_m_ratio, double area, double metals, double theta, double dist, int reflection):
-            Cataclysmic_Variable(m,r,b,mdot,inv_r_m,r_m_ratio,area,metals,theta,dist,reflection)
+        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double r_m_ratio, double metals, double theta, double dist, int reflection):
+            Cataclysmic_Variable(m,r,b,mdot,area,inv_r_m,r_m_ratio,metals,theta,dist,reflection)
         {
             Set_Abundances();
-            Guess_Shock_Height();
-            Shock_Height_Shooting();
-            Build_Column_Profile();
+            //Guess_Shock_Height();
+            //Shock_Height_Shooting();
+            //Build_Column_Profile();
         }
         void Set_Abundances() override{
             abundances.resize(atomic_charge.size());
@@ -31,14 +53,6 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             }
             abundances = abundances/abundances.sum();
             Set_Cooling_Constants();
-        }
-        py::array_t<double> Valarray_to_Numpy(valarray<double>* arr){
-            py::array_t<double> array(arr->size());
-            py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-            for(int i = 0; i < arr->size(); i++){
-                np_array(i) = (*arr)[i];
-            }
-            return array;
         }
         py::array_t<double> Get_Altitude(){
             return Valarray_to_Numpy(&altitude);
@@ -87,10 +101,10 @@ PYBIND11_MODULE(_pymcvspec, module) {
     py::class_<Py_Cataclysmic_Variable>(module, "_cataclysmic_variable", py::module_local())
         .def(py::init<double,double,double,double,double,double,double,double,double,double,int>(),
             py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
-            py::arg("mdot") = 1e15, py::arg("inv_r_m") = 0., py::arg("r_m_ratio") = 1., py::arg("metalicity") = 1.,
-            py::arg("area") = 1e15, py::arg("cos_incl_angle") = 0.5,
+            py::arg("mdot") = 1e15, py::arg("area") = 1e15, py::arg("inv_r_m") = 0., py::arg("r_m_ratio") = 1.,
+            py::arg("metalicity") = 1., py::arg("cos_incl_angle") = 0.5,
             py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
-        .def("set_shock_height", &Py_Cataclysmic_Variable::Update_Shock_Height)
+        .def("set_shock_height", &Py_Cataclysmic_Variable::Update_Shock_Position)
         .def("get_landing", &Py_Cataclysmic_Variable::Get_Landing_Altitude)
         .def("get_altitude", &Py_Cataclysmic_Variable::Get_Altitude)
         .def("get_velocity", &Py_Cataclysmic_Variable::Get_Velocity)
@@ -105,14 +119,24 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("get_m_dot", &Py_Cataclysmic_Variable::Get_Accretion_Rate)
         .def("get_shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
         .def("get_avg_charge", &Py_Cataclysmic_Variable::Get_Avg_Atomic_Charge)
-        .def("print", &Py_Cataclysmic_Variable::Print_Properties);
+        .def("print", &Py_Cataclysmic_Variable::Print_Properties)
+        .def("flow_equation", [](Py_Cataclysmic_Variable& self, double s, py::array_t<double, py::array::c_style | py::array::forcecast> state_py){
+            valarray<double> state = Numpy_to_Valarray(state_py);
+            valarray<double> deriv(state.size());
+            self.Flow_Equation(s, state, deriv);
+            return Valarray_to_Numpy(&deriv);
+        });
 
     py::class_<Dipole>(module, "_dipole", py::module_local())
         .def(py::init<double>(),py::arg("u")=0.03)
-        .def("update_geo", [](Dipole& self, double w, double& r, double& dr_dw, double& proj_r_w, double& convergance, py::array_t<double> metric){
-            py::buffer_info buf = metric.request();
-            double* ptr = static_cast<double*>(buf.ptr);
-            self.update_coordinates(w, r, dr_dw, proj_r_w, convergance, ptr);
-            return py::make_tuple(r, dr_dw, proj_r_w, convergance);
+        .def("update_geo", [](Dipole& self, double w){
+            double r, proj_r_w, convergance, metric[3];
+            self.update_coordinates(w, r, proj_r_w, convergance, metric);
+            py::array_t<double> array(3);
+            py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
+            for(int i = 0; i < 3; i++){
+                np_array(i) = metric[i];
+            }
+            return py::make_tuple(r, proj_r_w, convergance, array);
         });
 }

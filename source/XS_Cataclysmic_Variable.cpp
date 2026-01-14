@@ -6,8 +6,7 @@ XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, d
     Cataclysmic_Variable(m,r,b,mdot,area,inv_r_m,r_m_ratio,metals,theta,dist,reflection)
 {
     Set_Abundances();
-    Guess_Shock_Height();
-    Shock_Height_Shooting();
+    Determine_Shock_Position();
     Build_Column_Profile();
 }
 

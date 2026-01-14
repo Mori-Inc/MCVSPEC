@@ -20,7 +20,6 @@ class Cataclysmic_Variable{
         // utilities
         const int refl;
         Dipole geometry;
-        double upper_bound, lower_bound, upper_landing, lower_landing;
         // unit conversion
         const double length_conv, vel_conv, time_conv, volume_conv, mass_conv, energy_conv, density_conv;
 
@@ -28,19 +27,18 @@ class Cataclysmic_Variable{
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,int);
 
-        void Bracket_Shock_Height();
-        void Shock_Height_Shooting();
+        void Bracket_Shock_Position(double&,double&,double&,double&);
+        void Determine_Shock_Position();
         void Build_Column_Profile();
         void Print_Properties();
-        void Update_Shock_Height(double);
-        double Get_Landing_Altitude();
+        void Update_Shock_Position(double);
+        double Get_Landing_Altitude(double);
         static double Get_Radius(double);
         static double Get_Accretion_Rate(double, double, double, double);
+        void Flow_Equation(double,const valarray<double>&, valarray<double>&) const;
 
     protected:
         virtual void Set_Abundances() = 0;
         void Set_Cooling_Constants();
-        void Guess_Shock_Height();
-        void Flow_Equation(double,const valarray<double>&, valarray<double>&) const;
         Integrator<Cataclysmic_Variable, &Cataclysmic_Variable::Flow_Equation> accretion_column{*this};
 };
