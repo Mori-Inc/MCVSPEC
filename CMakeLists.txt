@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(BUILD_PYBINDINGS True CACHE BOOL "Build pyMCVSPEC")
 set(BUILD_XSMODEL True CACHE BOOL "Build XSpec Model")
@@ -74,6 +74,7 @@ if(BUILD_XSMODEL)
                     ${CMAKE_SOURCE_DIR}/include/XS_Cataclysmic_Variable.hh;
                     ${CMAKE_SOURCE_DIR}/include/integration.hh;
                     ${CMAKE_SOURCE_DIR}/include/integration.tpp;
+                    ${CMAKE_SOURCE_DIR}/include/vector_operators.hh;
                     ${CMAKE_SOURCE_DIR}/include/constants.hh;
                     ${CMAKE_SOURCE_DIR}/include/tableau.hh;
                     ${CMAKE_SOURCE_DIR}/include/gaunt.hh;

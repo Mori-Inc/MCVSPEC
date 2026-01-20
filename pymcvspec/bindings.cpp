@@ -1,4 +1,3 @@
-#include <cstddef>
 #include <pybind11/buffer_info.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -7,30 +6,33 @@
 #include "constants.hh"
 #include "dipole.hh"
 
-#include <iostream>
-#include <valarray>
+#include <vector>
+
+using std::memcpy;
+using std::transform;
 
 namespace py = pybind11;
 
-py::array_t<double> Valarray_to_Numpy(valarray<double>* arr){
-    py::array_t<double> array(arr->size());
-    py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-    for(int i = 0; i < arr->size(); i++){
-        np_array(i) = (*arr)[i];
+template <typename T>
+vector<T> Numpy_to_Vector(py::array_t<T, py::array::c_style | py::array::forcecast> np_array){
+    py::buffer_info array_info = np_array.request();
+    if (array_info.ndim != 1){
+        throw std::runtime_error("Only Handles 1D Numpy Arrays");
     }
-    return array;
+    const size_t arr_len =  static_cast<size_t>(array_info.shape[0]);
+    const T* source = static_cast<const T*>(array_info.ptr);
+    vector<T> cpp_vec(arr_len);
+    memcpy(cpp_vec.data(), source, arr_len*sizeof(T));
+    return cpp_vec;
 }
 
-valarray<double> Numpy_to_Valarray(const py::array_t<double, py::array::c_style | py::array::forcecast>& arr){
-    py::buffer_info buffer = arr.request();
-    const size_t len = static_cast<size_t>(buffer.shape[0]);
-    const double* arr_ptr = static_cast<const double*>(buffer.ptr);
-
-    std::valarray<double> array(len);
-    for (uint i=0; i<len; i++){
-        array[i] = arr_ptr[i];
-    }
-    return array;
+template <typename T>
+py::array_t<T> Vector_to_Numpy(const std::vector<T>& cpp_vec) {
+    py::array_t<T> np_array(static_cast<py::size_t>(cpp_vec.size()));
+    py::buffer_info array_info = np_array.request();
+    T* array_pointer = static_cast<T*>(array_info.ptr);
+    memcpy(array_pointer, cpp_vec.data(), cpp_vec.size()*sizeof(T));
+    return np_array;
 }
 
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
@@ -39,47 +41,46 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             Cataclysmic_Variable(m,r,b,mdot,area,inv_r_m,r_m_ratio,metals,theta,dist,reflection)
         {
             Set_Abundances();
-            //Guess_Shock_Height();
-            //Shock_Height_Shooting();
-            //Build_Column_Profile();
         }
         void Set_Abundances() override{
             abundances.resize(atomic_charge.size());
             abundances = {1.00e+00, 9.77e-02, 3.63e-04, 1.12e-04, 8.51e-04, 1.23e-04,
                           3.80e-05, 2.95e-06, 3.55e-05, 1.62e-05, 3.63e-06, 2.29e-06,
                           4.68e-05, 1.78e-06}; // taken from Anders & Grevesse (1989) DOI: 10.1016/0016-7037(89)90286-X
+            double total=0;
             for(uint i=2; i<abundances.size(); i++){
                 abundances[i] *= metalicity;
+                total += abundances[i];
             }
-            abundances = abundances/abundances.sum();
+            transform(abundances.begin(),abundances.end(),abundances.begin(),[total](double x) {return x/total;});
             Set_Cooling_Constants();
         }
         py::array_t<double> Get_Altitude(){
-            return Valarray_to_Numpy(&altitude);
+            return Vector_to_Numpy(altitude);
         }
         py::array_t<double> Get_Velocity(){
-            return Valarray_to_Numpy(&velocity);
+            return Vector_to_Numpy(velocity);
         }
         py::array_t<double> Get_Electron_Temperature(){
-            return Valarray_to_Numpy(&electron_temperature);
+            return Vector_to_Numpy(electron_temperature);
         }
         py::array_t<double> Get_Ion_Temperature(){
-            return Valarray_to_Numpy(&ion_temperature);
+            return Vector_to_Numpy(ion_temperature);
         }
         py::array_t<double> Get_Electron_Density(){
-            return Valarray_to_Numpy(&electron_density);
+            return Vector_to_Numpy(electron_density);
         }
         py::array_t<double> Get_Density(){
-            return Valarray_to_Numpy(&density);
+            return Vector_to_Numpy(density);
         }
         py::array_t<double> Get_Total_Pressure(){
-            return Valarray_to_Numpy(&total_pressure);
+            return Vector_to_Numpy(total_pressure);
         }
         py::array_t<double> Get_Electron_Pressure(){
-            return Valarray_to_Numpy(&electron_pressure);
+            return Vector_to_Numpy(electron_pressure);
         }
         py::array_t<double> Get_Volume(){
-            return Valarray_to_Numpy(&volume);
+            return Vector_to_Numpy(volume);
         }
         double Get_Radius(){
             return radius;
@@ -121,10 +122,10 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("get_avg_charge", &Py_Cataclysmic_Variable::Get_Avg_Atomic_Charge)
         .def("print", &Py_Cataclysmic_Variable::Print_Properties)
         .def("flow_equation", [](Py_Cataclysmic_Variable& self, double s, py::array_t<double, py::array::c_style | py::array::forcecast> state_py){
-            valarray<double> state = Numpy_to_Valarray(state_py);
-            valarray<double> deriv(state.size());
+            vector<double> state = Numpy_to_Vector(state_py);
+            vector<double> deriv(state.size());
             self.Flow_Equation(s, state, deriv);
-            return Valarray_to_Numpy(&deriv);
+            return Vector_to_Numpy(deriv);
         });
 
     py::class_<Dipole>(module, "_dipole", py::module_local())

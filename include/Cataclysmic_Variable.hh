@@ -10,13 +10,13 @@ class Cataclysmic_Variable{
         const double mass, radius, b_field, inverse_mag_radius, corotation_ratio, distance;
         const double accretion_rate, accretion_area, metalicity, pressure_ratio, incl_angle;
         double shock_height;
-        valarray<double> abundances; // fractional abundance of elements in accretion column
+        vector<double> abundances; // fractional abundance of elements in accretion column
         // derived column properties
         double avg_ion_mass, avg_atomic_charge, density_const, exchange_const, bremss_const, cyclotron_const;
         // boundary conditions
         double w_s, x_s, v_s, pe_s, s_s;
         // thermal profile
-        valarray<double> altitude, volume, velocity, density, total_pressure, electron_pressure, electron_density, electron_temperature, ion_temperature;
+        vector<double> altitude, volume, velocity, density, total_pressure, electron_pressure, electron_density, electron_temperature, ion_temperature;
         // utilities
         const int refl;
         Dipole geometry;
@@ -29,16 +29,18 @@ class Cataclysmic_Variable{
 
         void Bracket_Shock_Position(double&,double&,double&,double&);
         void Determine_Shock_Position();
+        template <typename func>
+        void Build_Grid(func,const vector<double>&,vector<vector<double>>&);
         void Build_Column_Profile();
         void Print_Properties();
         void Update_Shock_Position(double);
         double Get_Landing_Altitude(double);
         static double Get_Radius(double);
         static double Get_Accretion_Rate(double, double, double, double);
-        void Flow_Equation(double,const valarray<double>&, valarray<double>&) const;
+        void Flow_Equation(double,const vector<double>&, vector<double>&) const;
 
     protected:
         virtual void Set_Abundances() = 0;
         void Set_Cooling_Constants();
-        Integrator<Cataclysmic_Variable, &Cataclysmic_Variable::Flow_Equation> accretion_column{*this};
+        Integrator<Cataclysmic_Variable, &Cataclysmic_Variable::Flow_Equation> accretion_column{*this, 4};
 };
