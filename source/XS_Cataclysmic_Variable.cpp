@@ -15,7 +15,7 @@ void XS_Cataclysmic_Variable::Set_Abundances(){
     abundances[0] = FunctionUtility::getAbundance(atomic_charge[0]);
 
     abundances[1] = FunctionUtility::getAbundance(atomic_charge[1]);
-    double abund_sum=0;
+    double abund_sum=abundances[0]+abundances[1];
     for(int i = 2; i < 14; i++){
         abundances[i] = metalicity*FunctionUtility::getAbundance(atomic_charge[i]);
         abund_sum += abundances[i];

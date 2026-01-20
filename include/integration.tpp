@@ -35,6 +35,7 @@ Integrator<model,call>::Integrator(const model& function, const int n_dim, const
 
 template <typename model, exec<model> call>
 void Integrator<model,call>::Set_Initial_Step(const double& t0, const vector<double>& y0){
+    fill(tol.begin(), tol.end(), abs_err);
     add_abs_vector_inplace(tol, rel_err, y0);
     double h_0 = 1e-2*norm(y0)/norm(k[0]);
     linear_combo(1.,y0, dir*h_0, k[0],y_internal);
@@ -103,7 +104,7 @@ void Integrator<model,call>::Prepare_Step(const double& t,const vector<double>& 
         add_vector_inplace(err_arr, e[n_stages],k[n_stages]);
         double sqr_err = 0;
         for(int i=0; i<y.size(); i++){
-            const double tol_i = abs_err + rel_err*max(abs(y[i]), abs(y_internal[i]));
+            const double tol_i = abs_err + rel_err*max(std::abs(y[i]), std::abs(y_internal[i]));
             const double err_i = h*err_arr[i]/tol_i;
             sqr_err += err_i*err_i;
         }

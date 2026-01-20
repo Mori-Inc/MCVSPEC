@@ -15,7 +15,6 @@ using std::abs;
 using std::vector;
 
 static double previous_shock_height = 0;
-static int f_evals = 0;
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metalicity(abund),
     pressure_ratio(.75), incl_angle(theta), refl(reflection), geometry(sin(1*pi/180)*sin(1*pi/180)),
@@ -128,7 +127,6 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const vector<double>& st
     derivs[1] = dx_ds;
     derivs[2] = dv_ds;
     derivs[3] = dp_ds;
-    f_evals++;
 }
 
 double Cataclysmic_Variable::Get_Landing_Altitude(double w_s){
@@ -291,7 +289,6 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid
 }
 
 void Cataclysmic_Variable::Build_Column_Profile(){
-
     const double dkTe = (kT_grid_spacing/erg_to_kev)*density_const/(avg_ion_mass*vel_conv*vel_conv);
     const double dkTi = dkTe/avg_atomic_charge;
     const vector<double> grid_spacing = {dkTe, dkTi, altitude_grid_spacing*shock_height};
@@ -378,5 +375,4 @@ void Cataclysmic_Variable::Print_Properties(){
     cout << " shock height:       " << shock_height << " cm" << endl;
     cout << " shock temperature:  " << electron_temperature[0] << " keV" << endl;
     cout << " density:            " <<  electron_density[0] << " --> " << electron_density[electron_density.size()-1] <<  " e-/cm3" << endl;
-    cout << " fevals: " << f_evals << endl;
 }

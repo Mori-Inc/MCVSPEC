@@ -56,12 +56,12 @@ inline void add_vector_inplace(vector<double>& x, const double a, const vector<d
 
 inline void add_abs_vector_inplace(vector<double>& x, const double a, const vector<double>& y){
     for(int i=0; i<x.size(); i++){
-        x[i] += a*abs(y[i]);
+        x[i] += a*std::abs(y[i]);
     }
 }
 
 inline void element_max(const vector<double>& x, const vector<double>& y, vector<double>& out){
     for(int i=0; i<x.size(); i++){
-        out[i] = max(abs(x[i]), abs(y[i]));
+        out[i] = max(std::abs(x[i]), std::abs(y[i]));
     }
 }
