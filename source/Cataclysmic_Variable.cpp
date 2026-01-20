@@ -15,6 +15,7 @@ using std::abs;
 using std::vector;
 
 static double previous_shock_height = 0;
+static int f_evals = 0;
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metalicity(abund),
     pressure_ratio(.75), incl_angle(theta), refl(reflection), geometry(sin(1*pi/180)*sin(1*pi/180)),
@@ -127,6 +128,7 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const vector<double>& st
     derivs[1] = dx_ds;
     derivs[2] = dv_ds;
     derivs[3] = dp_ds;
+    f_evals++;
 }
 
 double Cataclysmic_Variable::Get_Landing_Altitude(double w_s){
@@ -165,7 +167,6 @@ double Cataclysmic_Variable::Get_Landing_Altitude(double w_s){
 void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& lower_bound, double& upper_landing, double& lower_landing){
     upper_bound = geometry.w_0;
     upper_landing = Get_Landing_Altitude(upper_bound);
-    cout << upper_landing << endl;
     if(upper_landing < 0){
         cerr << "Error: column is inverted?" << endl;
     }
@@ -262,6 +263,7 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid
     accretion_column.Initialize(t, 0, y);
     grid.push_back(y);
     grid_func(t,y,last_grid_vars);
+    current_grid_vars[1] = last_grid_vars;
 
     while(last_grid_vars[0] > grid_spacing[0]){
         t_interp = t;
@@ -275,7 +277,7 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid
             t_interp += dt;
             accretion_column.Interpolate(t_interp, y_interp);
             grid_func(t_interp,y_interp,current_grid_vars[1]);
-            for(int j=0; i<grid_spacing.size(); j++){
+            for(int j=0; j<grid_spacing.size(); j++){
                 distance[1] = abs((current_grid_vars[1][j]-last_grid_vars[j])/grid_spacing[j]);
                 if(distance[1]>1){
                     t_grid = t_interp + (1-distance[1])*dt/(distance[1]-distance[0]);
@@ -376,4 +378,5 @@ void Cataclysmic_Variable::Print_Properties(){
     cout << " shock height:       " << shock_height << " cm" << endl;
     cout << " shock temperature:  " << electron_temperature[0] << " keV" << endl;
     cout << " density:            " <<  electron_density[0] << " --> " << electron_density[electron_density.size()-1] <<  " e-/cm3" << endl;
+    cout << " fevals: " << f_evals << endl;
 }

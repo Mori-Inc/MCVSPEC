@@ -1,8 +1,10 @@
 #pragma once
 #include <vector>
+#include <cmath>
 
 using std::vector;
 using std::max;
+using std::abs;
 
 inline void add_scalar(const double a, const vector<double>& x, vector<double>& out){
     for(int i=0; i<x.size(); i++){
