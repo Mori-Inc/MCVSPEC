@@ -7,8 +7,6 @@
 #include <cmath>
 
 using std::fill;
-using std::begin;
-using std::end;
 using std::max;
 using std::min;
 using std::pow;

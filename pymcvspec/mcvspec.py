@@ -14,53 +14,111 @@ class cataclysmic_variable:
         self,
         mass: u.Quantity[u.M_sun],
         b_field: u.Quantity[u.MG],
-        accretion_rate: u.Quantity[u.g/u.s],
+        accretion_rate: u.Quantity[u.g/u.cm**2/u.s],
         accretion_area: u.Quantity[u.cm**2],
         magnetospheric_radius: u.Quantity[u.cm] = 0*u.cm,
-        mag_radius_ratio=1,
-        metalicity=1,
-        shock_ratio=0.75,
-        cos_inclination_angle=0.5,
+        corotation_radius: u.Quantity[u.cm] = 0*u.cm,
+        metalicity: u.Quantity[u.dimensionless_unscaled] = 1,
+        shock_ratio: u.Quantity[u.dimensionless_unscaled] = 0.75,
+        orbital_inclination: u.Quantity[u.deg] = 45*u.deg,
+        column_magnetic_colatitude: u.Quantity[u.deg] = 1*u.deg,
         distance: u.Quantity[u.pc] = 1*u.pc,
     ) -> None:
         self.mass = mass.to(u.M_sun)
         self.radius = (_mass_to_radius(mass.to_value(u.g))*u.cm).to(u.R_sun)
         self.b_field = b_field.to(u.MG)
-        self.accretion_rate = accretion_rate.to(u.g/u.s)
+        self.accretion_rate = (accretion_rate*accretion_area).to(u.g/u.s)
         self.accretion_area = accretion_area.to(u.cm**2)
-        self.mdot = (accretion_rate/accretion_area).to(u.g/u.cm**2/u.s)
+        self.mdot = accretion_rate.to(u.g/u.cm**2/u.s)
         self.magnetospheric_radius = magnetospheric_radius.to(u.cm)
+        self.corotation_radius = corotation_radius.to(u.cm)
         self.metalicity = 1
         self.shock_ratio = shock_ratio
-        self.cos_incl = cos_inclination_angle
+        self.orbital_inclination = orbital_inclination.to(u.deg)
+        self.magnetic_colatitude = column_magnetic_colatitude.to(u.deg)
         self.distance = distance.to(u.pc)
         if magnetospheric_radius.value == 0:
             irm = 0.0/u.cm
+            corot_ratio = 1
         else:
             irm = 1/magnetospheric_radius
+            corot_ratio = magnetospheric_radius/corotation_radius
+
         self.cpp_impl = _cataclysmic_variable(
-            mass.to_value(u.g),
-            self.radius.to_value(u.cm),
-            b_field.to_value(u.G),
-            accretion_rate.to_value(u.g/u.s),
-            irm.to_value(1/u.cm),
-            mag_radius_ratio,
-            accretion_area.to_value(u.cm**2),
-            metalicity,
-            cos_inclination_angle,
-            distance.to_value(u.cm),
-            1,
+            mass = self.mass.to_value(u.g),
+            radius = self.radius.to_value(u.cm),
+            b_field = self.b_field.to_value(u.G),
+            mdot = self.accretion_rate.to_value(u.g/u.s),
+            area = accretion_area.to_value(u.cm**2),
+            inv_r_m = irm.to_value(1/u.cm),
+            r_m_ratio = corot_ratio,
+            metalicity = metalicity,
+            cos_incl_angle = np.cos(self.orbital_inclination.to_value(u.radian)),
+            shock_ratio = self.shock_ratio,
+            shock_coord = np.sin(self.magnetic_colatitude.to_value(u.radian))**2,
+            src_distance = distance.to_value(u.cm),
+            refl_on = 1,
         )
-        self.zbar = self.cpp_impl.get_avg_charge()
-        self.altitude = self.cpp_impl.get_altitude()*u.cm
-        self.velocity = self.cpp_impl.get_velocity()*u.cm/u.s
-        self.electron_temperature = self.cpp_impl.get_electron_temperature()*u.keV
-        self.ion_temperature = self.cpp_impl.get_ion_temperature()*u.keV
-        self.electron_density = self.cpp_impl.get_electron_density()/u.cm**3
-        self.density = self.cpp_impl.get_density()*u.g/u.cm**3
-        self.total_pressure = self.cpp_impl.get_total_pressure()*u.dyne/u.cm**2
-        self.electron_pressure = self.cpp_impl.get_electron_pressure()*u.dyne/u.cm**2
-        self.volume = self.cpp_impl.get_volume()*u.cm**3
+
+        self.shock_height = self.cpp_impl.shock_height*u.cm
+        self.abundance = self.cpp_impl.abundance
+        self.mbar = self.cpp_impl.average_ion_mass*u.g
+        self.zbar = self.cpp_impl.average_ion_charge
+        self.density_const = self.cpp_impl.density_const
+        self.exchange_const = self.cpp_impl.exchange_const
+        self.bremss_const = self.cpp_impl.bremss_const
+        self.cyclotron_const = self.cpp_impl.cyclotron_const
+        self.length_unit = self.cpp_impl.length_converter*u.cm
+        self.mass_unit = self.cpp_impl.mass_converter*u.g
+        self.time_unit = self.cpp_impl.time_converter*u.s
+        self.velocity_unit = self.cpp_impl.velocity_converter*u.cm/u.s
+        self.volume_unit = self.cpp_impl.volume_converter*u.cm**3
+        self.energy_unit = self.cpp_impl.energy_converter*u.erg
+        self.density_unit = self.cpp_impl.density_converter*u.g/u.cm**3
+        self.altitude = self.cpp_impl.altitude*u.cm
+        self.volume = self.cpp_impl.volume*u.cm**3
+        self.velocity = self.cpp_impl.velocity*u.cm/u.s
+        self.density = self.cpp_impl.density*u.g/u.cm**3
+        self.total_pressure = self.cpp_impl.total_pressure*u.dyne/u.cm**2
+        self.electron_pressure = self.cpp_impl.electron_pressure*u.dyne/u.cm**2
+        self.electron_density = self.cpp_impl.electron_density/u.cm**3
+        self.electron_temperature = self.cpp_impl.electron_temperature*u.keV
+        self.ion_temperature = self.cpp_impl.ion_temperature*u.keV
+
+    @property
+    def ion_density(self):
+        return self.electron_density/self.zbar
+    @property
+    def ion_pressure(self):
+        return self.total_pressure-self.electron_pressure
+
+    def solve(self):
+        self.cpp_impl.solve()
+        self.shock_height = self.cpp_impl.shock_height*u.cm
+        self.abundance = self.cpp_impl.abundance
+        self.mbar = self.cpp_impl.average_ion_mass*u.g
+        self.zbar = self.cpp_impl.average_ion_charge
+        self.density_const = self.cpp_impl.density_const
+        self.exchange_const = self.cpp_impl.exchange_const
+        self.bremss_const = self.cpp_impl.bremss_const
+        self.cyclotron_const = self.cpp_impl.cyclotron_const
+        self.length_unit = self.cpp_impl.length_converter*u.cm
+        self.mass_unit = self.cpp_impl.mass_converter*u.g
+        self.time_unit = self.cpp_impl.time_converter*u.s
+        self.velocity_unit = self.cpp_impl.velocity_converter*u.cm/u.s
+        self.volume_unit = self.cpp_impl.volume_converter*u.cm**3
+        self.energy_unit = self.cpp_impl.energy_converter*u.erg
+        self.density_unit = self.cpp_impl.density_converter*u.g/u.cm**3
+        self.altitude = self.cpp_impl.altitude*u.cm
+        self.volume = self.cpp_impl.volume*u.cm**3
+        self.velocity = self.cpp_impl.velocity*u.cm/u.s
+        self.density = self.cpp_impl.density*u.g/u.cm**3
+        self.total_pressure = self.cpp_impl.total_pressure*u.dyne/u.cm**2
+        self.electron_pressure = self.cpp_impl.electron_pressure*u.dyne/u.cm**2
+        self.electron_density = self.cpp_impl.electron_density/u.cm**3
+        self.electron_temperature = self.cpp_impl.electron_temperature*u.keV
+        self.ion_temperature = self.cpp_impl.ion_temperature*u.keV
+
 
     @u.quantity_input
     def spectrum(self, energy_bins:u.Quantity[u.keV]) -> u.Quantity[1/u.s/u.keV/u.cm**2]:
@@ -89,10 +147,10 @@ class polar(cataclysmic_variable):
         b_field: u.Quantity[u.MG],
         luminosity: u.Quantity[u.erg/u.s],
         accretion_area: u.Quantity[u.cm**2] = 0*u.cm**2,
-        fractional_area=1e-3,
-        metalicity=1,
-        shock_ratio=0.75,
-        cos_inclination_angle=0.5,
+        fractional_area: u.Quantity[u.dimensionless_unscaled] = 1e-3,
+        metalicity: u.Quantity[u.dimensionless_unscaled] = 1,
+        shock_ratio: u.Quantity[u.dimensionless_unscaled] = 0.75,
+        orbital_inclination: u.Quantity[u.deg] = 45*u.deg,
         distance: u.Quantity[u.pc] = 1*u.pc,
     ) -> None:
         radius = (_mass_to_radius(mass.to_value(u.g))*u.cm).to(u.R_sun)
@@ -103,13 +161,14 @@ class polar(cataclysmic_variable):
             self,
             mass,
             b_field,
-            mdot,
+            mdot/accretion_area,
             accretion_area,
             metalicity=metalicity,
             shock_ratio=shock_ratio,
-            cos_inclination_angle=cos_inclination_angle,
+            orbital_inclination=orbital_inclination,
             distance=distance,
         )
+        self.solve()
 
 
 class intermediate_polar(cataclysmic_variable):
@@ -120,15 +179,16 @@ class intermediate_polar(cataclysmic_variable):
         spin_period: u.Quantity[u.s],
         luminosity: u.Quantity[u.erg/u.s],
         accretion_area: u.Quantity[u.cm**2] = 0*u.cm**2,
-        fractional_area=1e-3,
-        metalicity=1,
-        shock_ratio=0.75,
-        cos_inclination_angle=0.5,
+        fractional_area: u.Quantity[u.dimensionless_unscaled] = 1e-3,
+        metalicity: u.Quantity[u.dimensionless_unscaled] = 1,
+        shock_ratio: u.Quantity[u.dimensionless_unscaled] = 0.75,
+        orbital_inclination: u.Quantity[u.deg] = 45*u.deg,
         distance: u.Quantity[u.pc] = 1*u.pc,
         mag_radius_ratio=1,
     ) -> None:
         radius = (_mass_to_radius(mass.to_value(u.g))*u.cm).to(u.R_sun)
-        r_m = mag_radius_ratio * np.cbrt(G*mass*(spin_period**2)/(4*np.pi*np.pi))
+        corotation_radius = np.cbrt(G*mass*(spin_period**2)/(4*np.pi*np.pi))
+        r_m = mag_radius_ratio*corotation_radius
         if accretion_area == 0*u.cm**2:
             accretion_area = fractional_area*4*np.pi*(radius**2)
         mdot = _luminosity_to_mdot(luminosity.to_value(u.erg/u.s),mass.to_value(u.g),radius.to_value(u.cm),1/r_m.to_value(u.cm))*u.g/u.s
@@ -137,12 +197,13 @@ class intermediate_polar(cataclysmic_variable):
             self,
             mass,
             b_field,
-            mdot,
+            mdot/accretion_area,
             accretion_area,
             magnetospheric_radius=r_m,
-            mag_radius_ratio=mag_radius_ratio,
+            corotation_radius=corotation_radius,
             metalicity=metalicity,
             shock_ratio=shock_ratio,
-            cos_inclination_angle=cos_inclination_angle,
+            orbital_inclination=orbital_inclination,
             distance=distance,
         )
+        self.solve()

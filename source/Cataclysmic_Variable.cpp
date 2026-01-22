@@ -15,9 +15,9 @@ using std::abs;
 using std::vector;
 
 static double previous_shock_height = 0;
-Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double dist, int reflection):
+Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double p_ratio, double u, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metalicity(abund),
-    pressure_ratio(.75), incl_angle(theta), refl(reflection), geometry(sin(1*pi/180)*sin(1*pi/180)),
+    pressure_ratio(p_ratio), incl_angle(theta), refl(reflection), geometry(u),
     length_conv(radius), vel_conv(sqrt(2*grav_const*mass/radius)), time_conv(length_conv/vel_conv), volume_conv(length_conv*length_conv*length_conv),
     mass_conv((geometry.a_0*accretion_rate/accretion_area)*volume_conv/vel_conv),
     energy_conv(mass_conv*vel_conv*vel_conv), density_conv(mass_conv/volume_conv)
@@ -355,7 +355,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         volume[i] += metric[0]*metric[1]*metric[2];
         geometry.update_coordinates((a+b)/2, r, proj, conv, metric);
         volume[i] += 4*metric[0]*metric[1]*metric[2];
-        volume[i] *= length_conv*length_conv*length_conv*(b - a)/6;
+        volume[i] *= (accretion_area*length_conv/geometry.a_0)*(b - a)/6.;
     }
 }
 

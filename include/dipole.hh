@@ -33,8 +33,8 @@ struct Dipole{
 
         const double denom = 1 + 3*w2*r4;
         metric[0] = r2/sqrt(r*u*denom);
+        metric[1] = r3/sqrt(denom);
         metric[2] = sqrt(u*r3);
-        metric[1] = metric[0]*metric[2];
 
         convergance = -(3*w*r4/(denom*denom))*(5*w2*r4 + 3);
 
