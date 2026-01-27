@@ -1,8 +1,10 @@
 import numpy as np
 import pyatomdb
-from _pymcvspec import _cataclysmic_variable, _luminosity_to_mdot, _mass_to_radius
 import astropy.units as u
 from astropy.constants import G
+
+from _pymcvspec import _cataclysmic_variable, _dipole
+from _pymcvspec import _mass_to_radius, _luminosity_to_mdot
 
 cgs = [(u.statC, ((u.g*u.cm**3)**0.5)/u.s, lambda x: x, lambda x:x),
        (u.G, ((u.g/u.cm)**0.5/u.s), lambda x: x, lambda x: x)]
@@ -43,7 +45,8 @@ class cataclysmic_variable:
         else:
             irm = 1/magnetospheric_radius
             corot_ratio = magnetospheric_radius/corotation_radius
-
+        cos_incl = np.cos(self.orbital_inclination.to_value(u.radian))
+        u = np.sin(self.magnetic_colatitude.to_value(u.radian))**2
         self.cpp_impl = _cataclysmic_variable(
             mass = self.mass.to_value(u.g),
             radius = self.radius.to_value(u.cm),
@@ -53,13 +56,13 @@ class cataclysmic_variable:
             inv_r_m = irm.to_value(1/u.cm),
             r_m_ratio = corot_ratio,
             metalicity = metalicity,
-            cos_incl_angle = np.cos(self.orbital_inclination.to_value(u.radian)),
+            cos_incl_angle = cos_incl,
             shock_ratio = self.shock_ratio,
-            shock_coord = np.sin(self.magnetic_colatitude.to_value(u.radian))**2,
+            column_coord = u,
             src_distance = distance.to_value(u.cm),
             refl_on = 1,
         )
-
+        self.geometry = _dipole(self.cpp_impl.column_coord)
         self.shock_height = self.cpp_impl.shock_height*u.cm
         self.abundance = self.cpp_impl.abundance
         self.mbar = self.cpp_impl.average_ion_mass*u.g
@@ -79,8 +82,8 @@ class cataclysmic_variable:
         self.volume = self.cpp_impl.volume*u.cm**3
         self.velocity = self.cpp_impl.velocity*u.cm/u.s
         self.density = self.cpp_impl.density*u.g/u.cm**3
-        self.total_pressure = self.cpp_impl.total_pressure*u.dyne/u.cm**2
-        self.electron_pressure = self.cpp_impl.electron_pressure*u.dyne/u.cm**2
+        self.total_pressure = self.cpp_impl.total_pressure*u.erg/u.cm**3
+        self.electron_pressure = self.cpp_impl.electron_pressure*u.erg/u.cm**3
         self.electron_density = self.cpp_impl.electron_density/u.cm**3
         self.electron_temperature = self.cpp_impl.electron_temperature*u.keV
         self.ion_temperature = self.cpp_impl.ion_temperature*u.keV
@@ -88,6 +91,7 @@ class cataclysmic_variable:
     @property
     def ion_density(self):
         return self.electron_density/self.zbar
+
     @property
     def ion_pressure(self):
         return self.total_pressure-self.electron_pressure
@@ -113,29 +117,34 @@ class cataclysmic_variable:
         self.volume = self.cpp_impl.volume*u.cm**3
         self.velocity = self.cpp_impl.velocity*u.cm/u.s
         self.density = self.cpp_impl.density*u.g/u.cm**3
-        self.total_pressure = self.cpp_impl.total_pressure*u.dyne/u.cm**2
-        self.electron_pressure = self.cpp_impl.electron_pressure*u.dyne/u.cm**2
+        self.total_pressure = self.cpp_impl.total_pressure*u.erg/u.cm**3
+        self.electron_pressure = self.cpp_impl.electron_pressure*u.erg/u.cm**3
         self.electron_density = self.cpp_impl.electron_density/u.cm**3
         self.electron_temperature = self.cpp_impl.electron_temperature*u.keV
         self.ion_temperature = self.cpp_impl.ion_temperature*u.keV
 
-
     @u.quantity_input
-    def spectrum(self, energy_bins:u.Quantity[u.keV]) -> u.Quantity[1/u.s/u.keV/u.cm**2]:
+    def spectrum(self,
+        energy_bins:u.Quantity[u.keV]
+    ) -> u.Quantity[1/u.s/u.keV/u.cm**2]:
         session = pyatomdb.spectrum.CIESession()
         session.set_response(energy_bins.to_value(u.keV), raw=True)
         flux = np.zeros(len(energy_bins)-1)/(u.s*u.keV*u.cm**2)
+        apec_unit = ((u.cm**3)/u.s/energy_bins.unit)
         for kT, n_e, n_i, vol in zip(
             self.electron_temperature,
             self.electron_density,
             self.electron_density/self.zbar,
             self.volume,
         ):
-            # note: pyatomdb returns a spectrum which is normalized to emissivity*effective area
-            # when no arf is set the arf defaults to 1 cm^2
-            # so I assign units here of emissivity instead
-            # If an arf was set one would need to first divide by the arf to get back to the appropriate norm
-            flux += session.return_spectrum(kT.to_value(u.keV))*((u.cm**3)/u.s/energy_bins.unit)*n_e*n_i*vol/(4 * np.pi * self.distance**2)
+            # The units of a pyatomdb "spectrum" are photons*cm**3/s/keV
+            # This is normalized to a flux (units of photons/s/cm**2/keV)
+            # by multiplying by the plasma "emission measure" divided by
+            # surface area of a sphere with radius "d". If an arf is set
+            # pyatomdb will instead compute a spectrum with units
+            # photons*cm**5/s/keV and the arf would need to be factored out.
+            norm = n_e*n_i*vol/(4*np.pi*self.distance**2)
+            flux += session.return_spectrum(kT.to_value(u.keV))*apec_unit*norm
         return flux.to(1/u.s/u.keV/u.cm**2)
 
 
@@ -156,7 +165,11 @@ class polar(cataclysmic_variable):
         radius = (_mass_to_radius(mass.to_value(u.g))*u.cm).to(u.R_sun)
         if accretion_area == 0*u.cm**2:
             accretion_area = fractional_area*4*np.pi*(radius**2)
-        mdot = _luminosity_to_mdot(luminosity.to_value(u.erg/u.s), mass.to_value(u.g), radius.to_value(u.cm), 0)*u.g/u.s
+        mdot = _luminosity_to_mdot(
+            luminosity.to_value(u.erg/u.s),
+            mass.to_value(u.g),
+            radius.to_value(u.cm), 0)
+        mdot *= u.g/u.s
         cataclysmic_variable.__init__(
             self,
             mass,
@@ -191,8 +204,14 @@ class intermediate_polar(cataclysmic_variable):
         r_m = mag_radius_ratio*corotation_radius
         if accretion_area == 0*u.cm**2:
             accretion_area = fractional_area*4*np.pi*(radius**2)
-        mdot = _luminosity_to_mdot(luminosity.to_value(u.erg/u.s),mass.to_value(u.g),radius.to_value(u.cm),1/r_m.to_value(u.cm))*u.g/u.s
-        b_field = (np.sqrt(32*mdot*np.sqrt(G*mass*(r_m**7)))/(radius**3)).to(u.G, equivalencies=cgs)
+        mdot = _luminosity_to_mdot(
+            luminosity.to_value(u.erg/u.s),
+            mass.to_value(u.g),
+            radius.to_value(u.cm),
+            1/r_m.to_value(u.cm))
+        mdot *= u.g/u.s
+        b_field = (np.sqrt(32*mdot*np.sqrt(G*mass*(r_m**7)))/(radius**3))
+        b_field = b_field.to(u.G, equivalencies=cgs)
         cataclysmic_variable.__init__(
             self,
             mass,

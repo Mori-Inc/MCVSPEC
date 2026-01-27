@@ -103,7 +103,7 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const vector<double>& st
     const double dens3 = dens*dens*dens;
     const double dens5 = dens3*dens*dens;
     const double chi = (1+avg_atomic_charge)/avg_atomic_charge;
-    const double b_scale = sqrt(4-3*geometry.u*r)/(r*r*r);
+    const double b_sqr = (4-3*geometry.u*r)/(r*r*r*r*r*r);
 
     const double ne_cgs = (density_conv*dens)*density_const/avg_ion_mass;
     const double kT_cgs = (energy_conv/volume_conv)*pe/ne_cgs;
@@ -111,7 +111,7 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const vector<double>& st
     const double coulomb_log = 0.5*log(coulomb_log_coeff*kT_cgs*kT_cgs/ne_cgs);
 
     const double grav = -0.5*proj_r_w/(r*r);
-    const double cyc = (cyclotron_const/gff)*pe*pe*pow(b_scale/dens, 2.85)/(dens*pow(area,0.425));
+    const double cyc = (cyclotron_const/gff)*pe*pe*pow(b_sqr/(dens*dens*area),0.425)*b_sqr/dens3;
     const double rad = bremss_const*gff*sqrt(pe*dens3)*(1+cyc);
     const double exch = exchange_const*coulomb_log*sqrt(dens5/pe)*(p/pe - chi);
     const double geom = convergance*v*(x-v)/metric[1];

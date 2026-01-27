@@ -87,6 +87,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         double Get_Vol_Conv(){return volume_conv;}
         double Get_Energy_Conv(){return energy_conv;}
         double Get_Density_Conv(){return density_conv;}
+        double Get_Column_Coord(){return geometry.u;}
         vector<double>& Get_Altitude(){return altitude;}
         vector<double>& Get_Volume(){return volume;}
         vector<double>& Get_Velocity(){return velocity;}
@@ -108,7 +109,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
             py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
             py::arg("mdot") = 1e15, py::arg("area") = 1e15, py::arg("inv_r_m") = 0., py::arg("r_m_ratio") = 1.,
             py::arg("metalicity") = 1., py::arg("cos_incl_angle") = 0.5, py::arg("shock_ratio") = 0.75,
-            py::arg("shock_coord") = 1e-8, py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
+            py::arg("column_coord") = 1e-8, py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def_property_readonly("mass", &Py_Cataclysmic_Variable::Get_Mass)
         .def_property_readonly("b_field", &Py_Cataclysmic_Variable::Get_B_Field)
         .def_property_readonly("inv_r_m", &Py_Cataclysmic_Variable::Get_inv_Mag_Radius)
@@ -133,6 +134,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def_property_readonly("volume_converter", &Py_Cataclysmic_Variable::Get_Vol_Conv)
         .def_property_readonly("energy_converter", &Py_Cataclysmic_Variable::Get_Energy_Conv)
         .def_property_readonly("density_converter", &Py_Cataclysmic_Variable::Get_Density_Conv)
+        .def_property_readonly("column_coord", &Py_Cataclysmic_Variable::Get_Column_Coord)
         .def_property_readonly("altitude", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Altitude());})
         .def_property_readonly("volume", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Volume());})
         .def_property_readonly("velocity", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Velocity());})
