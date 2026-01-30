@@ -167,6 +167,8 @@ void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& l
     upper_landing = Get_Landing_Altitude(upper_bound);
     if(upper_landing < 0){
         cerr << "Error: column is inverted?" << endl;
+        valid_solution = false;
+        return;
     }
 
     double logw = -log(geometry.w_0);
@@ -193,7 +195,10 @@ void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& l
         dwl_dlw[1] = (samples[2]-samples[1])/dlw;
     }
     if(samples[1] > 0){ // if minima > 0
-        cerr << "No valid solutions" << endl;
+        cerr << "Error: Minimum landing altitude is above WD surface" << endl;
+        cerr << "Minima: " << samples[1] << endl;
+        valid_solution = false;
+        return;
     }
     lower_bound = 1./exp(logw);
     lower_landing = samples[1];
@@ -203,6 +208,10 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
     double upper_bound, lower_bound;
     double upper_landing, lower_landing;
     Bracket_Shock_Position(upper_bound, lower_bound, upper_landing, lower_landing);
+    // if no minimum skip
+    if(!valid_solution){
+        return;
+    }
     double k1 = 0.2/(upper_bound-lower_bound);
     double n0 = 1;
     double nmax = log2((upper_bound-lower_bound)/(2*h_s_tolerance)) + n0;
@@ -247,6 +256,9 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
 
 template <typename func>
 void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid_spacing, vector<vector<double>>& grid){
+    if(!valid_solution){
+        return;
+    }
     const int n_segments = 16; // number of subdivisions to make between each RK step to search for roots
     double t = s_s;
     vector<double> y = {w_s, x_s, v_s, pe_s};
@@ -289,6 +301,9 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid
 }
 
 void Cataclysmic_Variable::Build_Column_Profile(){
+    if(!valid_solution){
+        return;
+    }
     const double dkTe = (kT_grid_spacing/erg_to_kev)*density_const/(avg_ion_mass*vel_conv*vel_conv);
     const double dkTi = dkTe/avg_atomic_charge;
     const vector<double> grid_spacing = {dkTe, dkTi, altitude_grid_spacing*shock_height};
@@ -337,18 +352,9 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         electron_density[i] = (density_const/avg_ion_mass)*density[i];
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*(total_pressure[i]-electron_pressure[i])/(electron_density[i]/avg_atomic_charge);
-        if(i==0){
-            a = grid[i][0];
-        }
-        else{
-            a = (grid[i-1][0] + grid[i][0])/2;
-        }
-        if(i==n_points-1){
-            b = grid[i][0];
-        }
-        else{
-            b = (grid[i][0] + grid[i+1][0])/2;
-        }
+        int x = Three ? 3 : 0;
+        a = i==0 ? grid[i][0] : (grid[i-1][0] + grid[i][0])/2;
+        b = i==n_points-1 ? grid[i][0] : (grid[i][0] + grid[i+1][0])/2;
         geometry.update_coordinates(a, r, proj, conv, metric);
         volume[i] = metric[0]*metric[1]*metric[2];
         geometry.update_coordinates(b, r, proj, conv, metric);
@@ -360,6 +366,9 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 }
 
 void Cataclysmic_Variable::Print_Properties(){
+    if(altitude.size() < 1){
+        return;
+    }
     cout << "===================================================" << endl;
     cout << "                   mCV Properties                  " << endl;
     cout << "===================================================" << endl;

@@ -22,6 +22,8 @@ class Cataclysmic_Variable{
         Dipole geometry;
         // unit conversion
         const double length_conv, vel_conv, time_conv, volume_conv, mass_conv, energy_conv, density_conv;
+        // if solution found
+        bool valid_solution = true;
 
 
     public:

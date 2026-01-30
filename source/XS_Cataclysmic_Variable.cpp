@@ -1,6 +1,9 @@
 #include "XS_Cataclysmic_Variable.hh"
 #include <XSFunctions/Utilities/FunctionUtility.h>
 #include <funcWrappers.h>
+#include <cmath>
+
+using std::nan;
 
 XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double r_m_ratio, double metals, double theta, double dist, int reflection):
     Cataclysmic_Variable(m,r,b,mdot,area,inv_r_m,r_m_ratio,metals,theta,0.75,1e-8,dist,reflection)
@@ -27,6 +30,10 @@ void XS_Cataclysmic_Variable::Set_Abundances(){
 }
 
 void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
+    if(!valid_solution){
+        flux = nan("");
+        return;
+    }
     int n = flux.size();
     double refl_amp;
     valarray<double> apec_flux(n);
