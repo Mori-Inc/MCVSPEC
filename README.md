@@ -4,6 +4,8 @@
 MCVSPEC is a model for post-shock accretion flow in magnetic Cataclysmic Variables (mCVs).
 It solves for the full thermal profile of the post-shock accretion column (PSAC) and can produce an X-Ray spectrum from that profile. Currently MCVSPEC supports two interfaces: python and xspec. These interfaces are not perfectly equivalent (in particular the python interface provides more flexible accsess to the thermal profiles while the xspec interface provides a more accurate spectrum) so it is recommended that both are installed where possible.
 
+MCVSPEC includes thermal bremsstrahlung and cylotron radiation, a gravitational protential, and a dipole magnetic field. It uses the "soft landing" boundary (v=0 at the WD surface) and a Rankine-Hugoniot strong shock boundary to compute the thermal profile of the PSAC. 
+
 ## Dependencies
 * CMake
 * Python
@@ -96,3 +98,7 @@ The python interface has 3 classes: `cataclysmic_variable`, `polar`, and `interm
 ## The WD Mass-Radius Relationship
 
 MCVSPEC uses a numerical solution to the WD mass-radius relationship following the model of [Hamada and Salpeter (1961)](https://ui.adsabs.harvard.edu/abs/1961ApJ...134..683H/abstract). This solution, at discrete points, is stored in a file, `data/mass_radius.txt`, and is interpolated to estimate the mass-radius relationship. This file is generated with the python script `data/wd_mass_radius.py` and then converted into a C++ header during the build process. Hamada and Salpeter's model depends on the white dwarf composition which is set with the parameters $\mu=\frac{A}{Z}$ and $Z$. The default `data/mass_radius.txt` was generated for $\mu=2$ and $Z=6$. To generate a different mass-radius relationship simply execute the script with `python wd_mass_radius.py -Z <your_z> -mu <your_mu>` and then rebuild the software. One could also test their own mass-radius relationship by generating an identically formatted `data/mass_radius.txt` and rebuilding.
+
+## A Note on Dipolar Geometry
+
+Accretion columns with variable cross-sectional area can have, under the right circumstances, non-unique solutions. In general, multiple solutions should be excpected when the shock density is small and the cooling rate is low. MCVSPEC always chooses the solution which corresponds to the shortest accretion column. If no solution exists MCVSPEC will notify the user and abort the fit.
