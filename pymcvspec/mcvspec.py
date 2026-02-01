@@ -6,7 +6,7 @@ from astropy.constants import G
 from _pymcvspec import _cataclysmic_variable, _dipole
 from _pymcvspec import _mass_to_radius, _luminosity_to_mdot
 
-cgs = [(u.statC, ((u.g*u.cm**3)**0.5)/u.s, lambda x: x, lambda x:x),
+cgs = [(u.statC, ((u.g*u.cm**3)**0.5)/u.s, lambda x: x, lambda x: x),
        (u.G, ((u.g/u.cm)**0.5/u.s), lambda x: x, lambda x: x)]
 
 
@@ -48,19 +48,19 @@ class cataclysmic_variable:
         cos_incl = np.cos(self.orbital_inclination.to_value(u.radian))
         u = np.sin(self.magnetic_colatitude.to_value(u.radian))**2
         self.cpp_impl = _cataclysmic_variable(
-            mass = self.mass.to_value(u.g),
-            radius = self.radius.to_value(u.cm),
-            b_field = self.b_field.to_value(u.G),
-            mdot = self.accretion_rate.to_value(u.g/u.s),
-            area = accretion_area.to_value(u.cm**2),
-            inv_r_m = irm.to_value(1/u.cm),
-            r_m_ratio = corot_ratio,
-            metalicity = metalicity,
-            cos_incl_angle = cos_incl,
-            shock_ratio = self.shock_ratio,
-            column_coord = u,
-            src_distance = distance.to_value(u.cm),
-            refl_on = 1,
+            mass=self.mass.to_value(u.g),
+            radius=self.radius.to_value(u.cm),
+            b_field=self.b_field.to_value(u.G),
+            mdot=self.accretion_rate.to_value(u.g/u.s),
+            area=accretion_area.to_value(u.cm**2),
+            inv_r_m=irm.to_value(1/u.cm),
+            r_m_ratio=corot_ratio,
+            metalicity=metalicity,
+            cos_incl_angle=cos_incl,
+            shock_ratio=self.shock_ratio,
+            column_coord=u,
+            src_distance=distance.to_value(u.cm),
+            refl_on=1,
         )
         self.geometry = _dipole(self.cpp_impl.column_coord)
         self.shock_height = self.cpp_impl.shock_height*u.cm
@@ -125,8 +125,8 @@ class cataclysmic_variable:
 
     @u.quantity_input
     def spectrum(self,
-        energy_bins:u.Quantity[u.keV]
-    ) -> u.Quantity[1/u.s/u.keV/u.cm**2]:
+                 energy_bins: u.Quantity[u.keV]
+                 ) -> u.Quantity[1/u.s/u.keV/u.cm**2]:
         session = pyatomdb.spectrum.CIESession()
         session.set_response(energy_bins.to_value(u.keV), raw=True)
         flux = np.zeros(len(energy_bins)-1)/(u.s*u.keV*u.cm**2)
