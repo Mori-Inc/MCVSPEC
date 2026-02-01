@@ -352,7 +352,6 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         electron_density[i] = (density_const/avg_ion_mass)*density[i];
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*(total_pressure[i]-electron_pressure[i])/(electron_density[i]/avg_atomic_charge);
-        int x = Three ? 3 : 0;
         a = i==0 ? grid[i][0] : (grid[i-1][0] + grid[i][0])/2;
         b = i==n_points-1 ? grid[i][0] : (grid[i][0] + grid[i+1][0])/2;
         geometry.update_coordinates(a, r, proj, conv, metric);
