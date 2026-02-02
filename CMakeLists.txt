@@ -74,7 +74,7 @@ if(BUILD_XSMODEL)
                     ${CMAKE_SOURCE_DIR}/include/XS_Cataclysmic_Variable.hh;
                     ${CMAKE_SOURCE_DIR}/include/integration.hh;
                     ${CMAKE_SOURCE_DIR}/include/integration.tpp;
-                    ${CMAKE_SOURCE_DIR}/include/vector_operators.hh;
+                    ${CMAKE_SOURCE_DIR}/include/array_operators.hh;
                     ${CMAKE_SOURCE_DIR}/include/constants.hh;
                     ${CMAKE_SOURCE_DIR}/include/tableau.hh;
                     ${CMAKE_SOURCE_DIR}/include/gaunt.hh;

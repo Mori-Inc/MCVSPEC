@@ -5,18 +5,14 @@
 #include "Cataclysmic_Variable.hh"
 #include "constants.hh"
 #include "dipole.hh"
-
 #include <vector>
-
-using std::memcpy;
-using std::transform;
 
 namespace py = pybind11;
 
 template <typename T>
 static py::array_t<T> Vector_to_Numpy(const std::vector<T>& cpp_vec) {
   py::array_t<T> np_array(cpp_vec.size());
-  memcpy(np_array.mutable_data(), cpp_vec.data(), cpp_vec.size()*sizeof(T));
+  std::memcpy(np_array.mutable_data(), cpp_vec.data(), cpp_vec.size()*sizeof(T));
   return np_array;
 }
 
@@ -32,12 +28,23 @@ static std::vector<double> Numpy_to_Vector(py::handle obj) {
     }
 
     vector<double> cpp_vec((size_t)np_array.shape(0));
-    memcpy(cpp_vec.data(), np_array.data(), cpp_vec.size()*sizeof(double));
+    std::memcpy(cpp_vec.data(), np_array.data(), cpp_vec.size()*sizeof(double));
     return cpp_vec;
+}
+
+template <size_t n_dim>
+inline void Numpy_to_State(const double* np_ptr, State<n_dim>& state) {
+    std::memcpy(state.data(), np_ptr, n_dim*sizeof(double));
+}
+
+template <size_t n_dim>
+inline void State_to_Numpy(const State<n_dim>& state, double* np_ptr) {
+    std::memcpy(np_ptr, state.data(), n_dim*sizeof(double));
 }
 
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
+        static constexpr size_t n_dim = Cataclysmic_Variable::n_dim;
         Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double r_m_ratio, double metals, double theta, double pressure_ratio, double u, double dist, int reflection):
             Cataclysmic_Variable(m,r,b,mdot,area,inv_r_m,r_m_ratio,metals,theta,pressure_ratio,u,dist,reflection)
         {
@@ -54,7 +61,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
                 abundances[i] *= metalicity;
                 total += abundances[i];
             }
-            transform(abundances.begin(),abundances.end(),abundances.begin(),[total](double x) {return x/total;});
+            std::transform(abundances.begin(),abundances.end(),abundances.begin(),[total](double x) {return x/total;});
             Set_Cooling_Constants();
         }
 
@@ -98,7 +105,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         vector<double>& Get_Electron_Temperature(){return electron_temperature;}
         vector<double>& Get_Ion_Temperature(){return ion_temperature;}
         vector<double>& Get_Abundance(){return abundances;}
-
+        State<n_dim> state{}, deriv{};
 };
 
 PYBIND11_MODULE(_pymcvspec, module) {
@@ -148,10 +155,11 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def("solve", &Py_Cataclysmic_Variable::Solve_Profile)
         .def("print", &Py_Cataclysmic_Variable::Print_Properties)
         .def("flow_equation", [](Py_Cataclysmic_Variable& self, double s, py::array_t<double, py::array::c_style | py::array::forcecast> state_py){
-            vector<double> state = Numpy_to_Vector(state_py);
-            vector<double> deriv(state.size());
-            self.Flow_Equation(s, state, deriv);
-            return Vector_to_Numpy(deriv);
+            Numpy_to_State(state_py.data(), self.state);
+            self.Flow_Equation(s, self.state, self.deriv);
+            py::array_t<double> np_array(self.n_dim);
+            State_to_Numpy(self.deriv, np_array.mutable_data());
+            return np_array;
         });
 
     py::class_<Dipole>(module, "_dipole", py::module_local())

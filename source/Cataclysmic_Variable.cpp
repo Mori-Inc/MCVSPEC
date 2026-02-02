@@ -11,7 +11,6 @@
 using std::cout;
 using std::endl;
 using std::cerr;
-using std::abs;
 using std::vector;
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double p_ratio, double u, double dist, int reflection):
@@ -19,7 +18,8 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double 
     pressure_ratio(p_ratio), incl_angle(theta), refl(reflection), geometry(u),
     length_conv(radius), vel_conv(sqrt(2*grav_const*mass/radius)), time_conv(length_conv/vel_conv), volume_conv(length_conv*length_conv*length_conv),
     mass_conv((geometry.a_0*accretion_rate/accretion_area)*volume_conv/vel_conv),
-    energy_conv(mass_conv*vel_conv*vel_conv), density_conv(mass_conv/volume_conv)
+    energy_conv(mass_conv*vel_conv*vel_conv), density_conv(mass_conv/volume_conv),
+    accretion_column(Diff_EQ{*this})
 {}
 
 void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as these values depend only on the input properties not on any derived properties
@@ -85,7 +85,7 @@ void Cataclysmic_Variable::Update_Shock_Position(double shock_pos){
     s_s = mdot*(x_s-v_s)*pow(v_s/mdot, 5./3.);
 }
 
-void Cataclysmic_Variable::Flow_Equation(double entropy,const vector<double>& state, vector<double>& derivs) const{
+void Cataclysmic_Variable::Flow_Equation(double entropy,const State<n_dim>& state, State<n_dim>& derivs) const{
     const double& s = entropy;
     const double& w = state[0];
     const double& x = state[1];
@@ -132,13 +132,13 @@ double Cataclysmic_Variable::Get_Landing_Altitude(double w_s){
     // return signed distance from WD surface in w
     Update_Shock_Position(w_s);
     double s = s_s;
-    vector<double> y = {w_s, x_s, v_s, pe_s};
+    State<n_dim> y = {w_s, x_s, v_s, pe_s};
     accretion_column.Initialize(s, 0, y);
     while(s/s_s > 1e-2){
          accretion_column.Step(s, y);
     }
     double error = 1;
-    vector<double> slope(4);
+    State<n_dim> slope{};
     Flow_Equation(s,  y, slope);
     double s_prev = s;
     double dw_prev = slope[0];
@@ -146,7 +146,7 @@ double Cataclysmic_Variable::Get_Landing_Altitude(double w_s){
     while(error > 1e-8){
         accretion_column.Step(s, y);
         Flow_Equation(s,  y, slope);
-        error = 0.5*abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extroplation on w
+        error = 0.5*std::abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extroplation on w
         s_prev = s;
         dw_prev = slope[0];
     }
@@ -222,7 +222,7 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
         dir = (0. < (midpoint-regula_falsi)) - ((midpoint-regula_falsi) < 0.);
         truncation = k1*(upper_bound-lower_bound)*(upper_bound-lower_bound); // k2 = 2
 
-        if(truncation <= abs(midpoint-regula_falsi)){
+        if(truncation <= std::abs(midpoint-regula_falsi)){
             new_bound = regula_falsi + dir*truncation;
         }
         else{
@@ -230,7 +230,7 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
         }
 
         projection = h_s_tolerance*(pow(2,nmax-i)) - (upper_bound-lower_bound)/2;
-        if(abs(new_bound-midpoint) > projection){
+        if(std::abs(new_bound-midpoint) > projection){
             new_bound = midpoint - dir*projection;
         }
 
@@ -253,19 +253,19 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
 }
 
 template <typename func>
-void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid_spacing, vector<vector<double>>& grid){
+void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid_spacing, vector<State<n_dim>>& grid){
     if(!valid_solution){
         return;
     }
     const int n_segments = 16; // number of subdivisions to make between each RK step to search for roots
     double t = s_s;
-    vector<double> y = {w_s, x_s, v_s, pe_s};
+    State<n_dim> y = {w_s, x_s, v_s, pe_s};
     double dt;
     vector<double> last_grid_vars(grid_spacing.size());
     vector<vector<double>> current_grid_vars(2,vector<double>(grid_spacing.size()));
     vector<double> distance(2);
     double t_interp, t_grid;
-    vector<double> y_interp(y.size());
+    State<n_dim> y_interp{};
 
 
     accretion_column.Initialize(t, 0, y);
@@ -286,7 +286,7 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid
             accretion_column.Interpolate(t_interp, y_interp);
             grid_func(t_interp,y_interp,current_grid_vars[1]);
             for(int j=0; j<grid_spacing.size(); j++){
-                distance[1] = abs((current_grid_vars[1][j]-last_grid_vars[j])/grid_spacing[j]);
+                distance[1] = std::abs((current_grid_vars[1][j]-last_grid_vars[j])/grid_spacing[j]);
                 if(distance[1]>1){
                     t_grid = t_interp + (1-distance[1])*dt/(distance[1]-distance[0]);
                     accretion_column.Interpolate(t_grid, y_interp);
@@ -307,23 +307,20 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     const vector<double> grid_spacing = {dkTe, dkTi, altitude_grid_spacing*shock_height};
 
     double r, proj, conv, metric[3];
-    vector<double> dy_dt(4);
-    auto kT_e = [](const vector<double>& y, double metric[3]){
+    auto kT_e = [](const State<n_dim>& y, double metric[3]){
         return y[2]*y[3]*metric[0]*metric[2];
     };
-    auto kT_i = [](const vector<double>& y, double metric[3]){
+    auto kT_i = [](const State<n_dim>& y, double metric[3]){
         return y[2]*(y[1]-y[2]-y[3]*metric[0]*metric[2]);
     };
-    auto grid_func = [this, kT_e, kT_i, &r, &proj, &conv, &metric, &dy_dt](const double& t, const vector<double>& y, vector<double>& vars){
+    auto grid_func = [this, kT_e, kT_i, &r, &proj, &conv, &metric](const double& t, const State<n_dim>& y, vector<double>& vars){
         geometry.update_coordinates(y[0], r, proj, conv, metric);
-        Flow_Equation(t,y,dy_dt);
-
         vars[0] = kT_e(y, metric);
         vars[1] = kT_i(y, metric);
         vars[2] = r;
     };
 
-    vector<vector<double>> grid;
+    vector<State<n_dim>> grid;
     Build_Grid(grid_func, grid_spacing, grid);
 
     int n_points = grid.size();

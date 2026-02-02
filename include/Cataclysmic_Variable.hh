@@ -6,6 +6,7 @@
 
 class Cataclysmic_Variable{
     protected:
+        static constexpr size_t n_dim = 4;
         // input properties
         const double mass, radius, b_field, inverse_mag_radius, corotation_ratio, distance;
         const double accretion_rate, accretion_area, metalicity, pressure_ratio, incl_angle;
@@ -32,17 +33,23 @@ class Cataclysmic_Variable{
         void Bracket_Shock_Position(double&,double&,double&,double&);
         void Determine_Shock_Position();
         template <typename func>
-        void Build_Grid(func,const vector<double>&,vector<vector<double>>&);
+        void Build_Grid(func,const vector<double>&,vector<State<n_dim>>&);
         void Build_Column_Profile();
         void Print_Properties();
         void Update_Shock_Position(double);
         double Get_Landing_Altitude(double);
         static double Get_Radius(double);
         static double Get_Accretion_Rate(double, double, double, double);
-        void Flow_Equation(double,const vector<double>&, vector<double>&) const;
+        void Flow_Equation(double,const State<n_dim>&, State<n_dim>&) const;
 
     protected:
         virtual void Set_Abundances() = 0;
         void Set_Cooling_Constants();
-        Integrator<Cataclysmic_Variable, &Cataclysmic_Variable::Flow_Equation> accretion_column{*this, 4};
+        struct Diff_EQ {
+            Cataclysmic_Variable& self;
+            void operator()(double t, const State<n_dim>& y, State<n_dim>& dydt) const {
+              self.Flow_Equation(t, y, dydt);
+            }
+        };
+        Integrator<4, Diff_EQ> accretion_column;
 };
