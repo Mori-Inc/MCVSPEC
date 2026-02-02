@@ -14,7 +14,6 @@ using std::cerr;
 using std::abs;
 using std::vector;
 
-static double previous_shock_height = 0;
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double p_ratio, double u, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metalicity(abund),
     pressure_ratio(p_ratio), incl_angle(theta), refl(reflection), geometry(u),
@@ -251,7 +250,6 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
         i++;
     }
     Update_Shock_Position((upper_bound+lower_bound)/2);
-    previous_shock_height = w_s;
 }
 
 template <typename func>
