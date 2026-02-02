@@ -103,7 +103,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
 
 PYBIND11_MODULE(_pymcvspec, module) {
     module.def("_mass_to_radius", &Cataclysmic_Variable::Get_Radius, "Returns the radius (cm) for a corresponding WD mass (g)");
-    module.def("_luminosity_to_mdot", &Cataclysmic_Variable::Get_Accretion_Rate, "Returns the radius (cm) for a corresponding WD mass (g)");
+    module.def("_luminosity_to_mdot", &Cataclysmic_Variable::Get_Accretion_Rate, "Returns the accretion rate (g/s) for a corresponding luminosity (erg/s), mass (g), and radius (cm)");
     py::class_<Py_Cataclysmic_Variable>(module, "_cataclysmic_variable", py::module_local())
         .def(py::init<double,double,double,double,double,double,double,double,double,double,double,double,int>(),
             py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
