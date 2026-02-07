@@ -19,7 +19,7 @@ Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double 
     length_conv(radius), vel_conv(sqrt(2*grav_const*mass/radius)), time_conv(length_conv/vel_conv), volume_conv(length_conv*length_conv*length_conv),
     mass_conv((geometry.a_0*accretion_rate/accretion_area)*volume_conv/vel_conv),
     energy_conv(mass_conv*vel_conv*vel_conv), density_conv(mass_conv/volume_conv),
-    accretion_column(Diff_EQ{*this})
+    accretion_column(Diff_EQ{*this},abs_err,rel_err)
 {}
 
 void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as these values depend only on the input properties not on any derived properties
@@ -143,7 +143,7 @@ double Cataclysmic_Variable::Get_Landing_Altitude(double w_s){
     double s_prev = s;
     double dw_prev = slope[0];
 
-    while(error > 1e-8){
+    while(error > abs_err){
         accretion_column.Step(s, y);
         Flow_Equation(s,  y, slope);
         error = 0.5*std::abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extroplation on w
@@ -213,10 +213,10 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
     }
     double k1 = 0.2/(upper_bound-lower_bound);
     double n0 = 1;
-    double nmax = log2((upper_bound-lower_bound)/(2*h_s_tolerance)) + n0;
+    double nmax = log2((upper_bound-lower_bound)/(2*abs_err)) + n0;
     int i=0;
     double new_bound, new_altitude, midpoint, regula_falsi, truncation, projection, dir;
-    while(upper_bound-lower_bound > h_s_tolerance){
+    while(upper_bound-lower_bound > abs_err){
         midpoint = (upper_bound+lower_bound)/2;
         regula_falsi = (upper_landing*lower_bound - lower_landing*upper_bound)/(lower_landing-upper_landing);
         dir = (0. < (midpoint-regula_falsi)) - ((midpoint-regula_falsi) < 0.);
@@ -229,7 +229,7 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
             new_bound = midpoint;
         }
 
-        projection = h_s_tolerance*(pow(2,nmax-i)) - (upper_bound-lower_bound)/2;
+        projection = abs_err*(pow(2,nmax-i)) - (upper_bound-lower_bound)/2;
         if(std::abs(new_bound-midpoint) > projection){
             new_bound = midpoint - dir*projection;
         }
@@ -253,46 +253,66 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
 }
 
 template <typename func>
-void Cataclysmic_Variable::Build_Grid(func grid_func, const vector<double>& grid_spacing, vector<State<n_dim>>& grid){
+void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& grid_spacing, vector<State<n_dim>>& grid){
     if(!valid_solution){
         return;
     }
-    const int n_segments = 16; // number of subdivisions to make between each RK step to search for roots
+    constexpr int n_segments=16;
+    // integration variables
     double t = s_s;
     State<n_dim> y = {w_s, x_s, v_s, pe_s};
-    double dt;
-    vector<double> last_grid_vars(grid_spacing.size());
-    vector<vector<double>> current_grid_vars(2,vector<double>(grid_spacing.size()));
-    vector<double> distance(2);
-    double t_interp, t_grid;
-    State<n_dim> y_interp{};
-
-
     accretion_column.Initialize(t, 0, y);
+
+    // grid variables
+    State<n_grid_vars> grid_vars{};
+    grid_func(t,y,grid_vars);
+    grid.reserve(size_t(std::abs(grid_vars[0]/grid_spacing[0]))+1);
     grid.push_back(y);
-    grid_func(t,y,last_grid_vars);
-    current_grid_vars[1] = last_grid_vars;
 
-    while(last_grid_vars[0] > grid_spacing[0]){
-        t_interp = t;
-        y_interp = y;
-        accretion_column.Dense_Step(t, y);
+    // segment variables
+    double t_left, t_right, t_cross;
+    State<n_dim> y_left, y_right;
+    State<n_grid_vars> grid_left, grid_right;
+    y_right = y;
+    grid_right = grid_vars;
 
-        dt = (t-t_interp)/n_segments;
-        for(int i=0; i<n_segments; i++){
-            current_grid_vars[0] = current_grid_vars[1];
-            distance[0] = distance[1];
-            t_interp += dt;
-            accretion_column.Interpolate(t_interp, y_interp);
-            grid_func(t_interp,y_interp,current_grid_vars[1]);
-            for(int j=0; j<grid_spacing.size(); j++){
-                distance[1] = std::abs((current_grid_vars[1][j]-last_grid_vars[j])/grid_spacing[j]);
-                if(distance[1]>1){
-                    t_grid = t_interp + (1-distance[1])*dt/(distance[1]-distance[0]);
-                    accretion_column.Interpolate(t_grid, y_interp);
-                    grid_func(t_grid,y_interp,last_grid_vars);
-                    grid.push_back(y_interp);
-                }
+    auto crossing_found = [&grid_spacing, &grid_vars, &grid_left, &grid_right, &t_cross](const double t_left, const double t_right){
+        double delta_t, distance_right, distance_left;
+        double min_dt = t_right-t_left;
+        bool found=false;
+        for(size_t i=0; i<n_grid_vars; ++i){
+            distance_right = std::abs((grid_right[i]-grid_vars[i])/grid_spacing[i]);
+            distance_left = std::abs((grid_left[i]-grid_vars[i])/grid_spacing[i]);
+            delta_t = (t_left-t_right)*(1-distance_left)/(distance_right-distance_left);
+            if(distance_right>1 && std::abs(delta_t)<std::abs(min_dt)){
+                found=true;
+                min_dt = delta_t;
+            }
+        }
+        if(!found){
+            return false;
+        }
+        t_cross = t_left + min_dt;
+        return true;
+    };
+
+    while(grid_vars[0] > grid_spacing[0] && t > abs_err){
+        double t0 = t;
+        accretion_column.Dense_Step(t,y);
+        double dt = (t-t0)/double(n_segments);
+        for(int seg=0; seg<n_segments; seg++){
+            t_left = t0 + dt*seg;
+            t_right = t0 + dt*(seg+1);
+            y_left = y_right;
+            accretion_column.Interpolate(t_right, y_right);
+            grid_left = grid_right;
+            grid_func(t_right, y_right, grid_right);
+            while(crossing_found(t_left, t_right)){
+                t_left = t_cross;
+                accretion_column.Interpolate(t_left, y_left);
+                grid_func(t_left, y_left, grid_left);
+                grid.push_back(y_left);
+                grid_vars = grid_left;
             }
         }
     }
@@ -304,7 +324,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     }
     const double dkTe = (kT_grid_spacing/erg_to_kev)*density_const/(avg_ion_mass*vel_conv*vel_conv);
     const double dkTi = dkTe/avg_atomic_charge;
-    const vector<double> grid_spacing = {dkTe, dkTi, altitude_grid_spacing*shock_height};
+    const State<n_grid_vars> grid_spacing = {dkTe, dkTi, altitude_grid_spacing*shock_height/length_conv};
 
     double r, proj, conv, metric[3];
     auto kT_e = [](const State<n_dim>& y, double metric[3]){
@@ -313,7 +333,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     auto kT_i = [](const State<n_dim>& y, double metric[3]){
         return y[2]*(y[1]-y[2]-y[3]*metric[0]*metric[2]);
     };
-    auto grid_func = [this, kT_e, kT_i, &r, &proj, &conv, &metric](const double& t, const State<n_dim>& y, vector<double>& vars){
+    auto grid_func = [this, kT_e, kT_i, &r, &proj, &conv, &metric](const double& t, const State<n_dim>& y, State<n_grid_vars>& vars){
         geometry.update_coordinates(y[0], r, proj, conv, metric);
         vars[0] = kT_e(y, metric);
         vars[1] = kT_i(y, metric);

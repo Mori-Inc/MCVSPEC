@@ -7,6 +7,7 @@
 class Cataclysmic_Variable{
     protected:
         static constexpr size_t n_dim = 4;
+        static constexpr size_t n_grid_vars = 3;
         // input properties
         const double mass, radius, b_field, inverse_mag_radius, corotation_ratio, distance;
         const double accretion_rate, accretion_area, metalicity, pressure_ratio, incl_angle;
@@ -33,7 +34,7 @@ class Cataclysmic_Variable{
         void Bracket_Shock_Position(double&,double&,double&,double&);
         void Determine_Shock_Position();
         template <typename func>
-        void Build_Grid(func,const vector<double>&,vector<State<n_dim>>&);
+        void Build_Grid(func,const State<n_grid_vars>&,vector<State<n_dim>>&);
         void Build_Column_Profile();
         void Print_Properties();
         void Update_Shock_Position(double);
@@ -51,5 +52,7 @@ class Cataclysmic_Variable{
               self.Flow_Equation(t, y, dydt);
             }
         };
+        const double abs_err = 1e-8;
+        const double rel_err = 1e-6;
         Integrator<4, Diff_EQ> accretion_column;
 };
