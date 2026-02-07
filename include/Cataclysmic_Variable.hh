@@ -3,6 +3,9 @@
 #include "constants.hh"
 #include "dipole.hh"
 #include "integration.hh"
+#include <vector>
+
+using std::vector;
 
 class Cataclysmic_Variable{
     protected:

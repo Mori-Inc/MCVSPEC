@@ -9,6 +9,8 @@
 
 namespace py = pybind11;
 
+using std::vector;
+
 template <typename T>
 static py::array_t<T> Vector_to_Numpy(const std::vector<T>& cpp_vec) {
   py::array_t<T> np_array(cpp_vec.size());
@@ -52,7 +54,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         }
 
         void Set_Abundances() override{
-            abundances.resize(atomic_charge.size());
+            abundances.resize(n_elements);
             abundances = {1.00e+00, 9.77e-02, 3.63e-04, 1.12e-04, 8.51e-04, 1.23e-04,
                           3.80e-05, 2.95e-06, 3.55e-05, 1.62e-05, 3.63e-06, 2.29e-06,
                           4.68e-05, 1.78e-06}; // taken from Anders & Grevesse (1989) DOI: 10.1016/0016-7037(89)90286-X
