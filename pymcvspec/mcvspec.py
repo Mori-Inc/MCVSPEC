@@ -306,7 +306,7 @@ class cataclysmic_variable:
             irm = 1/magnetospheric_radius
             corot_ratio = magnetospheric_radius/corotation_radius
         cos_incl = np.cos(self.orbital_inclination.to_value(u.radian))
-        u = np.sin(self.magnetic_colatitude.to_value(u.radian))**2
+        u_coord = np.sin(self.magnetic_colatitude.to_value(u.radian))**2
         self._cpp_impl = _cataclysmic_variable(
             mass=self.mass.to_value(u.g),
             radius=self.radius.to_value(u.cm),
@@ -318,7 +318,7 @@ class cataclysmic_variable:
             metalicity=metalicity,
             cos_incl_angle=cos_incl,
             shock_ratio=self.shock_ratio,
-            column_coord=u,
+            column_coord=u_coord,
             src_distance=distance.to_value(u.cm),
             refl_on=0,
         )
