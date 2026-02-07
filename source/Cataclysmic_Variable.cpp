@@ -244,8 +244,8 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
             lower_landing = new_altitude;
         }
         else{
-            upper_bound = new_altitude;
-            lower_bound = new_altitude;
+            upper_bound = new_bound;
+            lower_bound = new_bound;
         }
         i++;
     }
