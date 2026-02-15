@@ -1,6 +1,7 @@
 #pragma once
-#include<valarray>
+#include <valarray>
 #include <cmath>
+#include <iostream>
 
 using std::valarray;
 
@@ -31,14 +32,28 @@ struct Dipole{
         const double r3 = r2*r;
         const double r4 = r3*r;
 
-        const double denom = 1 + 3*w2*r4;
-        metric[0] = r2/sqrt(r*u*denom);
-        metric[1] = r3/sqrt(denom);
-        metric[2] = sqrt(u*r3);
+        const double costheta = w*r2;
 
-        convergance = -(3*w*r4/(denom*denom))*(5*w2*r4 + 3);
+        const double psi = 1./sqrt(1+3*costheta*costheta);
 
-        const double dr_dw = -2*w*r4/(4*w2*r3 + u);
-        proj_r_w = (r/(2*metric[1]))*(2*w*r4 + (3*u + 6*w2*r3)*dr_dw);
+        /*  For this dipole coordiante system the scale factor h_w is equal to
+        the product h_u*h_phi. We make use of this fact to make our computation
+        safer by only computing r3*psi, the product. This is advantageous since
+        h_u ~ 1/sin(theta) which = nan for theta=0. Since we only use the u and
+        phi scale factors to compute the cross sectional area A ~ h_u*h_phi we
+        simply store the area in h_u and set h_phi=1.
+
+        The complete scale factors are:
+        metric[0] = r2*psi/sintheta;
+        metric[1] = r3*psi;
+        metric[2] = r*sintheta;
+        */
+
+        metric[0] = r3*psi;
+        metric[1] = metric[0];
+        metric[2] = 1;
+
+        convergance = -3*w*r4*psi*psi*psi*psi*(5*w2*r4 + 3);
+        proj_r_w = 2*costheta*psi;
     }
 };
