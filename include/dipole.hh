@@ -54,6 +54,6 @@ struct Dipole{
         metric[2] = 1;
 
         convergance = -3*w*r4*psi*psi*psi*psi*(5*w2*r4 + 3);
-        proj_r_w = 2*costheta*psi;
+        proj_r_w = -2*costheta*psi;
     }
 };
