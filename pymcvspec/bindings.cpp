@@ -85,7 +85,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         double Get_Shock_Height(){return shock_height;}
         double Get_mBar(){return avg_ion_mass;}
         double Get_ZBar(){return avg_atomic_charge;}
-        double Get_Dens_Const(){return density_const;}
+        double Get_Dens_to_ne(){return mass_to_number_density;}
         double Get_Exch_Const(){return exchange_const;}
         double Get_Bremss_Const(){return bremss_const;}
         double Get_Cycl_Const(){return cyclotron_const;}
@@ -132,7 +132,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def_property_readonly("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
         .def_property_readonly("average_ion_mass", &Py_Cataclysmic_Variable::Get_mBar)
         .def_property_readonly("average_ion_charge", &Py_Cataclysmic_Variable::Get_ZBar)
-        .def_property_readonly("density_const", &Py_Cataclysmic_Variable::Get_Dens_Const)
+        .def_property_readonly("density_to_ne", &Py_Cataclysmic_Variable::Get_Dens_to_ne)
         .def_property_readonly("exchange_const", &Py_Cataclysmic_Variable::Get_Exch_Const)
         .def_property_readonly("bremss_const", &Py_Cataclysmic_Variable::Get_Bremss_Const)
         .def_property_readonly("cyclotron_const", &Py_Cataclysmic_Variable::Get_Cycl_Const)

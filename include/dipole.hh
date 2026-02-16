@@ -15,7 +15,7 @@ struct Dipole{
     }
 
     // solves for the relevant coordinate transforms for a dipole geometry with r=1 -> stellar surface
-    void update_coordinates(double w, double& r, double& proj_r_w, double& convergance, double metric[3]) const{
+    void update_coordinates(double w, double& r, double& proj_r_w, double& convergance, double scale_factors[3]) const{
         const double w2 = w*w;
 
         const double canalle_w = -u*u/(64*w2*w2);
@@ -44,14 +44,14 @@ struct Dipole{
         simply store the area in h_u and set h_phi=1.
 
         The complete scale factors are:
-        metric[0] = r2*psi/sintheta;
-        metric[1] = r3*psi;
-        metric[2] = r*sintheta;
+        scale_factors[0] = r2*psi/sintheta;
+        scale_factors[1] = r3*psi;
+        scale_factors[2] = r*sintheta;
         */
 
-        metric[0] = r3*psi;
-        metric[1] = metric[0];
-        metric[2] = 1;
+        scale_factors[0] = r3*psi;
+        scale_factors[1] = scale_factors[0];
+        scale_factors[2] = 1;
 
         convergance = -3*w*r4*psi*psi*psi*psi*(5*w2*r4 + 3);
         proj_r_w = -2*costheta*psi;

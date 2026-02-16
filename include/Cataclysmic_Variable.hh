@@ -17,7 +17,7 @@ class Cataclysmic_Variable{
         double shock_height;
         vector<double> abundances; // fractional abundance of elements in accretion column
         // derived column properties
-        double avg_ion_mass, avg_atomic_charge, density_const, exchange_const, bremss_const, cyclotron_const;
+        double avg_ion_mass, avg_atomic_charge, mass_to_number_density, exchange_const, bremss_const, cyclotron_const;
         // boundary conditions
         double w_s, x_s, v_s, pe_s, s_s;
         // thermal profile
@@ -26,7 +26,7 @@ class Cataclysmic_Variable{
         const int refl;
         Dipole geometry;
         // unit conversion
-        const double length_conv, vel_conv, time_conv, volume_conv, mass_conv, energy_conv, density_conv;
+        const double length_conv, vel_conv, time_conv, volume_conv, mass_conv, energy_conv, density_conv, pressure_conv;
         // if solution found
         bool valid_solution = true;
 
