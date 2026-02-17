@@ -300,11 +300,10 @@ class cataclysmic_variable:
         self.magnetic_colatitude = column_magnetic_colatitude.to(u.deg)
         self.distance = distance.to(u.pc)
         if magnetospheric_radius.value == 0:
-            irm = 0.0/u.cm
-            corot_ratio = 1
-        else:
-            irm = 1/magnetospheric_radius
-            corot_ratio = magnetospheric_radius/corotation_radius
+            magnetospheric_radius = np.inf*u.cm
+            corotation_radius = 1*u.cm
+        irm = 1/magnetospheric_radius
+        corot_ratio = magnetospheric_radius/corotation_radius
         cos_incl = np.cos(self.orbital_inclination.to_value(u.radian))
         u_coord = np.sin(self.magnetic_colatitude.to_value(u.radian))**2
         self._cpp_impl = _cataclysmic_variable(
