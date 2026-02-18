@@ -171,36 +171,40 @@ void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& l
         return;
     }
 
-    double logw = -log(geometry.w_0);
-    double dlw = 0.01;
-    double samples[3] = {Get_Landing_Altitude(1./exp(logw-dlw)),
+    double r=1.;
+    double dr = 0.01;
+    auto r_to_w = [this](double r){ return sqrt(1-geometry.u*r)/(r*r); };
+    double samples[3] = {Get_Landing_Altitude(r_to_w(r-dr)),
                         upper_landing,
-                        Get_Landing_Altitude(1./exp(logw+dlw))};
-    double dwl_dlw[2] = {(samples[1]-samples[0])/dlw, (samples[2]-samples[1])/dlw};
+                        Get_Landing_Altitude(r_to_w(r+dr))};
+
+    double dwl_drs[2] = {(samples[1]-samples[0])/dr, (samples[2]-samples[1])/dr};
     double step = 0;
-    while(dwl_dlw[0]*dwl_dlw[1] > 0){ // while minima not bounded
+    while(dwl_drs[0]*dwl_drs[1] > 0){ // while minima not bounded
         if(samples[2]<0){
-            lower_bound = 1./exp(logw+dlw);
+            lower_bound = r_to_w(r+dr);
             lower_landing = samples[2];
             return;
         }
-        upper_bound = 1./exp(logw+dlw);
+        upper_bound = r_to_w(r+dr);
         upper_landing = samples[2];
-        step = 0.5*dlw*(samples[0]-samples[2])/(samples[0]-2*samples[1]+samples[2]);
-        logw += step;
-        samples[0] = Get_Landing_Altitude(1./exp(logw-dlw));
-        samples[1] = Get_Landing_Altitude(1./exp(logw));
-        samples[2] = Get_Landing_Altitude(1./exp(logw+dlw));
-        dwl_dlw[0] = (samples[1]-samples[0])/dlw;
-        dwl_dlw[1] = (samples[2]-samples[1])/dlw;
+        step = 0.5*dr*(samples[0]-samples[2])/(samples[0]-2*samples[1]+samples[2]);
+        r += step;
+        samples[0] = Get_Landing_Altitude(r_to_w(r-dr));
+        samples[1] = Get_Landing_Altitude(r_to_w(r));
+        samples[2] = Get_Landing_Altitude(r_to_w(r+dr));
+        dwl_drs[0] = (samples[1]-samples[0])/dr;
+        dwl_drs[1] = (samples[2]-samples[1])/dr;
     }
+
     if(samples[1] > 0){ // if minima > 0
         cerr << "Error: Minimum landing altitude is above WD surface" << endl;
         cerr << "Minima: " << samples[1] << endl;
         valid_solution = false;
         return;
     }
-    lower_bound = 1./exp(logw);
+
+    lower_bound = r_to_w(r);
     lower_landing = samples[1];
 }
 
