@@ -189,7 +189,7 @@ void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& l
         upper_bound = r_to_w(r+dr);
         upper_landing = samples[2];
         step = 0.5*dr*(samples[0]-samples[2])/(samples[0]-2*samples[1]+samples[2]);
-        r += step;
+        r += std::min(1.,step);
         samples[0] = Get_Landing_Altitude(r_to_w(r-dr));
         samples[1] = Get_Landing_Altitude(r_to_w(r));
         samples[2] = Get_Landing_Altitude(r_to_w(r+dr));
