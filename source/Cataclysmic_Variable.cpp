@@ -288,7 +288,7 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
         for(size_t i=0; i<n_grid_vars; ++i){
             distance_right = std::abs((grid_right[i]-grid_vars[i])/grid_spacing[i]);
             distance_left = std::abs((grid_left[i]-grid_vars[i])/grid_spacing[i]);
-            delta_t = (t_left-t_right)*(1-distance_left)/(distance_right-distance_left);
+            delta_t = (t_right-t_left)*(1-distance_left)/(distance_right-distance_left);
             if(distance_right>1 && std::abs(delta_t)<std::abs(min_dt)){
                 found=true;
                 min_dt = delta_t;
