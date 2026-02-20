@@ -329,7 +329,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     }
     const double dkTe = (kT_grid_spacing/erg_to_kev)*mass_to_number_density/(vel_conv*vel_conv);
     const double dkTi = dkTe/avg_atomic_charge;
-    const State<n_grid_vars> grid_spacing = {dkTe, dkTi, altitude_grid_spacing*shock_height/length_conv};
+    const State<n_grid_vars> grid_spacing = {dkTi, dkTe, altitude_grid_spacing*shock_height/length_conv};
 
     double r, proj, conv, scale_factors[3];
     auto kT_e = [](const State<n_dim>& y, double scale_factors[3]){
@@ -340,8 +340,8 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     };
     auto grid_func = [this, kT_e, kT_i, &r, &proj, &conv, &scale_factors](const double& t, const State<n_dim>& y, State<n_grid_vars>& vars){
         geometry.update_coordinates(y[0], r, proj, conv, scale_factors);
-        vars[0] = kT_e(y, scale_factors);
-        vars[1] = kT_i(y, scale_factors);
+        vars[0] = kT_i(y, scale_factors);
+        vars[1] = kT_e(y, scale_factors);
         vars[2] = r;
     };
 
