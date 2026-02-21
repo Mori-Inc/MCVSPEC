@@ -31,6 +31,7 @@ class Cataclysmic_Variable{
 
     public:
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,double,double,int);
+        virtual ~Cataclysmic_Variable() = default;
 
         void Bracket_Shock_Position(double&,double&,double&,double&);
         void Determine_Shock_Position();
