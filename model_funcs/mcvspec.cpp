@@ -34,12 +34,12 @@ XS_Cataclysmic_Variable make_mcv(const RealArray& user_params, const bool is_ip=
     }
     // abundance, inclination angle, distnace, reflect
     int par_ind = is_ip ? 5 : 4;
-    double metalicity = user_params[par_ind];
+    double metallicity = user_params[par_ind];
     double cos_incl = user_params[++par_ind];
     double distance = user_params[++par_ind]*pc_to_cm;
     int refl = user_params[++par_ind];
 
-    return XS_Cataclysmic_Variable(mass, radius, b_field, mdot, area, inverse_rm, corotation_ratio, metalicity, cos_incl, distance, refl);
+    return XS_Cataclysmic_Variable(mass, radius, b_field, mdot, area, inverse_rm, corotation_ratio, metallicity, cos_incl, distance, refl);
 }
 
 extern "C"

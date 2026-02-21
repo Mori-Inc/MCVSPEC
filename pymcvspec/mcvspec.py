@@ -190,8 +190,8 @@ class cataclysmic_variable:
         magnetospheric radius of WD
     corotation_radius : `~astropy.units.Quantity`
         corotation radius, defined as cbrt(G*M*P_spin**2/(4*pi**2))
-    metalicity : float
-        metalicity of accretion column relative to solar abundance
+    metallicity : float
+        metallicity of accretion column relative to solar abundance
     shock_ratio : float
         ratio of electron and ion partial pressures at the shock front
     orbital_inclination : `~astropy.units.Quantity`
@@ -280,7 +280,7 @@ class cataclysmic_variable:
         accretion_area: u.Quantity[u.cm**2],
         magnetospheric_radius: u.Quantity[u.cm] = 0*u.cm,
         corotation_radius: u.Quantity[u.cm] = 0*u.cm,
-        metalicity: u.Quantity[u.dimensionless_unscaled] = 1,
+        metallicity: u.Quantity[u.dimensionless_unscaled] = 1,
         shock_ratio: u.Quantity[u.dimensionless_unscaled] = 0.75,
         orbital_inclination: u.Quantity[u.deg] = 45*u.deg,
         column_magnetic_colatitude: u.Quantity[u.deg] = 1*u.deg,
@@ -294,7 +294,7 @@ class cataclysmic_variable:
         self.accretion_area = accretion_area.to(u.cm**2)
         self.magnetospheric_radius = magnetospheric_radius.to(u.cm)
         self.corotation_radius = corotation_radius.to(u.cm)
-        self.metalicity = metalicity
+        self.metallicity = metallicity
         self.shock_ratio = shock_ratio
         self.orbital_inclination = orbital_inclination.to(u.deg)
         self.magnetic_colatitude = column_magnetic_colatitude.to(u.deg)
@@ -314,7 +314,7 @@ class cataclysmic_variable:
             area=accretion_area.to_value(u.cm**2),
             inv_r_m=irm.to_value(1/u.cm),
             r_m_ratio=corot_ratio,
-            metalicity=metalicity,
+            metallicity=metallicity,
             cos_incl_angle=cos_incl,
             shock_ratio=self.shock_ratio,
             column_coord=u_coord,
@@ -465,8 +465,8 @@ class polar(cataclysmic_variable):
         bolometric luminosity of mCV
     accretion_area : `~astropy.units.Quantity`
         area of accretion column at WD surface
-    metalicity : float
-        metalicity of accretion column relative to solar abundance
+    metallicity : float
+        metallicity of accretion column relative to solar abundance
     shock_ratio : float
         ratio of electron and ion partial pressures at the shock front
     orbital_inclination : `~astropy.units.Quantity`
@@ -493,7 +493,7 @@ class polar(cataclysmic_variable):
         luminosity: u.Quantity[u.erg/u.s],
         accretion_area: u.Quantity[u.cm**2] = 0*u.cm**2,
         fractional_area: u.Quantity[u.dimensionless_unscaled] = 1e-3,
-        metalicity: u.Quantity[u.dimensionless_unscaled] = 1,
+        metallicity: u.Quantity[u.dimensionless_unscaled] = 1,
         shock_ratio: u.Quantity[u.dimensionless_unscaled] = 0.75,
         orbital_inclination: u.Quantity[u.deg] = 45*u.deg,
         distance: u.Quantity[u.pc] = 1*u.pc,
@@ -508,7 +508,7 @@ class polar(cataclysmic_variable):
             b_field,
             mdot,
             accretion_area,
-            metalicity=metalicity,
+            metallicity=metallicity,
             shock_ratio=shock_ratio,
             orbital_inclination=orbital_inclination,
             distance=distance,
@@ -534,8 +534,8 @@ class intermediate_polar(cataclysmic_variable):
         bolometric luminosity of mCV
     accretion_area : `~astropy.units.Quantity`
         area of accretion column at WD surface
-    metalicity : float
-        metalicity of accretion column relative to solar abundance
+    metallicity : float
+        metallicity of accretion column relative to solar abundance
     shock_ratio : float
         ratio of electron and ion partial pressures at the shock front
     orbital_inclination : `~astropy.units.Quantity`
@@ -564,7 +564,7 @@ class intermediate_polar(cataclysmic_variable):
         luminosity: u.Quantity[u.erg/u.s],
         accretion_area: u.Quantity[u.cm**2] = 0*u.cm**2,
         fractional_area: u.Quantity[u.dimensionless_unscaled] = 1e-3,
-        metalicity: u.Quantity[u.dimensionless_unscaled] = 1,
+        metallicity: u.Quantity[u.dimensionless_unscaled] = 1,
         shock_ratio: u.Quantity[u.dimensionless_unscaled] = 0.75,
         orbital_inclination: u.Quantity[u.deg] = 45*u.deg,
         distance: u.Quantity[u.pc] = 1*u.pc,
@@ -586,7 +586,7 @@ class intermediate_polar(cataclysmic_variable):
             accretion_area,
             magnetospheric_radius=r_m,
             corotation_radius=corotation_radius,
-            metalicity=metalicity,
+            metallicity=metallicity,
             shock_ratio=shock_ratio,
             orbital_inclination=orbital_inclination,
             distance=distance,

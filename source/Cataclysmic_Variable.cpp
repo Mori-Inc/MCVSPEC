@@ -14,7 +14,7 @@ using std::cerr;
 using std::vector;
 
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double p_ratio, double u, double dist, int reflection):
-    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metalicity(abund),
+    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metallicity(abund),
     pressure_ratio(p_ratio), incl_angle(theta), refl(reflection), geometry(u),
     length_conv(radius), vel_conv(sqrt(2*grav_const*mass/radius)), time_conv(length_conv/vel_conv), volume_conv(length_conv*length_conv*length_conv),
     mass_conv((geometry.a_0*accretion_rate/accretion_area)*volume_conv/vel_conv),
@@ -29,7 +29,7 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     double avg_charge_squared = 0;
     double avg_charge_sqr_over_mass = 0;
 
-    for(uint i=0; i<abundances.size(); i++){
+    for(size_t i=0; i<abundances.size(); i++){
         avg_ion_mass += abundances[i]*atomic_mass[i]*amu_to_g;
         avg_atomic_charge += abundances[i]*atomic_charge[i];
         avg_charge_squared += abundances[i]*atomic_charge[i]*atomic_charge[i];
@@ -216,8 +216,8 @@ void Cataclysmic_Variable::Determine_Shock_Position(){
     if(!valid_solution){
         return;
     }
-    double k1 = 0.2/(upper_bound-lower_bound);
-    double n0 = 1;
+    const double k1 = 0.2/(upper_bound-lower_bound);
+    const double n0 = 1;
     double nmax = log2((upper_bound-lower_bound)/(2*abs_err)) + n0;
     int i=0;
     double new_bound, new_altitude, midpoint, regula_falsi, truncation, projection, dir;
@@ -305,7 +305,7 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
         double t0 = t;
         accretion_column.Dense_Step(t,y);
         double dt = (t-t0)/double(n_segments);
-        for(int seg=0; seg<n_segments; seg++){
+        for(size_t seg=0; seg<n_segments; seg++){
             t_left = t0 + dt*seg;
             t_right = t0 + dt*(seg+1);
             y_left = y_right;
@@ -361,7 +361,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 
     double mdot, a, b;
 
-    for(uint i=0; i<n_points; i++){
+    for(size_t i=0; i<n_points; i++){
         geometry.update_coordinates(grid[i][0], r, proj, conv, scale_factors);
         altitude[i] = length_conv*(r-1);
         velocity[i] = vel_conv*grid[i][2];

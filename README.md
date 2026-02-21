@@ -51,7 +51,7 @@ MCVSPEC contains a total of eight models. All eight models have the following pa
 | *`Mag Var`*       | Model dependant        | Variable to set the magnetic field strength of the WD                 |
 | *`Accretion Var`* | Model dependant        | Variable to set the accretion rate of the WD                          |
 | *`Area Var`*      | Model dependant        | Variable to set the accretion area of the WD                          | 
-| `abund`           | Relative to solar      | Accretion column metalicity                                           |
+| `abund`           | Relative to solar      | Accretion column metallicity                                           |
 | `cosAngle`        | Dimensionless (0 to 1) | Cosine of the inclination angle of the PSAC                           |
 | `distance`        | parsecs                | distance to source (used only for flux normalization)                 |
 | `reflectOn`       | 0, 1                   | Toggle reflection                                                     |
@@ -79,7 +79,7 @@ abund = 0.5
 incl = 60*u.deg
 dist = 160*u.pc
 my_source = mcvspec.cataclysmic_variable(mass, b_field, accretion_rate, 
-    accretion_area, metalicity=abund, orbital_inclination=incl
+    accretion_area, metallicity=abund, orbital_inclination=incl
     distance=dist)
 
 # get information about the thermal profile

@@ -59,8 +59,8 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
                           3.80e-05, 2.95e-06, 3.55e-05, 1.62e-05, 3.63e-06, 2.29e-06,
                           4.68e-05, 1.78e-06}; // taken from Anders & Grevesse (1989) DOI: 10.1016/0016-7037(89)90286-X
             double total= abundances[0]+abundances[1];
-            for(uint i=2; i<abundances.size(); i++){
-                abundances[i] *= metalicity;
+            for(size_t i=2; i<abundances.size(); i++){
+                abundances[i] *= metallicity;
                 total += abundances[i];
             }
             std::transform(abundances.begin(),abundances.end(),abundances.begin(),[total](double x) {return x/total;});
@@ -79,7 +79,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         double Get_Distance(){return distance;}
         double Get_Mdot(){return accretion_rate;}
         double Get_Area(){return accretion_area;}
-        double Get_Abund(){return metalicity;}
+        double Get_Abund(){return metallicity;}
         double Get_Shock_Ratio(){return pressure_ratio;}
         double Get_Inclination_Angle(){return incl_angle;}
         double Get_Shock_Height(){return shock_height;}
@@ -117,7 +117,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def(py::init<double,double,double,double,double,double,double,double,double,double,double,double,int>(),
             py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
             py::arg("mdot") = 1e15, py::arg("area") = 1e15, py::arg("inv_r_m") = 0., py::arg("r_m_ratio") = 1.,
-            py::arg("metalicity") = 1., py::arg("cos_incl_angle") = 0.5, py::arg("shock_ratio") = 0.75,
+            py::arg("metallicity") = 1., py::arg("cos_incl_angle") = 0.5, py::arg("shock_ratio") = 0.75,
             py::arg("column_coord") = 1e-8, py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
         .def_property_readonly("mass", &Py_Cataclysmic_Variable::Get_Mass)
         .def_property_readonly("b_field", &Py_Cataclysmic_Variable::Get_B_Field)
@@ -126,7 +126,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def_property_readonly("distance", &Py_Cataclysmic_Variable::Get_Distance)
         .def_property_readonly("accretion_rate", &Py_Cataclysmic_Variable::Get_Mdot)
         .def_property_readonly("accretion_area", &Py_Cataclysmic_Variable::Get_Area)
-        .def_property_readonly("metalicity", &Py_Cataclysmic_Variable::Get_Abund)
+        .def_property_readonly("metallicity", &Py_Cataclysmic_Variable::Get_Abund)
         .def_property_readonly("shock_ratio", &Py_Cataclysmic_Variable::Get_Shock_Ratio)
         .def_property_readonly("inclination_angle", &Py_Cataclysmic_Variable::Get_Inclination_Angle)
         .def_property_readonly("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
@@ -174,7 +174,7 @@ PYBIND11_MODULE(_pymcvspec, module) {
             self.update_coordinates(w, r, proj_r_w, convergance, metric);
             py::array_t<double> array(3);
             py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-            for(int i = 0; i < 3; i++){
+            for(size_t i = 0; i < 3; i++){
                 np_array(i) = metric[i];
             }
             return py::make_tuple(r, proj_r_w, convergance, array);

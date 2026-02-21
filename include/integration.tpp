@@ -7,8 +7,6 @@
 #include <array>
 #include <cmath>
 
-using std::pow;
-
 template <size_t n_dim>
 inline double norm(const State<n_dim>& x){
     double norm = 0.;
@@ -35,7 +33,7 @@ void Integrator<n_dim,RHS>::Set_Initial_Step(const double& t0, const State<n_dim
     divide_elements_inplace(buffer, tol);
     double delta = norm(buffer)/h_0;
     divide_elements(k[0], tol, buffer);
-    double h_1 = pow(1e-2/std::max(delta,norm(buffer)),1./tableau::order);
+    double h_1 = std::pow(1e-2/std::max(delta,norm(buffer)),1./tableau::order);
     h = std::min(1e2*h_0,h_1);
 }
 
@@ -57,9 +55,9 @@ void Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, 
     double err_norm;
     while(!step_succeded){
         multiply_scalar(e[0], k[0], err_arr);
-        for(uint i=1; i<tableau::n_stages; i++){
+        for(size_t i=1; i<tableau::n_stages; i++){
             dy.fill(0.0);
-            for(int j = 0; j<i; j++){
+            for(size_t j = 0; j<i; j++){
                 add_vector_inplace(dy, a[i][j], k[j]);
             }
             t_internal = t+c[i]*dir*h;
@@ -68,7 +66,7 @@ void Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, 
             add_vector_inplace(err_arr, e[i],k[i]);
         }
         dy.fill(0.0);
-        for(uint i=0; i<tableau::n_stages; i++){
+        for(size_t i=0; i<tableau::n_stages; i++){
             add_vector_inplace(dy, b[i],k[i]);
         }
         multiply_scalar_inplace(dy, dir*h);
@@ -77,7 +75,7 @@ void Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, 
         func(t+dt, y_internal, k[tableau::n_stages]);
         add_vector_inplace(err_arr, e[tableau::n_stages],k[tableau::n_stages]);
         double sqr_err = 0;
-        for(int i=0; i<y.size(); i++){
+        for(size_t i=0; i<y.size(); i++){
             const double tol_i = abs_err + rel_err*std::max(std::abs(y[i]), std::abs(y_internal[i]));
             const double err_i = h*err_arr[i]/tol_i;
             sqr_err += err_i*err_i;
@@ -89,15 +87,15 @@ void Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, 
                 h_new = 5.*h;
             }
             else if(step_failed){
-                h_new = std::min(0.9*pow(err_norm,-1./tableau::order), 1.)*h;
+                h_new = std::min(0.9*std::pow(err_norm,-1./tableau::order), 1.)*h;
             }
             else{
-                h_new = std::min(0.9*pow(err_norm,-1./tableau::order), 5.)*h;
+                h_new = std::min(0.9*std::pow(err_norm,-1./tableau::order), 5.)*h;
             }
         }
         else if(err_norm >= 1.){
             step_failed = true;
-            h *= std::max(0.9*pow(err_norm,-1./tableau::order), 0.2);
+            h *= std::max(0.9*std::pow(err_norm,-1./tableau::order), 0.2);
         }
         else{
             // if err is nan
@@ -126,12 +124,12 @@ void Integrator<n_dim,RHS>::Dense_Step(double& t, State<n_dim>& y){
     t_old = t;
     q[0]=y;
     Prepare_Step(t, y, h_new);
-    for(int i = 1; i<tableau::order; i++){
+    for(size_t i = 1; i<tableau::order; i++){
         q[i].fill(0.0);
-        for(int j = 0; j<tableau::n_stages+1; j++){
+        for(size_t j = 0; j<tableau::n_stages+1; j++){
             add_vector_inplace(q[i], p[j][i-1], k[j]);
         }
-        multiply_scalar_inplace(q[i], pow(h,1-i));
+        multiply_scalar_inplace(q[i], std::pow(h,1-i));
     }
     add_vector_inplace(y, 1., dy);
     t += dt;
@@ -143,7 +141,8 @@ template <size_t n_dim, class RHS>
 void Integrator<n_dim,RHS>::Interpolate(double t, State<n_dim>& y){
     double dt = dir*(t-t_old);
     y = q[0];
-    for(uint i=1; i<tableau::order; i++){
-        add_vector_inplace(y, dir*pow(dt,i), q[i]);
+    for(size_t i=1; i<tableau::order; i++){
+        add_vector_inplace(y, dir*std::
+        pow(dt,i), q[i]);
     }
 }

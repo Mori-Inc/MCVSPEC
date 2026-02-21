@@ -19,11 +19,11 @@ void XS_Cataclysmic_Variable::Set_Abundances(){
 
     abundances[1] = FunctionUtility::getAbundance(atomic_charge[1]);
     double abund_sum=abundances[0]+abundances[1];
-    for(int i = 2; i<n_elements; i++){
-        abundances[i] = metalicity*FunctionUtility::getAbundance(atomic_charge[i]);
+    for(size_t i = 2; i<n_elements; i++){
+        abundances[i] = metallicity*FunctionUtility::getAbundance(atomic_charge[i]);
         abund_sum += abundances[i];
     }
-    for(int i=0; i<abundances.size(); i++){
+    for(size_t i=0; i<abundances.size(); i++){
         abundances[i] /= abund_sum;
     }
     Set_Cooling_Constants();
@@ -36,14 +36,14 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
     }
     int n = flux.size();
     double refl_amp;
-    valarray<double> apec_flux(n);
-    valarray<double> reflected_flux(n);
-    valarray<double> flux_error(n);
-    valarray<double> apec_parameters = {0,0,metalicity,0};
-    valarray<double> refl_parameters = {-1,0,metalicity,metalicity,incl_angle};
+    RealArray apec_flux(n);
+    RealArray reflected_flux(n);
+    RealArray flux_error(n);
+    RealArray apec_parameters = {0,0,metallicity,0};
+    RealArray refl_parameters = {-1,0,metallicity,metallicity,incl_angle};
     // refl_amp = -1 means only return reflected spectrum, this ensures that reflection can be done separately to apec
 
-    for(int i=0; i<altitude.size(); i++){
+    for(size_t i=0; i<altitude.size(); i++){
         apec_parameters[0] = electron_temperature[i];
         apec_parameters[1] = ion_temperature[i];
         if (electron_temperature[i] > 64.0 || ion_temperature[i] > 64.0){

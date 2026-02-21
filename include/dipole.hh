@@ -1,9 +1,5 @@
 #pragma once
-#include <valarray>
 #include <cmath>
-#include <iostream>
-
-using std::valarray;
 
 struct Dipole{
     double u, w_0, a_0;
