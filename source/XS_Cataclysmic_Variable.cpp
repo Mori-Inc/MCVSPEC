@@ -29,12 +29,13 @@ void XS_Cataclysmic_Variable::Set_Abundances(){
     Set_Cooling_Constants();
 }
 
-void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
+const void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string){
     if(!valid_solution){
         flux = nan("");
         return;
     }
     int n = flux.size();
+    double alt;
     double refl_amp;
     RealArray apec_flux(n);
     RealArray reflected_flux(n);
@@ -57,10 +58,8 @@ void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spe
         flux += apec_flux;
 
         if(refl==1){
-            if(altitude[i]<0){
-                altitude[i] = 0;
-            }
-            refl_amp = 1-sqrt(1.0-1.0/pow(1+altitude[i]/radius,2));
+            alt = altitude[i]<0 ? 0. : altitude[i];
+            refl_amp = 1-sqrt(1.0-1.0/pow(1+alt/radius,2));
             reflected_flux += refl_amp*apec_flux;
         }
         apec_flux *= 0;
