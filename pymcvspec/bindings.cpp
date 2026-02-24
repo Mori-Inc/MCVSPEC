@@ -72,41 +72,41 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             Build_Column_Profile();
         }
 
-        double Get_Mass(){return mass;}
-        double Get_B_Field(){return b_field;}
-        double Get_inv_Mag_Radius(){return inverse_mag_radius;}
-        double Get_Corotation_Ratio(){return corotation_ratio;}
-        double Get_Distance(){return distance;}
-        double Get_Mdot(){return accretion_rate;}
-        double Get_Area(){return accretion_area;}
-        double Get_Abund(){return metallicity;}
-        double Get_Shock_Ratio(){return pressure_ratio;}
-        double Get_Inclination_Angle(){return incl_angle;}
-        double Get_Shock_Height(){return shock_height;}
-        double Get_mBar(){return avg_ion_mass;}
-        double Get_ZBar(){return avg_atomic_charge;}
-        double Get_Dens_to_ne(){return mass_to_number_density;}
-        double Get_Exch_Const(){return exchange_const;}
-        double Get_Bremss_Const(){return bremss_const;}
-        double Get_Cycl_Const(){return cyclotron_const;}
-        double Get_Length_Conv(){return length_conv;}
-        double Get_Mass_Conv(){return mass_conv;}
-        double Get_Time_Conv(){return time_conv;}
-        double Get_Vel_Conv(){return vel_conv;}
-        double Get_Vol_Conv(){return volume_conv;}
-        double Get_Energy_Conv(){return energy_conv;}
-        double Get_Density_Conv(){return density_conv;}
-        double Get_Column_Coord(){return geometry.u;}
-        vector<double>& Get_Altitude(){return altitude;}
-        vector<double>& Get_Volume(){return volume;}
-        vector<double>& Get_Velocity(){return velocity;}
-        vector<double>& Get_Density(){return density;}
-        vector<double>& Get_Pressure(){return total_pressure;}
-        vector<double>& Get_Electron_Pressure(){return electron_pressure;}
-        vector<double>& Get_Electron_Density(){return electron_density;}
-        vector<double>& Get_Electron_Temperature(){return electron_temperature;}
-        vector<double>& Get_Ion_Temperature(){return ion_temperature;}
-        vector<double>& Get_Abundance(){return abundances;}
+        const double Get_Mass() const {return mass;}
+        const double Get_B_Field() const {return b_field;}
+        const double Get_inv_Mag_Radius() const {return inverse_mag_radius;}
+        const double Get_Corotation_Ratio() const {return corotation_ratio;}
+        const double Get_Distance() const {return distance;}
+        const double Get_Mdot() const {return accretion_rate;}
+        const double Get_Area() const {return accretion_area;}
+        const double Get_Abund() const {return metallicity;}
+        const double Get_Shock_Ratio() const {return pressure_ratio;}
+        const double Get_Inclination_Angle() const {return incl_angle;}
+        const double Get_Shock_Height() const {return shock_height;}
+        const double Get_mBar() const {return avg_ion_mass;}
+        const double Get_ZBar() const {return avg_atomic_charge;}
+        const double Get_Dens_to_ne() const {return mass_to_number_density;}
+        const double Get_Exch_Const() const {return exchange_const;}
+        const double Get_Bremss_Const() const {return bremss_const;}
+        const double Get_Cycl_Const() const {return cyclotron_const;}
+        const double Get_Length_Conv() const {return length_conv;}
+        const double Get_Mass_Conv() const {return mass_conv;}
+        const double Get_Time_Conv() const {return time_conv;}
+        const double Get_Vel_Conv() const {return vel_conv;}
+        const double Get_Vol_Conv() const {return volume_conv;}
+        const double Get_Energy_Conv() const {return energy_conv;}
+        const double Get_Density_Conv() const {return density_conv;}
+        const double Get_Column_Coord() const {return geometry.u;}
+        const vector<double>& Get_Altitude() const {return altitude;}
+        const vector<double>& Get_Volume() const {return volume;}
+        const vector<double>& Get_Velocity() const {return velocity;}
+        const vector<double>& Get_Density() const {return density;}
+        const vector<double>& Get_Pressure() const {return total_pressure;}
+        const vector<double>& Get_Electron_Pressure() const {return electron_pressure;}
+        const vector<double>& Get_Electron_Density() const {return electron_density;}
+        const vector<double>& Get_Electron_Temperature() const {return electron_temperature;}
+        const vector<double>& Get_Ion_Temperature() const {return ion_temperature;}
+        const vector<double>& Get_Abundance() const {return abundances;}
         State<n_dim> state{}, deriv{};
 };
 
