@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <array>
 
 // physical constants
 constexpr double pi = 3.14159265358979323846264338327950;
@@ -16,8 +17,8 @@ constexpr double planck_const = 6.62607015e-27; // erg s
 constexpr double hbar = planck_const/(2*pi);
 constexpr double alpha = 7.2973525643e-3;
 constexpr int n_elements = 14;
-constexpr double atomic_charge[n_elements] = {1,2,6,7,8,10,12,13,14,16,18,20,26,28}; // charges of elements in abundances array
-constexpr double atomic_mass[n_elements] = {1.007975,4.002602,12.0106,14.006855,15.9994,20.17976,24.3055,
+constexpr std::array<int, n_elements> atomic_charge = {1,2,6,7,8,10,12,13,14,16,18,20,26,28}; // charges of elements in abundances array
+constexpr std::array<double, n_elements> atomic_mass = {1.007975,4.002602,12.0106,14.006855,15.9994,20.17976,24.3055,
                                 26.98153843,28.085,32.0675,39.8775,40.0784,55.8452,58.69344};
 const double bremss_coeff = std::sqrt(512*pi/(27.*m_e*m_e*m_e))*alpha*alpha*alpha*hbar*hbar; // cgs bremms constant for hydrogen plasma
 constexpr double cyclotron_coeff = 8.07e-2/(k_b*k_b);

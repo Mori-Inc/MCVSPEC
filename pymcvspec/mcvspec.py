@@ -14,9 +14,13 @@ from astropy.constants import G
 
 from _pymcvspec import _cataclysmic_variable, _dipole
 from _pymcvspec import _mass_to_radius, _luminosity_to_mdot
+from _pymcvspec import _atomic_charges, _atomic_masses
 
 cgs = [(u.statC, ((u.g*u.cm**3)**0.5)/u.s, lambda x: x, lambda x: x),
        (u.G, ((u.g/u.cm)**0.5/u.s), lambda x: x, lambda x: x)]
+
+atomic_charges = np.array(_atomic_charges)
+atomic_masses = np.array(_atomic_masses)*u.u
 
 @u.quantity_input
 def mass_to_radius(mass: u.Quantity[u.M_sun]) -> u.Quantity[u.cm]:
@@ -426,6 +430,7 @@ class cataclysmic_variable:
         """
 
         session = pyatomdb.spectrum.CIESession()
+        session.set_abund(atomic_charges, self.metallicity)
         session.set_response(energy_bins.to_value(u.keV), raw=True)
         flux = np.zeros(len(energy_bins)-1)/(u.s*u.keV*u.cm**2)
         apec_unit = ((u.cm**3)/u.s/energy_bins.unit)

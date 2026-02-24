@@ -2,9 +2,7 @@
 #include <array>
 #include <cmath>
 #include <algorithm>
-
-template <size_t n_dim>
-using State = std::array<double, n_dim>;
+#include "integration.hh" // for State
 
 template <size_t n_dim>
 inline void add_scalar(const double a, const State<n_dim>& x, State<n_dim>& out){
