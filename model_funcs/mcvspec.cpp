@@ -1,10 +1,11 @@
+#include "Cataclysmic_Variable.hh"
 #include "XS_Cataclysmic_Variable.hh"
 #include "constants.hh"
 
 XS_Cataclysmic_Variable make_mcv(const RealArray& user_params, const bool is_ip=false, const bool use_lum=false, const bool use_f=false){
     // mass and radius
     double mass = user_params[0]*m_sol;
-    double radius = Cataclysmic_Variable::Get_Radius(mass);
+    double radius = Mass_to_Radius(mass);
     // accretion area in cm2
     int area_ind = is_ip ? 4 : 3;
     double area = user_params[area_ind]*1e15;
@@ -25,7 +26,7 @@ XS_Cataclysmic_Variable make_mcv(const RealArray& user_params, const bool is_ip=
     int mdot_ind = is_ip ? 3 : 2;
     double mdot = area*user_params[mdot_ind];
     if(use_lum){
-        mdot = Cataclysmic_Variable::Get_Accretion_Rate(user_params[mdot_ind]*1e33, mass, radius, inverse_rm);
+        mdot = Luminosity_to_Accretion_Rate(user_params[mdot_ind]*1e33, mass, radius, inverse_rm);
     }
     // magnetic field
     double b_field = user_params[1]*1e6;

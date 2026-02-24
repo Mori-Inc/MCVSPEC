@@ -13,6 +13,30 @@ using std::endl;
 using std::cerr;
 using std::vector;
 
+double Luminosity_to_Accretion_Rate(double luminosity, double mass, double radius, double inverse_mag_radius){
+    double accretion_rate = luminosity/(grav_const*mass*((1./radius) - inverse_mag_radius));
+    return accretion_rate;
+}
+
+double Mass_to_Radius(double mass){
+    int left_ind = 0;
+    int i = mass_radius_length/2;
+    int right_ind = mass_radius_length-1;
+    while(right_ind-left_ind > 1){
+        i = left_ind + (right_ind-left_ind)/2;
+        if(mass>white_dwarf_mass[i]){
+            left_ind = i;
+        }
+        else{
+            right_ind = i;
+        }
+    }
+    double delta_r = white_dwarf_radius[right_ind]-white_dwarf_radius[left_ind];
+    double delta_m = white_dwarf_mass[right_ind]-white_dwarf_mass[left_ind];
+    double radius = white_dwarf_radius[left_ind] + (delta_r/delta_m)*(mass-white_dwarf_mass[left_ind]);
+    return radius;
+}
+
 Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double p_ratio, double u, double dist, int reflection):
     mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metallicity(abund),
     pressure_ratio(p_ratio), incl_angle(theta), refl(reflection), geometry(u),
@@ -46,30 +70,6 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     cyclotron_const *= pow(vel_conv,3.85)*pressure_conv*pressure_conv;
     exchange_const = exchange_coeff*avg_charge_sqr_over_mass*sesquialteral_rho_ne*mass_to_number_density;
     exchange_const *= mass_conv/(vel_conv*vel_conv*vel_conv*vel_conv*length_conv*length_conv);
-}
-
-double Cataclysmic_Variable::Get_Accretion_Rate(double luminosity, double mass, double radius, double inverse_mag_radius){
-    double accretion_rate = luminosity/(grav_const*mass*((1./radius) - inverse_mag_radius));
-    return accretion_rate;
-}
-
-double Cataclysmic_Variable::Get_Radius(double mass){
-    int left_ind = 0;
-    int i = mass_radius_length/2;
-    int right_ind = mass_radius_length-1;
-    while(right_ind-left_ind > 1){
-        i = left_ind + (right_ind-left_ind)/2;
-        if(mass>white_dwarf_mass[i]){
-            left_ind = i;
-        }
-        else{
-            right_ind = i;
-        }
-    }
-    double delta_r = white_dwarf_radius[right_ind]-white_dwarf_radius[left_ind];
-    double delta_m = white_dwarf_mass[right_ind]-white_dwarf_mass[left_ind];
-    double radius = white_dwarf_radius[left_ind] + (delta_r/delta_m)*(mass-white_dwarf_mass[left_ind]);
-    return radius;
 }
 
 void Cataclysmic_Variable::Update_Shock_Position(double shock_pos){
@@ -208,7 +208,7 @@ void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& l
     lower_landing = samples[1];
 }
 
-void Cataclysmic_Variable::Determine_Shock_Position(){
+void Cataclysmic_Variable::Find_Shock_Position(){
     double upper_bound, lower_bound;
     double upper_landing, lower_landing;
     Bracket_Shock_Position(upper_bound, lower_bound, upper_landing, lower_landing);

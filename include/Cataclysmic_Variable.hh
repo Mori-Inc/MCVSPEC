@@ -5,6 +5,9 @@
 #include "integration.hh"
 #include <vector>
 
+double Mass_to_Radius(double);
+double Luminosity_to_Accretion_Rate(double, double, double, double);
+
 class Cataclysmic_Variable{
     protected:
         static constexpr size_t n_dim = 4;
@@ -33,21 +36,21 @@ class Cataclysmic_Variable{
         Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,double,double,int);
         virtual ~Cataclysmic_Variable() = default;
 
-        void Bracket_Shock_Position(double&,double&,double&,double&);
-        void Determine_Shock_Position();
-        template <typename func>
-        void Build_Grid(func,const State<n_grid_vars>&,std::vector<State<n_dim>>&);
-        void Build_Column_Profile();
-        void Print_Properties();
-        void Update_Shock_Position(double);
-        double Get_Landing_Altitude(double);
-        static double Get_Radius(double);
-        static double Get_Accretion_Rate(double, double, double, double);
         void Flow_Equation(double,const State<n_dim>&, State<n_dim>&) const;
+
+        void Bracket_Shock_Position(double&,double&,double&,double&);
+        void Find_Shock_Position();
+        void Build_Column_Profile();
+
+        void Print_Properties();
 
     protected:
         virtual void Set_Abundances() = 0;
         void Set_Cooling_Constants();
+        template <typename func>
+        void Build_Grid(func,const State<n_grid_vars>&,std::vector<State<n_dim>>&);
+        void Update_Shock_Position(double);
+        double Get_Landing_Altitude(double);
         struct Diff_EQ {
             Cataclysmic_Variable& self;
             void operator()(double t, const State<n_dim>& y, State<n_dim>& dydt) const {
