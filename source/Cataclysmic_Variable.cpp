@@ -71,7 +71,7 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     exchange_const *= mass_conv/(vel_conv*vel_conv*vel_conv*vel_conv*length_conv*length_conv);
 }
 
-void Cataclysmic_Variable::Compute_Shock_Bound(double w_s, State<n_dim>& bound, double& s_s){
+void Cataclysmic_Variable::Compute_Shock_Bound(double w_s, State<n_dim>& bound, double& s_s) const{
     double r_s, proj_r_w, convergance, scale_factors[3];
     geometry.update_coordinates(w_s, r_s, proj_r_w, convergance, scale_factors);
     double mdot = 1./(scale_factors[0]*scale_factors[2]);
@@ -125,7 +125,7 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const State<n_dim>& stat
     derivs[3] = dp_ds;
 }
 
-double Cataclysmic_Variable::Landing_Altitude(double w_s){
+double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
     // return signed distance from WD surface in w
     double s_s;
     State<n_dim> y;
@@ -159,7 +159,7 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s){
 // exit if
 // 1. a point is found with w_l < w_0, in which case we have bracketed our solution
 // 2. a minimum is found with w_l > w_0 in which case no solution exists
-void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& lower_bound, double& upper_landing, double& lower_landing){
+int Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& lower_bound, double& upper_landing, double& lower_landing) const {
     upper_bound = geometry.w_0;
     upper_landing = Landing_Altitude(upper_bound);
 
@@ -176,7 +176,7 @@ void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& l
         if(samples[2]<0){
             lower_bound = r_to_w(r+dr);
             lower_landing = samples[2];
-            return;
+            return 0;
         }
         upper_bound = r_to_w(r+dr);
         upper_landing = samples[2];
@@ -190,20 +190,21 @@ void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& l
     }
 
     if(samples[1] > 0){ // if minima > 0
-        valid_solution = false;
-        return;
+        return 1;
     }
 
     lower_bound = r_to_w(r);
     lower_landing = samples[1];
+    return 0;
 }
 
 void Cataclysmic_Variable::Find_Shock_Position(){
     double upper_bound, lower_bound;
     double upper_landing, lower_landing;
-    Bracket_Shock_Position(upper_bound, lower_bound, upper_landing, lower_landing);
+    int success = Bracket_Shock_Position(upper_bound, lower_bound, upper_landing, lower_landing);
     // if no minimum skip
-    if(!valid_solution){
+    if(success != 0){
+        valid_solution = false;
         return;
     }
     const double k1 = 0.2/(upper_bound-lower_bound);
@@ -244,12 +245,15 @@ void Cataclysmic_Variable::Find_Shock_Position(){
         }
         i++;
     }
-
-    Compute_Shock_Bound(0.5*(upper_bound+lower_bound), shock_boundary, shock_entropy);
+    State<n_dim> bound{};
+    double s_s;
+    Compute_Shock_Bound(0.5*(upper_bound+lower_bound), bound, s_s);
+    shock_boundary = bound;
+    shock_entropy = s_s;
 }
 
 template <typename func>
-void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& grid_spacing, vector<State<n_dim>>& grid){
+void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& grid_spacing, vector<State<n_dim>>& grid) const {
     if(!valid_solution){
         return;
     }
@@ -376,7 +380,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     }
 }
 
-void Cataclysmic_Variable::Print_Properties(){
+void Cataclysmic_Variable::Print_Properties() const{
     if(altitude.size() < 1){
         return;
     }

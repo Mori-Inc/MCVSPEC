@@ -40,16 +40,16 @@ class Cataclysmic_Variable{
         void Find_Shock_Position();
         void Build_Column_Profile();
 
-        void Print_Properties();
+        void Print_Properties() const;
 
     protected:
         virtual void Set_Abundances() = 0;
         void Set_Cooling_Constants();
-        void Bracket_Shock_Position(double&,double&,double&,double&);
+        int Bracket_Shock_Position(double&,double&,double&,double&) const;
         template <typename func>
-        void Build_Grid(func,const State<n_grid_vars>&,std::vector<State<n_dim>>&);
-        void Compute_Shock_Bound(double, State<n_dim>&, double&);
-        double Landing_Altitude(double);
+        void Build_Grid(func,const State<n_grid_vars>&,std::vector<State<n_dim>>&) const;
+        void Compute_Shock_Bound(double, State<n_dim>&, double&) const;
+        double Landing_Altitude(double) const;
         struct Diff_EQ {
             Cataclysmic_Variable& self;
             void operator()(double t, const State<n_dim>& y, State<n_dim>& dydt) const {
@@ -58,5 +58,5 @@ class Cataclysmic_Variable{
         };
         const double abs_err = 1e-8;
         const double rel_err = 1e-6;
-        Integrator<4, Diff_EQ> accretion_column;
+        mutable Integrator<4, Diff_EQ> accretion_column;
 };
