@@ -67,9 +67,13 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             Set_Cooling_Constants();
         }
 
-        void Solve_Profile(){
+        int Solve_Profile(){
             Find_Shock_Position();
             Build_Column_Profile();
+            if(!valid_solution){
+                return -1;
+            }
+            return 0;
         }
 
         const double Get_Mass() const {return mass;}
@@ -82,7 +86,6 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         const double Get_Abund() const {return metallicity;}
         const double Get_Shock_Ratio() const {return pressure_ratio;}
         const double Get_Inclination_Angle() const {return incl_angle;}
-        const double Get_Shock_Height() const {return shock_height;}
         const double Get_mBar() const {return avg_ion_mass;}
         const double Get_ZBar() const {return avg_atomic_charge;}
         const double Get_Dens_to_ne() const {return mass_to_number_density;}
@@ -131,7 +134,6 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def_property_readonly("metallicity", &Py_Cataclysmic_Variable::Get_Abund)
         .def_property_readonly("shock_ratio", &Py_Cataclysmic_Variable::Get_Shock_Ratio)
         .def_property_readonly("inclination_angle", &Py_Cataclysmic_Variable::Get_Inclination_Angle)
-        .def_property_readonly("shock_height", &Py_Cataclysmic_Variable::Get_Shock_Height)
         .def_property_readonly("average_ion_mass", &Py_Cataclysmic_Variable::Get_mBar)
         .def_property_readonly("average_ion_charge", &Py_Cataclysmic_Variable::Get_ZBar)
         .def_property_readonly("density_to_ne", &Py_Cataclysmic_Variable::Get_Dens_to_ne)

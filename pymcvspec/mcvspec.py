@@ -326,6 +326,9 @@ class cataclysmic_variable:
             refl_on=0,
         )
         self.geometry = dipole(self._cpp_impl.column_coord)
+        status = self._cpp_impl.solve()
+        if status == -1:
+            raise RuntimeError("No valid solution found: Column does not reach WD surface for any shock height")
 
     @property
     def shock_height(self):
@@ -405,9 +408,6 @@ class cataclysmic_variable:
     @property
     def ion_pressure(self):
         return self.total_pressure-self.electron_pressure
-
-    def solve(self):
-        self._cpp_impl.solve()
 
     @u.quantity_input
     def spectrum(self,

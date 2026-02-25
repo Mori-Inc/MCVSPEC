@@ -10,7 +10,6 @@
 
 using std::cout;
 using std::endl;
-using std::cerr;
 using std::vector;
 
 double Luminosity_to_Accretion_Rate(double luminosity, double mass, double radius, double inverse_mag_radius){
@@ -72,19 +71,16 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     exchange_const *= mass_conv/(vel_conv*vel_conv*vel_conv*vel_conv*length_conv*length_conv);
 }
 
-void Cataclysmic_Variable::Update_Shock_Position(double shock_pos){
-    w_s = shock_pos;
+void Cataclysmic_Variable::Compute_Shock_Bound(double w_s, State<n_dim>& bound, double& s_s){
     double r_s, proj_r_w, convergance, scale_factors[3];
     geometry.update_coordinates(w_s, r_s, proj_r_w, convergance, scale_factors);
-    shock_height = (r_s-1)*radius;
     double mdot = 1./(scale_factors[0]*scale_factors[2]);
-
     double vff = sqrt(1./r_s - radius*inverse_mag_radius);
-
-    x_s = vff;
-    v_s = vff/4;
-    pe_s = (pressure_ratio/(pressure_ratio+1))*mdot*(x_s-v_s);
-    s_s = mdot*(x_s-v_s)*pow(v_s/mdot, 5./3.);
+    bound[0] = w_s;
+    bound[1] = vff;
+    bound[2] = vff*0.25;
+    bound[3] = (pressure_ratio/(pressure_ratio+1))*mdot*0.75*vff;
+    s_s = mdot*0.75*vff*pow(0.25*vff/mdot, 5./3.);
 }
 
 void Cataclysmic_Variable::Flow_Equation(double entropy,const State<n_dim>& state, State<n_dim>& derivs) const{
@@ -129,11 +125,12 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const State<n_dim>& stat
     derivs[3] = dp_ds;
 }
 
-double Cataclysmic_Variable::Get_Landing_Altitude(double w_s){
+double Cataclysmic_Variable::Landing_Altitude(double w_s){
     // return signed distance from WD surface in w
-    Update_Shock_Position(w_s);
+    double s_s;
+    State<n_dim> y;
+    Compute_Shock_Bound(w_s, y, s_s);
     double s = s_s;
-    State<n_dim> y = {w_s, x_s, v_s, pe_s};
     accretion_column.Initialize(s, 0, y);
     while(s/s_s > 1e-2){
          accretion_column.Step(s, y);
@@ -164,19 +161,14 @@ double Cataclysmic_Variable::Get_Landing_Altitude(double w_s){
 // 2. a minimum is found with w_l > w_0 in which case no solution exists
 void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& lower_bound, double& upper_landing, double& lower_landing){
     upper_bound = geometry.w_0;
-    upper_landing = Get_Landing_Altitude(upper_bound);
-    if(upper_landing < 0){
-        cerr << "Error: column is inverted?" << endl;
-        valid_solution = false;
-        return;
-    }
+    upper_landing = Landing_Altitude(upper_bound);
 
     double r=1.;
     double dr = 0.01;
     auto r_to_w = [this](double r){ return sqrt(1-geometry.u*r)/(r*r); };
-    double samples[3] = {Get_Landing_Altitude(r_to_w(r-dr)),
+    double samples[3] = {Landing_Altitude(r_to_w(r-dr)),
                         upper_landing,
-                        Get_Landing_Altitude(r_to_w(r+dr))};
+                        Landing_Altitude(r_to_w(r+dr))};
 
     double dwl_drs[2] = {(samples[1]-samples[0])/dr, (samples[2]-samples[1])/dr};
     double step = 0;
@@ -190,16 +182,14 @@ void Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& l
         upper_landing = samples[2];
         step = 0.5*dr*(samples[0]-samples[2])/(samples[0]-2*samples[1]+samples[2]);
         r += std::min(1.,step);
-        samples[0] = Get_Landing_Altitude(r_to_w(r-dr));
-        samples[1] = Get_Landing_Altitude(r_to_w(r));
-        samples[2] = Get_Landing_Altitude(r_to_w(r+dr));
+        samples[0] = Landing_Altitude(r_to_w(r-dr));
+        samples[1] = Landing_Altitude(r_to_w(r));
+        samples[2] = Landing_Altitude(r_to_w(r+dr));
         dwl_drs[0] = (samples[1]-samples[0])/dr;
         dwl_drs[1] = (samples[2]-samples[1])/dr;
     }
 
     if(samples[1] > 0){ // if minima > 0
-        cerr << "Error: Minimum landing altitude is above WD surface" << endl;
-        cerr << "Minima: " << samples[1] << endl;
         valid_solution = false;
         return;
     }
@@ -239,7 +229,7 @@ void Cataclysmic_Variable::Find_Shock_Position(){
             new_bound = midpoint - dir*projection;
         }
 
-        new_altitude = Get_Landing_Altitude(new_bound);
+        new_altitude = Landing_Altitude(new_bound);
         if(new_altitude>0){
             upper_bound = new_bound;
             upper_landing = new_altitude;
@@ -254,7 +244,8 @@ void Cataclysmic_Variable::Find_Shock_Position(){
         }
         i++;
     }
-    Update_Shock_Position((upper_bound+lower_bound)/2);
+
+    Compute_Shock_Bound(0.5*(upper_bound+lower_bound), shock_boundary, shock_entropy);
 }
 
 template <typename func>
@@ -264,8 +255,8 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
     }
     constexpr int n_segments=16;
     // integration variables
-    double t = s_s;
-    State<n_dim> y = {w_s, x_s, v_s, pe_s};
+    double t = shock_entropy;
+    State<n_dim> y = shock_boundary;
     accretion_column.Initialize(t, 0, y);
 
     // grid variables
@@ -329,9 +320,10 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     }
     const double dkTe = (kT_grid_spacing/erg_to_kev)*mass_to_number_density/(vel_conv*vel_conv);
     const double dkTi = dkTe/avg_atomic_charge;
-    const State<n_grid_vars> grid_spacing = {dkTi, dkTe, altitude_grid_spacing*shock_height/length_conv};
-
     double r, proj, conv, scale_factors[3];
+    geometry.update_coordinates(shock_boundary[0], r, proj, conv, scale_factors);
+    const State<n_grid_vars> grid_spacing = {dkTi, dkTe, altitude_grid_spacing*(r-1)};
+
     auto kT_e = [](const State<n_dim>& y, double scale_factors[3]){
         return y[2]*y[3]*scale_factors[0]*scale_factors[2];
     };
@@ -399,8 +391,8 @@ void Cataclysmic_Variable::Print_Properties(){
     }
     cout << " accretion rate:     " << accretion_rate << " g/s" << endl;
     cout << " accretion rate:     " << density[0]*velocity[0] << " --> " <<  density[density.size()-1]*velocity[velocity.size()-1] << " g/cm2/s" << endl;
-    cout << " shock height:       " << shock_height/radius << " (h/R_wd)" << endl;
-    cout << " shock height:       " << shock_height << " cm" << endl;
+    cout << " shock height:       " << altitude[0]/radius << " (h/R_wd)" << endl;
+    cout << " shock height:       " << altitude[0] << " cm" << endl;
     cout << " shock temperature:  " << electron_temperature[0] << " keV" << endl;
     cout << " density:            " <<  electron_density[0] << " --> " << electron_density[electron_density.size()-1] <<  " e-/cm3" << endl;
 }
