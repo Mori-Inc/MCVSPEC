@@ -8,10 +8,6 @@
 #include <iostream>
 #include <vector>
 
-using std::cout;
-using std::endl;
-using std::vector;
-
 double Luminosity_to_Accretion_Rate(double luminosity, White_Dwarf wd){
     double accretion_rate = luminosity/(grav_const*wd.mass*((1./wd.radius) - wd.inverse_mag_radius));
     return accretion_rate;
@@ -254,7 +250,7 @@ void Cataclysmic_Variable::Find_Shock_Position(){
 }
 
 template <typename func>
-void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& grid_spacing, vector<State<n_dim>>& grid) const {
+void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& grid_spacing, std::vector<State<n_dim>>& grid) const {
     if(!valid_solution){
         return;
     }
@@ -342,7 +338,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         vars[2] = r;
     };
 
-    vector<State<n_dim>> grid;
+    std::vector<State<n_dim>> grid;
     Build_Grid(grid_func, grid_spacing, grid);
 
     int n_points = grid.size();
@@ -382,6 +378,8 @@ void Cataclysmic_Variable::Build_Column_Profile(){
 }
 
 void Cataclysmic_Variable::Print_Properties() const{
+    using std::cout;
+    using std::endl;
     if(altitude.size() < 1){
         return;
     }
