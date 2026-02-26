@@ -47,8 +47,8 @@ inline void State_to_Numpy(const State<n_dim>& state, double* np_ptr) {
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
         static constexpr size_t n_dim = Cataclysmic_Variable::n_dim;
-        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double r_m_ratio, double metals, double theta, double pressure_ratio, double u, double dist, int reflection):
-            Cataclysmic_Variable(m,r,b,mdot,area,inv_r_m,r_m_ratio,metals,theta,pressure_ratio,u,dist,reflection)
+        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double r_corot, double metals, double theta, double pressure_ratio, double u, double dist):
+            Cataclysmic_Variable(White_Dwarf(m,r,b,theta,inv_r_m,r_corot,dist),Accretion_Column(mdot,area,metals,pressure_ratio,u))
         {
             Set_Abundances();
         }
@@ -60,7 +60,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
                           4.68e-05, 1.78e-06}; // taken from Anders & Grevesse (1989) DOI: 10.1016/0016-7037(89)90286-X
             double total= abundances[0]+abundances[1];
             for(size_t i=2; i<abundances.size(); i++){
-                abundances[i] *= metallicity;
+                abundances[i] *= accretion_column.metallicity;
                 total += abundances[i];
             }
             std::transform(abundances.begin(),abundances.end(),abundances.begin(),[total](double x) {return x/total;});
@@ -76,16 +76,16 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
             return 0;
         }
 
-        const double Get_Mass() const {return mass;}
-        const double Get_B_Field() const {return b_field;}
-        const double Get_inv_Mag_Radius() const {return inverse_mag_radius;}
-        const double Get_Corotation_Ratio() const {return corotation_ratio;}
-        const double Get_Distance() const {return distance;}
-        const double Get_Mdot() const {return accretion_rate;}
-        const double Get_Area() const {return accretion_area;}
-        const double Get_Abund() const {return metallicity;}
-        const double Get_Shock_Ratio() const {return pressure_ratio;}
-        const double Get_Inclination_Angle() const {return incl_angle;}
+        const double Get_Mass() const {return white_dwarf.mass;}
+        const double Get_B_Field() const {return white_dwarf.b_field;}
+        const double Get_inv_Mag_Radius() const {return white_dwarf.inverse_mag_radius;}
+        const double Get_Corotation_Radius() const {return white_dwarf.corotation_radius;}
+        const double Get_Distance() const {return white_dwarf.distance;}
+        const double Get_Mdot() const {return accretion_column.accretion_rate;}
+        const double Get_Area() const {return accretion_column.accretion_area;}
+        const double Get_Abund() const {return accretion_column.metallicity;}
+        const double Get_Shock_Ratio() const {return accretion_column.shock_pressure_ratio;}
+        const double Get_Cos_Inclination_Angle() const {return white_dwarf.cos_inclination;}
         const double Get_mBar() const {return avg_ion_mass;}
         const double Get_ZBar() const {return avg_atomic_charge;}
         const double Get_Dens_to_ne() const {return mass_to_number_density;}
@@ -118,22 +118,27 @@ PYBIND11_MODULE(_pymcvspec, module) {
     module.attr("_atomic_masses") = py::cast(atomic_charge);
     module.def("_mass_to_radius", Mass_to_Radius, "Returns the radius (cm) for a corresponding WD mass (g)");
     module.def("_luminosity_to_mdot", Luminosity_to_Accretion_Rate, "Returns the accretion rate (g/s) for a corresponding luminosity (erg/s), mass (g), and radius (cm)");
-    py::class_<Py_Cataclysmic_Variable>(module, "_cataclysmic_variable", py::module_local())
-        .def(py::init<double,double,double,double,double,double,double,double,double,double,double,double,int>(),
+    py::class_<White_Dwarf>(module, "_white_dwarf", py::module_local())
+        .def(py::init<double, double, double, double, double, double, double>(),
             py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
-            py::arg("mdot") = 1e15, py::arg("area") = 1e15, py::arg("inv_r_m") = 0., py::arg("r_m_ratio") = 1.,
+            py::arg("cos_incl") = 0.5, py::arg("inv_mag_rad") = 0, py::arg("corot_rad") = 1,
+            py::arg("distance") = 200*pc_to_cm);
+    py::class_<Py_Cataclysmic_Variable>(module, "_cataclysmic_variable", py::module_local())
+        .def(py::init<double,double,double,double,double,double,double,double,double,double,double,double>(),
+            py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
+            py::arg("mdot") = 1e15, py::arg("area") = 1e15, py::arg("inv_r_m") = 0., py::arg("corot_radius") = 1.,
             py::arg("metallicity") = 1., py::arg("cos_incl_angle") = 0.5, py::arg("shock_ratio") = 0.75,
-            py::arg("column_coord") = 1e-8, py::arg("src_distance") = 200*pc_to_cm, py::arg("refl_on") = 1)
+            py::arg("column_coord") = 1e-8, py::arg("src_distance") = 200*pc_to_cm)
         .def_property_readonly("mass", &Py_Cataclysmic_Variable::Get_Mass)
         .def_property_readonly("b_field", &Py_Cataclysmic_Variable::Get_B_Field)
         .def_property_readonly("inv_r_m", &Py_Cataclysmic_Variable::Get_inv_Mag_Radius)
-        .def_property_readonly("corotation_ratio", &Py_Cataclysmic_Variable::Get_Corotation_Ratio)
+        .def_property_readonly("corotation_radius", &Py_Cataclysmic_Variable::Get_Corotation_Radius)
         .def_property_readonly("distance", &Py_Cataclysmic_Variable::Get_Distance)
         .def_property_readonly("accretion_rate", &Py_Cataclysmic_Variable::Get_Mdot)
         .def_property_readonly("accretion_area", &Py_Cataclysmic_Variable::Get_Area)
         .def_property_readonly("metallicity", &Py_Cataclysmic_Variable::Get_Abund)
         .def_property_readonly("shock_ratio", &Py_Cataclysmic_Variable::Get_Shock_Ratio)
-        .def_property_readonly("inclination_angle", &Py_Cataclysmic_Variable::Get_Inclination_Angle)
+        .def_property_readonly("cos_inclination_angle", &Py_Cataclysmic_Variable::Get_Cos_Inclination_Angle)
         .def_property_readonly("average_ion_mass", &Py_Cataclysmic_Variable::Get_mBar)
         .def_property_readonly("average_ion_charge", &Py_Cataclysmic_Variable::Get_ZBar)
         .def_property_readonly("density_to_ne", &Py_Cataclysmic_Variable::Get_Dens_to_ne)

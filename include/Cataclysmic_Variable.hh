@@ -4,35 +4,61 @@
 #include "integration.hh"
 #include <vector>
 
+struct White_Dwarf{
+    double mass;
+    double radius;
+    double b_field;
+    double cos_inclination;
+    double inverse_mag_radius;
+    double corotation_radius;
+    double distance;
+    White_Dwarf(double m, double r, double b, double cosi, double irm, double cort, double d):
+        mass(m), radius(r), b_field(b), cos_inclination(cosi), inverse_mag_radius(irm), corotation_radius(cort), distance(d)
+    {};
+    White_Dwarf() = default;
+};
+
+struct Accretion_Column{
+    double accretion_rate;
+    double accretion_area;
+    double metallicity;
+    double shock_pressure_ratio;
+    double sin_mag_colat;
+    Accretion_Column(double mdot, double a, double m, double delt, double sinb):
+        accretion_rate(mdot), accretion_area(a), metallicity(m), shock_pressure_ratio(delt), sin_mag_colat(sinb)
+    {};
+    Accretion_Column() = default;
+};
+
 double Mass_to_Radius(double);
-double Luminosity_to_Accretion_Rate(double, double, double, double);
+double Luminosity_to_Accretion_Rate(double, White_Dwarf);
 
 class Cataclysmic_Variable{
     protected:
         static constexpr size_t n_dim = 4;
         static constexpr size_t n_grid_vars = 3;
         // input properties
-        const double mass, radius, b_field, inverse_mag_radius, corotation_ratio, distance;
-        const double accretion_rate, accretion_area, metallicity, pressure_ratio, incl_angle;
-        std::vector<double> abundances; // fractional abundance of elements in accretion column
+        const White_Dwarf white_dwarf;
+        const Accretion_Column accretion_column;
+        const Dipole geometry;
+        // unit conversion (cgs values of MCVSPEC nd unit system)
+        const double length_conv, vel_conv, accretion_rate_conv;
+        const double time_conv, mass_conv, volume_conv, energy_conv, density_conv, pressure_conv;
+
         // derived column properties
+        std::vector<double> abundances; // fractional abundance of elements in accretion column
         double avg_ion_mass, avg_atomic_charge, mass_to_number_density, exchange_const, bremss_const, cyclotron_const;
         // thermal profile
         std::vector<double> altitude, volume, velocity, density, total_pressure, electron_pressure, electron_density, electron_temperature, ion_temperature;
-        // shock boundary
+        // shock boundary condition
         State<n_dim> shock_boundary;
         double shock_entropy;
-        // utilities
-        const int refl;
-        Dipole geometry;
-        // unit conversion
-        const double length_conv, vel_conv, time_conv, volume_conv, mass_conv, energy_conv, density_conv, pressure_conv;
         // if solution found
         bool valid_solution = true;
 
 
     public:
-        Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,double,double,int);
+        Cataclysmic_Variable(White_Dwarf, Accretion_Column);
         virtual ~Cataclysmic_Variable() = default;
 
         void Flow_Equation(double,const State<n_dim>&, State<n_dim>&) const;
@@ -58,5 +84,5 @@ class Cataclysmic_Variable{
         };
         const double abs_err = 1e-8;
         const double rel_err = 1e-6;
-        mutable Integrator<4, Diff_EQ> accretion_column;
+        mutable Integrator<4, Diff_EQ> integrator;
 };

@@ -12,8 +12,8 @@ using std::cout;
 using std::endl;
 using std::vector;
 
-double Luminosity_to_Accretion_Rate(double luminosity, double mass, double radius, double inverse_mag_radius){
-    double accretion_rate = luminosity/(grav_const*mass*((1./radius) - inverse_mag_radius));
+double Luminosity_to_Accretion_Rate(double luminosity, White_Dwarf wd){
+    double accretion_rate = luminosity/(grav_const*wd.mass*((1./wd.radius) - wd.inverse_mag_radius));
     return accretion_rate;
 }
 
@@ -36,13 +36,12 @@ double Mass_to_Radius(double mass){
     return radius;
 }
 
-Cataclysmic_Variable::Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double corot_rat, double abund, double theta, double p_ratio, double u, double dist, int reflection):
-    mass(m), radius(r), b_field(b),  inverse_mag_radius(inv_r_m), corotation_ratio(corot_rat), distance(dist), accretion_rate(mdot), accretion_area(area), metallicity(abund),
-    pressure_ratio(p_ratio), incl_angle(theta), refl(reflection), geometry(u),
-    length_conv(radius), vel_conv(sqrt(2*grav_const*mass/radius)), time_conv(length_conv/vel_conv), volume_conv(length_conv*length_conv*length_conv),
-    mass_conv((geometry.a_0*accretion_rate/accretion_area)*volume_conv/vel_conv),
+Cataclysmic_Variable::Cataclysmic_Variable(White_Dwarf wd, Accretion_Column col):
+    white_dwarf(wd), accretion_column(col), geometry(accretion_column.sin_mag_colat*accretion_column.sin_mag_colat),
+    length_conv(white_dwarf.radius), vel_conv(sqrt(2*grav_const*white_dwarf.mass/white_dwarf.radius)), accretion_rate_conv(geometry.a_0*col.accretion_rate),
+    time_conv(length_conv/vel_conv), mass_conv(accretion_rate_conv*length_conv*length_conv*time_conv), volume_conv(length_conv*length_conv*length_conv),
     energy_conv(mass_conv*vel_conv*vel_conv), density_conv(mass_conv/volume_conv), pressure_conv(energy_conv/volume_conv),
-    accretion_column(Diff_EQ{*this},abs_err,rel_err)
+    integrator(Diff_EQ{*this},abs_err,rel_err)
 {}
 
 void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as these values depend only on the input properties not on any derived properties
@@ -61,12 +60,14 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
 
     mass_to_number_density = avg_atomic_charge/(avg_ion_mass + avg_atomic_charge*m_e);
     const double sesquialteral_rho_ne = sqrt(mass_to_number_density*mass_to_number_density*mass_to_number_density);
+    const double b_sqr = white_dwarf.b_field*white_dwarf.b_field/(4-3*geometry.u);
     bremss_const = bremss_coeff*(avg_charge_squared/avg_atomic_charge)*sesquialteral_rho_ne;
     bremss_const *= mass_conv/(vel_conv*vel_conv*length_conv*length_conv);
     cyclotron_const = cyclotron_coeff*(avg_atomic_charge/avg_charge_squared);
-    cyclotron_const *= pow(b_field/(mass_to_number_density*accretion_rate*sqrt(4-3*geometry.u)),2.85);
-    cyclotron_const *= pow(accretion_area/geometry.a_0,3.425)/(mass_to_number_density*accretion_rate);
-    cyclotron_const *= pow(vel_conv,3.85)*pressure_conv*pressure_conv;
+    cyclotron_const *= b_sqr/(geometry.a_0*geometry.a_0*geometry.a_0);
+    cyclotron_const *= pow(b_sqr/(accretion_column.accretion_area*geometry.a_0), 0.425);
+    cyclotron_const *= pow(accretion_column.accretion_rate*mass_to_number_density, -3.85);
+    cyclotron_const *= pow(vel_conv,5.85)*accretion_rate_conv*accretion_rate_conv;
     exchange_const = exchange_coeff*avg_charge_sqr_over_mass*sesquialteral_rho_ne*mass_to_number_density;
     exchange_const *= mass_conv/(vel_conv*vel_conv*vel_conv*vel_conv*length_conv*length_conv);
 }
@@ -75,11 +76,11 @@ void Cataclysmic_Variable::Compute_Shock_Bound(double w_s, State<n_dim>& bound, 
     double r_s, proj_r_w, convergance, scale_factors[3];
     geometry.update_coordinates(w_s, r_s, proj_r_w, convergance, scale_factors);
     double mdot = 1./(scale_factors[0]*scale_factors[2]);
-    double vff = sqrt(1./r_s - radius*inverse_mag_radius);
+    double vff = sqrt(1./r_s - length_conv*white_dwarf.inverse_mag_radius);
     bound[0] = w_s;
     bound[1] = vff;
     bound[2] = vff*0.25;
-    bound[3] = (pressure_ratio/(pressure_ratio+1))*mdot*0.75*vff;
+    bound[3] = (accretion_column.shock_pressure_ratio/(1+accretion_column.shock_pressure_ratio))*mdot*0.75*vff;
     s_s = mdot*0.75*vff*pow(0.25*vff/mdot, 5./3.);
 }
 
@@ -131,9 +132,9 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
     State<n_dim> y;
     Compute_Shock_Bound(w_s, y, s_s);
     double s = s_s;
-    accretion_column.Initialize(s, 0, y);
+    integrator.Initialize(s, 0, y);
     while(s/s_s > 1e-2){
-         accretion_column.Step(s, y);
+         integrator.Step(s, y);
     }
     double error = 1;
     State<n_dim> slope{};
@@ -142,13 +143,13 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
     double dw_prev = slope[0];
 
     while(error > abs_err){
-        accretion_column.Step(s, y);
+        integrator.Step(s, y);
         Flow_Equation(s,  y, slope);
         error = 0.5*std::abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extroplation on w
         s_prev = s;
         dw_prev = slope[0];
     }
-    accretion_column.Step(s, y);
+    integrator.Step(s, y);
     Flow_Equation(s,  y, slope);
     double landing = y[0] - slope[0]*s;
     return landing - geometry.w_0;
@@ -261,7 +262,7 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
     // integration variables
     double t = shock_entropy;
     State<n_dim> y = shock_boundary;
-    accretion_column.Initialize(t, 0, y);
+    integrator.Initialize(t, 0, y);
 
     // grid variables
     State<n_grid_vars> grid_vars{};
@@ -298,18 +299,18 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
 
     while(grid_vars[0] > grid_spacing[0] && t > abs_err){
         double t0 = t;
-        accretion_column.Dense_Step(t,y);
+        integrator.Dense_Step(t,y);
         double dt = (t-t0)/double(n_segments);
         for(size_t seg=0; seg<n_segments; seg++){
             t_left = t0 + dt*seg;
             t_right = t0 + dt*(seg+1);
             y_left = y_right;
-            accretion_column.Interpolate(t_right, y_right);
+            integrator.Interpolate(t_right, y_right);
             grid_left = grid_right;
             grid_func(t_right, y_right, grid_right);
             while(crossing_found(t_left, t_right)){
                 t_left = t_cross;
-                accretion_column.Interpolate(t_left, y_left);
+                integrator.Interpolate(t_left, y_left);
                 grid_func(t_left, y_left, grid_left);
                 grid.push_back(y_left);
                 grid_vars = grid_left;
@@ -376,7 +377,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         volume[i] += scale_factors[0]*scale_factors[1]*scale_factors[2];
         geometry.update_coordinates((a+b)/2, r, proj, conv, scale_factors);
         volume[i] += 4*scale_factors[0]*scale_factors[1]*scale_factors[2];
-        volume[i] *= (accretion_area*length_conv/geometry.a_0)*(b - a)/6.;
+        volume[i] *= (accretion_column.accretion_area*length_conv/geometry.a_0)*(b - a)/6.;
     }
 }
 
@@ -387,15 +388,15 @@ void Cataclysmic_Variable::Print_Properties() const{
     cout << "===================================================" << endl;
     cout << "                   mCV Properties                  " << endl;
     cout << "===================================================" << endl;
-    cout << " mass:               " << mass/m_sol << " M_solar" << endl;
-    cout << " radius:             " << radius/r_sol << " R_solar" << endl;
-    cout << " B_field:            " << b_field/1e6 << " MG" << endl;
-    if(inverse_mag_radius != 0){
-        cout << " R_m/R:              " << (1./inverse_mag_radius)/radius << endl;
+    cout << " mass:               " << white_dwarf.mass/m_sol << " M_solar" << endl;
+    cout << " radius:             " << white_dwarf.radius/r_sol << " R_solar" << endl;
+    cout << " B_field:            " << white_dwarf.b_field/1e6 << " MG" << endl;
+    if(white_dwarf.inverse_mag_radius != 0){
+        cout << " R_m/R:              " << (1./white_dwarf.inverse_mag_radius)/white_dwarf.radius << endl;
     }
-    cout << " accretion rate:     " << accretion_rate << " g/s" << endl;
+    cout << " accretion rate:     " << accretion_column.accretion_rate*accretion_column.accretion_area << " g/s" << endl;
     cout << " accretion rate:     " << density[0]*velocity[0] << " --> " <<  density[density.size()-1]*velocity[velocity.size()-1] << " g/cm2/s" << endl;
-    cout << " shock height:       " << altitude[0]/radius << " (h/R_wd)" << endl;
+    cout << " shock height:       " << altitude[0]/white_dwarf.radius << " (h/R_wd)" << endl;
     cout << " shock height:       " << altitude[0] << " cm" << endl;
     cout << " shock temperature:  " << electron_temperature[0] << " keV" << endl;
     cout << " density:            " <<  electron_density[0] << " --> " << electron_density[electron_density.size()-1] <<  " e-/cm3" << endl;

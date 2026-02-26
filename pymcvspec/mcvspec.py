@@ -6,13 +6,12 @@ provides spectral output using pyatomdb. Currently there is no reflection
 model implemented directly in python.
 """
 
-from astropy.units.typing import Quantity
 import numpy as np
 import pyatomdb
 import astropy.units as u
 from astropy.constants import G
 
-from _pymcvspec import _cataclysmic_variable, _dipole
+from _pymcvspec import _cataclysmic_variable, _dipole, _white_dwarf
 from _pymcvspec import _mass_to_radius, _luminosity_to_mdot
 from _pymcvspec import _atomic_charges, _atomic_masses
 
@@ -95,7 +94,7 @@ def luminosity_to_mdot(luminosity : u.Quantity[u.erg/u.s],
         raise u.UnitTypeError("mass must have units of mass")
     if not radius.unit.is_equivalent(u.cm):
         raise u.UnitTypeError("radius must have units of length")
-    if not mag_radius.unit.is_equivalent(u.g):
+    if not mag_radius.unit.is_equivalent(u.cm):
         raise u.UnitTypeError("mag_radius must have units of length")
     irm = 0
     if mag_radius != 0:
@@ -103,7 +102,7 @@ def luminosity_to_mdot(luminosity : u.Quantity[u.erg/u.s],
     lum = luminosity.to_value(u.erg/u.s)
     m = mass.to_value(u.g)
     r = radius.to_value(u.cm)
-    return _luminosity_to_mdot(lum, m, r, irm)*u.g/u.s
+    return _luminosity_to_mdot(lum, _white_dwarf(m, r, inv_mag_rad=irm))*u.g/u.s
 
 class dipole(_dipole):
     """Public interface to _dipole.
@@ -307,23 +306,21 @@ class cataclysmic_variable:
             magnetospheric_radius = np.inf*u.cm
             corotation_radius = 1*u.cm
         irm = 1/magnetospheric_radius
-        corot_ratio = magnetospheric_radius/corotation_radius
         cos_incl = np.cos(self.orbital_inclination.to_value(u.radian))
         u_coord = np.sin(self.magnetic_colatitude.to_value(u.radian))**2
         self._cpp_impl = _cataclysmic_variable(
             mass=self.mass.to_value(u.g),
             radius=self.radius.to_value(u.cm),
             b_field=self.b_field.to_value(u.G),
-            mdot=self.accretion_rate.to_value(u.g/u.s),
+            mdot=self.mdot.to_value(u.g/u.cm**2/u.s),
             area=accretion_area.to_value(u.cm**2),
             inv_r_m=irm.to_value(1/u.cm),
-            r_m_ratio=corot_ratio,
+            corot_radius=corotation_radius.to_value(u.cm),
             metallicity=metallicity,
             cos_incl_angle=cos_incl,
             shock_ratio=self.shock_ratio,
             column_coord=u_coord,
-            src_distance=distance.to_value(u.cm),
-            refl_on=0,
+            src_distance=distance.to_value(u.cm)
         )
         self.geometry = dipole(self._cpp_impl.column_coord)
         status = self._cpp_impl.solve()
@@ -518,8 +515,6 @@ class polar(cataclysmic_variable):
             orbital_inclination=orbital_inclination,
             distance=distance,
         )
-        self.solve()
-
 
 class intermediate_polar(cataclysmic_variable):
     """Subclass of `cataclysmic_variable` optimized for IPs.
@@ -580,8 +575,8 @@ class intermediate_polar(cataclysmic_variable):
         r_m = mag_radius_ratio*corotation_radius
         if accretion_area == 0*u.cm**2:
             accretion_area = fractional_area*4*np.pi*(radius**2)
-        mdot = luminosity_to_mdot(luminosity, mass, radius, 1/r_m)/accretion_area
-        b_field = (np.sqrt(32*mdot*np.sqrt(G*mass*(r_m**7)))/(radius**3))
+        mdot = luminosity_to_mdot(luminosity, mass, radius, r_m)/accretion_area
+        b_field = (np.sqrt(32*mdot*accretion_area*np.sqrt(G*mass*(r_m**7)))/(radius**3))
         b_field = b_field.to(u.G, equivalencies=cgs)
         cataclysmic_variable.__init__(
             self,
@@ -596,4 +591,3 @@ class intermediate_polar(cataclysmic_variable):
             orbital_inclination=orbital_inclination,
             distance=distance,
         )
-        self.solve()
