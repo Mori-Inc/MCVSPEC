@@ -7,42 +7,43 @@ XS_Cataclysmic_Variable make_mcv(const RealArray& user_params, bool& refl, const
     Accretion_Column col;
     // invariant pars
     col.shock_pressure_ratio = 0.75;
+
+    size_t par_ind = 0;
     // mass and radius
-    wd.mass = user_params[0]*m_sol;
+    wd.mass = user_params[par_ind]*m_sol;
     wd.radius = Mass_to_Radius(wd.mass);
-    // accretion area in cm2
-    int area_ind = is_ip ? 4 : 3;
-    col.accretion_area = user_params[area_ind]*1e15;
+    // b_field
+    if(is_ip){
+        double p_spin = user_params[++par_ind];
+        double corotation_ratio = user_params[++par_ind];
+        wd.corotation_radius = cbrt(grav_const*wd.mass*p_spin*p_spin/(4*pi*pi));
+        wd.inverse_mag_radius = 1./(corotation_ratio*wd.corotation_radius);
+    }
+    else{
+        wd.b_field = user_params[++par_ind]*1e6;
+        wd.corotation_radius = 1;
+        wd.inverse_mag_radius = 0;
+    }
+    col.sin_mag_colat = sqrt(wd.inverse_mag_radius);
+    // accretion rate and area
+    col.accretion_rate = user_params[++par_ind];
     if(use_f){
-        double f = user_params[area_ind];
+        double f = user_params[++par_ind];
         col.accretion_area = f*4*pi*wd.radius*wd.radius;
     }
-    // magnetospheric radius
-    double mag_radius = 0;
-    double corotation_ratio = 0;
-    wd.corotation_radius = 1;
-    if(is_ip){
-        double p_spin = user_params[1];
-        corotation_ratio = user_params[2];
-        wd.corotation_radius = cbrt(grav_const*wd.mass*p_spin*p_spin/(4*pi*pi));
-        mag_radius = corotation_ratio*wd.corotation_radius;
+    else{
+        col.accretion_area = user_params[++par_ind]*1e15;
     }
-    wd.inverse_mag_radius = is_ip ? 1./mag_radius : 0;
-    col.sin_mag_colat = sqrt(wd.inverse_mag_radius);
-    // accretion rate
-    int mdot_ind = is_ip ? 3 : 2;
-    col.accretion_rate = user_params[mdot_ind];
     if(use_lum){
-        col.accretion_rate = Luminosity_to_Accretion_Rate(user_params[mdot_ind]*1e33, wd)/col.accretion_area;
+        double lum = col.accretion_rate*1e33;
+        col.accretion_rate = Luminosity_to_Accretion_Rate(lum, wd)/col.accretion_area;
     }
-    // magnetic field
-    wd.b_field = user_params[1]*1e6;
+
     if(is_ip){
-        wd.b_field = sqrt(32*col.accretion_rate*col.accretion_area*sqrt(grav_const*wd.mass*pow(mag_radius,7)))/(wd.radius*wd.radius*wd.radius);
+        wd.b_field = sqrt(32*col.accretion_rate*col.accretion_area*sqrt(grav_const*wd.mass/pow(wd.inverse_mag_radius,7)))/(wd.radius*wd.radius*wd.radius);
     }
-    // abundance, inclination angle, distnace, reflect
-    int par_ind = is_ip ? 5 : 4;
-    col.metallicity = user_params[par_ind];
+
+    col.metallicity = user_params[++par_ind];
     wd.cos_inclination = user_params[++par_ind];
     wd.distance = user_params[++par_ind]*pc_to_cm;
     refl = user_params[++par_ind];
