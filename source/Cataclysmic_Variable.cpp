@@ -342,6 +342,8 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     Build_Grid(grid_func, grid_spacing, grid);
 
     int n_points = grid.size();
+    position.resize(n_points);
+    volume_element.resize(n_points);
     velocity.resize(n_points);
     altitude.resize(n_points);
     total_pressure.resize(n_points);
@@ -350,12 +352,13 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     density.resize(n_points);
     electron_temperature.resize(n_points);
     ion_temperature.resize(n_points);
-    volume.resize(n_points);
 
-    double mdot, a, b;
+    double mdot;
 
     for(size_t i=0; i<n_points; i++){
         geometry.update_coordinates(grid[i][0], r, proj, conv, scale_factors);
+        position[i] = grid[i][0];
+        volume_element[i] = (accretion_column.accretion_area*length_conv/geometry.a_0)*scale_factors[0]*scale_factors[1]*scale_factors[2];
         altitude[i] = length_conv*(r-1);
         velocity[i] = vel_conv*grid[i][2];
         mdot = 1./(scale_factors[0]*scale_factors[2]);
@@ -365,15 +368,6 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         electron_density[i] = mass_to_number_density*density[i];
         electron_temperature[i] = erg_to_kev*electron_pressure[i]/electron_density[i];
         ion_temperature[i] = erg_to_kev*(total_pressure[i]-electron_pressure[i])/(electron_density[i]/avg_atomic_charge);
-        a = i==0 ? grid[i][0] : (grid[i-1][0] + grid[i][0])/2;
-        b = i==n_points-1 ? grid[i][0] : (grid[i][0] + grid[i+1][0])/2;
-        geometry.update_coordinates(a, r, proj, conv, scale_factors);
-        volume[i] = scale_factors[0]*scale_factors[1]*scale_factors[2];
-        geometry.update_coordinates(b, r, proj, conv, scale_factors);
-        volume[i] += scale_factors[0]*scale_factors[1]*scale_factors[2];
-        geometry.update_coordinates((a+b)/2, r, proj, conv, scale_factors);
-        volume[i] += 4*scale_factors[0]*scale_factors[1]*scale_factors[2];
-        volume[i] *= (accretion_column.accretion_area*length_conv/geometry.a_0)*(b - a)/6.;
     }
 }
 

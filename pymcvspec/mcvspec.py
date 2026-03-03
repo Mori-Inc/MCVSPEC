@@ -6,6 +6,7 @@ provides spectral output using pyatomdb. Currently there is no reflection
 model implemented directly in python.
 """
 
+from cmath import e
 import numpy as np
 import pyatomdb
 import astropy.units as u
@@ -325,7 +326,9 @@ class cataclysmic_variable:
         self.geometry = dipole(self._cpp_impl.column_coord)
         status = self._cpp_impl.solve()
         if status == -1:
-            raise RuntimeError("No valid solution found: Column does not reach WD surface for any shock height")
+            raise RuntimeError(("No valid solution found: Column does not "
+                                "reach WD surface for any shock height")
+                              )
 
     @property
     def shock_height(self):
@@ -373,11 +376,14 @@ class cataclysmic_variable:
     def density_unity(self):
         return self._cpp_impl.density_converter*u.g/u.cm**3
     @property
+    def position(self):
+        return self._cpp_impl.position*u.dimensionless_unscaled
+    @property
     def altitude(self):
         return self._cpp_impl.altitude*u.cm
     @property
-    def volume(self):
-        return self._cpp_impl.volume*u.cm**3
+    def volume_element(self):
+        return self._cpp_impl.volume_element*u.cm**3
     @property
     def velocity(self):
         return self._cpp_impl.velocity*u.cm/u.s
@@ -426,25 +432,37 @@ class cataclysmic_variable:
             photon flux in each bin (units of photons/s/cm**2/keV)
         """
 
-        session = pyatomdb.spectrum.CIESession()
-        session.set_abund(atomic_charges, self.metallicity)
-        session.set_response(energy_bins.to_value(u.keV), raw=True)
+        apec_unit = ((u.cm**3)/u.s)
+        dE = np.diff(energy_bins)
+        continuum = pyatomdb.spectrum.CIESession()
+        continuum.dolines = False
+        continuum.dopseudo = False
+        continuum.set_abund(atomic_charges[2:], self.metallicity)
+        continuum.set_response(energy_bins.to_value(u.keV), raw=True)
+
+        lines = pyatomdb.spectrum.CIESession()
+        lines.docont = False
+        lines.set_abund(atomic_charges[2:], self.metallicity)
+        lines.set_response(energy_bins.to_value(u.keV), raw=True)
+
+        flux_integrand = np.zeros((len(self.position), len(energy_bins)-1))/(u.s*u.keV*u.cm**2)
         flux = np.zeros(len(energy_bins)-1)/(u.s*u.keV*u.cm**2)
-        apec_unit = ((u.cm**3)/u.s/energy_bins.unit)
-        for kT, n_e, n_i, vol in zip(
-            self.electron_temperature,
-            self.electron_density,
-            self.electron_density/self.zbar,
-            self.volume,
-        ):
-            # The units of a pyatomdb "spectrum" are photons*cm**3/s/keV
-            # This is normalized to a flux (units of photons/s/cm**2/keV)
-            # by multiplying by the plasma "emission measure" divided by
-            # surface area of a sphere with radius "d". If an arf is set
-            # pyatomdb will instead compute a spectrum with units
-            # photons*cm**5/s/keV and the arf would need to be factored out.
-            norm = n_e*n_i*vol/(4*np.pi*self.distance**2)
-            flux += session.return_spectrum(kT.to_value(u.keV))*apec_unit*norm
+
+        profile = zip(self.electron_temperature,
+                      self.ion_temperature,
+                      self.electron_density,
+                      self.ion_density,
+                      self.volume_element)
+
+        for i, (kT_e,kT_i,n_e,n_i,dV) in enumerate(profile):
+            emissivity = continuum.return_spectrum(kT_e.to_value(u.keV))
+            emissivity += lines.return_spectrum(kT_i.to_value(u.keV))
+            norm = n_e*n_i*dV/(4*np.pi*self.distance**2)
+            flux_integrand[i] = norm*emissivity*apec_unit/dE
+
+        for i, dw in enumerate(np.diff(self.position)):
+            flux += 0.5*dw*(flux_integrand[i]+flux_integrand[i+1])
+
         return flux.to(1/u.s/u.keV/u.cm**2)
 
 

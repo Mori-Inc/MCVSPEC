@@ -49,7 +49,7 @@ class Cataclysmic_Variable{
         std::vector<double> abundances; // fractional abundance of elements in accretion column
         double avg_ion_mass, avg_atomic_charge, mass_to_number_density, exchange_const, bremss_const, cyclotron_const;
         // thermal profile
-        std::vector<double> altitude, volume, velocity, density, total_pressure, electron_pressure, electron_density, electron_temperature, ion_temperature;
+        std::vector<double> position, altitude, volume_element, velocity, density, total_pressure, electron_pressure, electron_density, electron_temperature, ion_temperature;
         // shock boundary condition
         State<n_dim> shock_boundary;
         double shock_entropy;

@@ -100,8 +100,9 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
         const double Get_Energy_Conv() const {return energy_conv;}
         const double Get_Density_Conv() const {return density_conv;}
         const double Get_Column_Coord() const {return geometry.u;}
+        const vector<double>& Get_Position() const {return position;}
         const vector<double>& Get_Altitude() const {return altitude;}
-        const vector<double>& Get_Volume() const {return volume;}
+        const vector<double>& Get_Volume_Element() const {return volume_element;}
         const vector<double>& Get_Velocity() const {return velocity;}
         const vector<double>& Get_Density() const {return density;}
         const vector<double>& Get_Pressure() const {return total_pressure;}
@@ -153,8 +154,9 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def_property_readonly("energy_converter", &Py_Cataclysmic_Variable::Get_Energy_Conv)
         .def_property_readonly("density_converter", &Py_Cataclysmic_Variable::Get_Density_Conv)
         .def_property_readonly("column_coord", &Py_Cataclysmic_Variable::Get_Column_Coord)
+        .def_property_readonly("position", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Position());})
         .def_property_readonly("altitude", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Altitude());})
-        .def_property_readonly("volume", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Volume());})
+        .def_property_readonly("volume_element", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Volume_Element());})
         .def_property_readonly("velocity", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Velocity());})
         .def_property_readonly("density", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Density());})
         .def_property_readonly("total_pressure", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Pressure());})
