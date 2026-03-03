@@ -30,6 +30,17 @@ struct Accretion_Column{
     Accretion_Column() = default;
 };
 
+struct Tolerance{
+    double absolute_error;
+    double relative_error;
+    double kT_grid_spacing;
+    double altitude_grid_spacing;
+    Tolerance(double abserr, double relerr, double dkT, double dz):
+        absolute_error(abserr), relative_error(relerr), kT_grid_spacing(dkT), altitude_grid_spacing(dz)
+    {};
+    Tolerance() = default;
+};
+
 double Mass_to_Radius(double);
 double Luminosity_to_Accretion_Rate(double, White_Dwarf);
 
@@ -40,6 +51,7 @@ class Cataclysmic_Variable{
         // input properties
         const White_Dwarf white_dwarf;
         const Accretion_Column accretion_column;
+        const Tolerance error_control;
         const Dipole geometry;
         // unit conversion (cgs values of MCVSPEC nd unit system)
         const double length_conv, vel_conv, accretion_rate_conv;
@@ -58,7 +70,7 @@ class Cataclysmic_Variable{
 
 
     public:
-        Cataclysmic_Variable(White_Dwarf, Accretion_Column);
+        Cataclysmic_Variable(White_Dwarf, Accretion_Column, Tolerance);
         virtual ~Cataclysmic_Variable() = default;
 
         void Flow_Equation(double,const State<n_dim>&, State<n_dim>&) const;
@@ -82,7 +94,5 @@ class Cataclysmic_Variable{
               self.Flow_Equation(t, y, dydt);
             }
         };
-        const double abs_err = 1e-8;
-        const double rel_err = 1e-6;
         mutable Integrator<4, Diff_EQ> integrator;
 };

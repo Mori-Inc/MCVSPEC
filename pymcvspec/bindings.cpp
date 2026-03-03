@@ -1,3 +1,4 @@
+#include <pybind11/attr.h>
 #include <pybind11/buffer_info.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -47,8 +48,8 @@ inline void State_to_Numpy(const State<n_dim>& state, double* np_ptr) {
 class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
         static constexpr size_t n_dim = Cataclysmic_Variable::n_dim;
-        Py_Cataclysmic_Variable(double m, double r, double b, double mdot, double area, double inv_r_m, double r_corot, double metals, double theta, double pressure_ratio, double u, double dist):
-            Cataclysmic_Variable(White_Dwarf(m,r,b,theta,inv_r_m,r_corot,dist),Accretion_Column(mdot,area,metals,pressure_ratio,u))
+        Py_Cataclysmic_Variable(White_Dwarf wd, Accretion_Column col, Tolerance tol):
+            Cataclysmic_Variable(wd, col, tol)
         {
             Set_Abundances();
         }
@@ -123,13 +124,48 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def(py::init<double, double, double, double, double, double, double>(),
             py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
             py::arg("cos_incl") = 0.5, py::arg("inv_mag_rad") = 0, py::arg("corot_rad") = 1,
-            py::arg("distance") = 200*pc_to_cm);
+            py::arg("distance") = 200*pc_to_cm)
+        .def_readwrite("mass", &White_Dwarf::mass)
+        .def_readwrite("radius", &White_Dwarf::radius)
+        .def_readwrite("b_field", &White_Dwarf::b_field)
+        .def_readwrite("cos_inclination", &White_Dwarf::cos_inclination)
+        .def_readwrite("inverse_mag_radius", &White_Dwarf::inverse_mag_radius)
+        .def_readwrite("corotation_radius", &White_Dwarf::corotation_radius)
+        .def_readwrite("distance", &White_Dwarf::distance);
+    py::class_<Accretion_Column>(module, "_accretion_column", py::module_local())
+        .def(py::init<double, double, double, double, double>(),
+            py::arg("mdot")=1, py::arg("area")=1e15, py::arg("metallicity")=1,
+            py::arg("shock_ratio")=0.75, py::arg("sin_colat")=0)
+        .def_readwrite("mdot", &Accretion_Column::accretion_rate)
+        .def_readwrite("area", &Accretion_Column::accretion_area)
+        .def_readwrite("metallicity", &Accretion_Column::metallicity)
+        .def_readwrite("shock_ratio", &Accretion_Column::shock_pressure_ratio)
+        .def_readwrite("sin_colatitude", &Accretion_Column::sin_mag_colat);
+    py::class_<Tolerance>(module, "_tolerance", py::module_local())
+        .def(py::init<double, double, double, double>(),
+            py::arg("abserr")=1e-8, py::arg("relerr")=1e-6, py::arg("dkT")=0.5, py::arg("dz")=0.1)
+        .def_readwrite("abs_err", &Tolerance::absolute_error)
+        .def_readwrite("rel_err", &Tolerance::relative_error)
+        .def_readwrite("dkT", &Tolerance::kT_grid_spacing)
+        .def_readwrite("dz", &Tolerance::altitude_grid_spacing);
+    py::class_<Dipole>(module, "_dipole", py::module_local())
+        .def(py::init<double>(),py::arg("u")=0.03)
+        .def_readonly("u", &Dipole::u)
+        .def_readonly("w0", &Dipole::w_0)
+        .def_readonly("a0", &Dipole::a_0)
+        .def("update_coordinates", [](Dipole& self, double w){
+            double r, proj_r_w, convergance, metric[3];
+            self.update_coordinates(w, r, proj_r_w, convergance, metric);
+            py::array_t<double> array(3);
+            py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
+            for(size_t i = 0; i < 3; i++){
+                np_array(i) = metric[i];
+            }
+            return py::make_tuple(r, proj_r_w, convergance, array);
+        });
     py::class_<Py_Cataclysmic_Variable>(module, "_cataclysmic_variable", py::module_local())
-        .def(py::init<double,double,double,double,double,double,double,double,double,double,double,double>(),
-            py::arg("mass") = 0.7*m_sol, py::arg("radius") = 0.01*r_sol, py::arg("b_field") = 1e7,
-            py::arg("mdot") = 1e15, py::arg("area") = 1e15, py::arg("inv_r_m") = 0., py::arg("corot_radius") = 1.,
-            py::arg("metallicity") = 1., py::arg("cos_incl_angle") = 0.5, py::arg("shock_ratio") = 0.75,
-            py::arg("column_coord") = 1e-8, py::arg("src_distance") = 200*pc_to_cm)
+        .def(py::init<White_Dwarf, Accretion_Column, Tolerance>(),
+                py::arg("white_dwarf"), py::arg("accretion_column"), py::arg("tol"))
         .def_property_readonly("mass", &Py_Cataclysmic_Variable::Get_Mass)
         .def_property_readonly("b_field", &Py_Cataclysmic_Variable::Get_B_Field)
         .def_property_readonly("inv_r_m", &Py_Cataclysmic_Variable::Get_inv_Mag_Radius)
@@ -173,21 +209,5 @@ PYBIND11_MODULE(_pymcvspec, module) {
             py::array_t<double> np_array(self.n_dim);
             State_to_Numpy(self.deriv, np_array.mutable_data());
             return np_array;
-        });
-
-    py::class_<Dipole>(module, "_dipole", py::module_local())
-        .def(py::init<double>(),py::arg("u")=0.03)
-        .def_readonly("u", &Dipole::u)
-        .def_readonly("w0", &Dipole::w_0)
-        .def_readonly("a0", &Dipole::a_0)
-        .def("update_coordinates", [](Dipole& self, double w){
-            double r, proj_r_w, convergance, metric[3];
-            self.update_coordinates(w, r, proj_r_w, convergance, metric);
-            py::array_t<double> array(3);
-            py::detail::unchecked_mutable_reference<double, 1> np_array = array.mutable_unchecked<1>();
-            for(size_t i = 0; i < 3; i++){
-                np_array(i) = metric[i];
-            }
-            return py::make_tuple(r, proj_r_w, convergance, array);
         });
 }

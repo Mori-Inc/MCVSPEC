@@ -5,6 +5,11 @@
 XS_Cataclysmic_Variable make_mcv(const RealArray& user_params, bool& refl, const bool is_ip=false, const bool use_lum=false, const bool use_f=false){
     White_Dwarf wd;
     Accretion_Column col;
+    Tolerance tol;
+    tol.absolute_error = 1e-8;
+    tol.relative_error = 1e-6;
+    tol.kT_grid_spacing = 0.5; // keV
+    tol.altitude_grid_spacing = 0.1; // fraction of shock height
     // invariant pars
     col.shock_pressure_ratio = 0.75;
 
@@ -48,7 +53,7 @@ XS_Cataclysmic_Variable make_mcv(const RealArray& user_params, bool& refl, const
     wd.distance = user_params[++par_ind]*pc_to_cm;
     refl = user_params[++par_ind];
 
-    return XS_Cataclysmic_Variable(wd,col);
+    return XS_Cataclysmic_Variable(wd,col,tol);
 }
 
 extern "C"

@@ -32,12 +32,12 @@ double Mass_to_Radius(double mass){
     return radius;
 }
 
-Cataclysmic_Variable::Cataclysmic_Variable(White_Dwarf wd, Accretion_Column col):
-    white_dwarf(wd), accretion_column(col), geometry(accretion_column.sin_mag_colat*accretion_column.sin_mag_colat),
+Cataclysmic_Variable::Cataclysmic_Variable(White_Dwarf wd, Accretion_Column col, Tolerance tol):
+    white_dwarf(wd), accretion_column(col), error_control(tol), geometry(accretion_column.sin_mag_colat*accretion_column.sin_mag_colat),
     length_conv(white_dwarf.radius), vel_conv(sqrt(2*grav_const*white_dwarf.mass/white_dwarf.radius)), accretion_rate_conv(geometry.a_0*col.accretion_rate),
     time_conv(length_conv/vel_conv), mass_conv(accretion_rate_conv*length_conv*length_conv*time_conv), volume_conv(length_conv*length_conv*length_conv),
     energy_conv(mass_conv*vel_conv*vel_conv), density_conv(mass_conv/volume_conv), pressure_conv(energy_conv/volume_conv),
-    integrator(Diff_EQ{*this},abs_err,rel_err)
+    integrator(Diff_EQ{*this},error_control.absolute_error,error_control.relative_error)
 {}
 
 void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as these values depend only on the input properties not on any derived properties
@@ -138,7 +138,7 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
     double s_prev = s;
     double dw_prev = slope[0];
 
-    while(error > abs_err){
+    while(error > error_control.absolute_error){
         integrator.Step(s, y);
         Flow_Equation(s,  y, slope);
         error = 0.5*std::abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extroplation on w
@@ -206,10 +206,10 @@ void Cataclysmic_Variable::Find_Shock_Position(){
     }
     const double k1 = 0.2/(upper_bound-lower_bound);
     const double n0 = 1;
-    double nmax = log2((upper_bound-lower_bound)/(2*abs_err)) + n0;
+    double nmax = log2((upper_bound-lower_bound)/(2*error_control.absolute_error)) + n0;
     int i=0;
     double new_bound, new_altitude, midpoint, regula_falsi, truncation, projection, dir;
-    while(upper_bound-lower_bound > abs_err){
+    while(upper_bound-lower_bound > error_control.absolute_error){
         midpoint = (upper_bound+lower_bound)/2;
         regula_falsi = (upper_landing*lower_bound - lower_landing*upper_bound)/(lower_landing-upper_landing);
         dir = (0. < (midpoint-regula_falsi)) - ((midpoint-regula_falsi) < 0.);
@@ -222,7 +222,7 @@ void Cataclysmic_Variable::Find_Shock_Position(){
             new_bound = midpoint;
         }
 
-        projection = abs_err*(pow(2,nmax-i)) - (upper_bound-lower_bound)/2;
+        projection = error_control.absolute_error*(pow(2,nmax-i)) - (upper_bound-lower_bound)/2;
         if(std::abs(new_bound-midpoint) > projection){
             new_bound = midpoint - dir*projection;
         }
@@ -293,7 +293,7 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
         return true;
     };
 
-    while(grid_vars[0] > grid_spacing[0] && t > abs_err){
+    while(grid_vars[0] > grid_spacing[0] && t > error_control.absolute_error){
         double t0 = t;
         integrator.Dense_Step(t,y);
         double dt = (t-t0)/double(n_segments);
@@ -319,11 +319,11 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     if(!valid_solution){
         return;
     }
-    const double dkTe = (kT_grid_spacing/erg_to_kev)*mass_to_number_density/(vel_conv*vel_conv);
+    const double dkTe = (error_control.kT_grid_spacing/erg_to_kev)*mass_to_number_density/(vel_conv*vel_conv);
     const double dkTi = dkTe/avg_atomic_charge;
     double r, proj, conv, scale_factors[3];
     geometry.update_coordinates(shock_boundary[0], r, proj, conv, scale_factors);
-    const State<n_grid_vars> grid_spacing = {dkTi, dkTe, altitude_grid_spacing*(r-1)};
+    const State<n_grid_vars> grid_spacing = {dkTi, dkTe, error_control.altitude_grid_spacing*(r-1)};
 
     auto kT_e = [](const State<n_dim>& y, double scale_factors[3]){
         return y[2]*y[3]*scale_factors[0]*scale_factors[2];

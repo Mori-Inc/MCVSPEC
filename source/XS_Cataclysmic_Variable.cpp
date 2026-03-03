@@ -1,4 +1,5 @@
 #include "XS_Cataclysmic_Variable.hh"
+#include "Cataclysmic_Variable.hh"
 #include "constants.hh"
 #include "xsTypes.h"
 #include <XSFunctions/Utilities/FunctionUtility.h>
@@ -6,8 +7,8 @@
 #include <cmath>
 #include <iostream>
 
-XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(White_Dwarf wd, Accretion_Column col):
-    Cataclysmic_Variable(wd, col)
+XS_Cataclysmic_Variable::XS_Cataclysmic_Variable(White_Dwarf wd, Accretion_Column col, Tolerance tol):
+    Cataclysmic_Variable(wd, col, tol)
 {
     Set_Abundances();
     Find_Shock_Position();
