@@ -576,7 +576,8 @@ class cataclysmic_variable:
         abs_err: float = 1e-8,
         rel_err: float = 1e-6,
         delta_kT: u.Quantity[u.keV] = 0.5*u.keV,
-        delta_z: float = 0.1
+        delta_z: float = 0.1,
+        solve: bool = True
     ) -> None:
         self.white_dwarf = white_dwarf(
             mass,
@@ -606,11 +607,12 @@ class cataclysmic_variable:
             self.tolerance._cpp_impl
         )
         self.geometry = dipole(self._cpp_impl.column_coord)
-        status = self._cpp_impl.solve()
-        if status == -1:
-            raise RuntimeError(("No valid solution found: Column does not "
-                                "reach WD surface for any shock height")
-                              )
+        if solve:
+            status = self._cpp_impl.solve()
+            if status == -1:
+                raise RuntimeError(("No valid solution found: Column does not "
+                                    "reach WD surface for any shock height")
+                                )
 
     @property
     def shock_height(self):
@@ -626,7 +628,7 @@ class cataclysmic_variable:
         return self._cpp_impl.average_ion_charge
     @property
     def density_const(self):
-        return self._cpp_impl.density_const
+        return self._cpp_impl.density_to_ne
     @property
     def exchange_const(self):
         return self._cpp_impl.exchange_const
@@ -655,7 +657,7 @@ class cataclysmic_variable:
     def energy_unit(self):
         return self._cpp_impl.energy_converter*u.erg
     @property
-    def density_unity(self):
+    def density_unit(self):
         return self._cpp_impl.density_converter*u.g/u.cm**3
     @property
     def position(self):

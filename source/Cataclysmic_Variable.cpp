@@ -55,17 +55,16 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
     }
 
     mass_to_number_density = avg_atomic_charge/(avg_ion_mass + avg_atomic_charge*m_e);
-    const double sesquialteral_rho_ne = sqrt(mass_to_number_density*mass_to_number_density*mass_to_number_density);
-    const double b_sqr = white_dwarf.b_field*white_dwarf.b_field/(4-3*geometry.u);
-    bremss_const = bremss_coeff*(avg_charge_squared/avg_atomic_charge)*sesquialteral_rho_ne;
-    bremss_const *= mass_conv/(vel_conv*vel_conv*length_conv*length_conv);
+    const double j_e = mass_to_number_density*accretion_column.accretion_rate*geometry.a_0;
+    const double b_sqr = white_dwarf.b_field*white_dwarf.b_field;
+    bremss_const = bremss_coeff*(avg_charge_squared/avg_atomic_charge)*sqrt(j_e*j_e*j_e);
+    bremss_const *= sqrt(time_conv*time_conv*time_conv*mass_conv)*length_conv/energy_conv;
     cyclotron_const = cyclotron_coeff*(avg_atomic_charge/avg_charge_squared);
-    cyclotron_const *= b_sqr/(geometry.a_0*geometry.a_0*geometry.a_0);
-    cyclotron_const *= pow(b_sqr/(accretion_column.accretion_area*geometry.a_0), 0.425);
-    cyclotron_const *= pow(accretion_column.accretion_rate*mass_to_number_density, -3.85);
-    cyclotron_const *= pow(vel_conv,5.85)*accretion_rate_conv*accretion_rate_conv;
-    exchange_const = exchange_coeff*avg_charge_sqr_over_mass*sesquialteral_rho_ne*mass_to_number_density;
-    exchange_const *= mass_conv/(vel_conv*vel_conv*vel_conv*vel_conv*length_conv*length_conv);
+    cyclotron_const *= b_sqr*pow(b_sqr/(geometry.a_0*accretion_column.accretion_area), 0.425)/(j_e*j_e);
+    cyclotron_const *= pow(geometry.a_0*geometry.a_0/j_e, 1.85);
+    cyclotron_const *= pressure_conv*pressure_conv*pow(vel_conv,3.85);
+    exchange_const = exchange_coeff*avg_charge_sqr_over_mass*sqrt(j_e*j_e*j_e*j_e*j_e);
+    exchange_const *= length_conv*length_conv*time_conv*time_conv*time_conv*sqrt(time_conv/energy_conv)/energy_conv;
 }
 
 void Cataclysmic_Variable::Compute_Shock_Bound(double w_s, State<n_dim>& bound, double& s_s) const{
@@ -90,31 +89,27 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const State<n_dim>& stat
     double r, proj_r_w, convergance, scale_factors[3];
     geometry.update_coordinates(w, r, proj_r_w, convergance, scale_factors);
 
-    const double area = scale_factors[0]*scale_factors[2];
+    const double& h = scale_factors[0];
+    const double area = scale_factors[1]*scale_factors[2];
     const double mdot = 1./area;
-    const double dens = mdot/v;
-    const double dens3 = dens*dens*dens;
-    const double dens5 = dens3*dens*dens;
-    const double p_ratio_0 = (1+avg_atomic_charge)/avg_atomic_charge;
-    const double b_sqr = (4-3*geometry.u*r)/(r*r*r*r*r*r);
+    const double p = mdot*(x-v);
 
-    const double ne_cgs = mass_to_number_density*dens*density_conv;
+
+    const double ne_cgs = mass_to_number_density*density_conv*mdot/v;
     const double kT_cgs = pressure_conv*pe/ne_cgs;
     const double gff = gaunt::gaunt_factor(kT_cgs);
     const double coulomb_log = 0.5*log(coulomb_log_coeff*kT_cgs*kT_cgs/ne_cgs);
 
-    const double grav = -0.5*proj_r_w/(r*r);
-    const double cyc = (cyclotron_const/gff)*pow(b_sqr*v/dens,0.425)*b_sqr*pe*pe/dens3;
-    const double rad = bremss_const*gff*sqrt(pe*dens3)*(1+cyc);
-    const double exch = exchange_const*coulomb_log*sqrt(dens5/pe)*(mdot*(x-v)/pe - p_ratio_0);
-    const double geom = convergance/scale_factors[1];
+    const double cyc = (cyclotron_const/gff)*pe*pe*v*v*v*h*pow(v*v/h, 0.425);
+    const double rad = bremss_const*gff*sqrt(pe/(h*h*h*v*v*v))*(1+cyc);
+    const double exch = (exchange_const*coulomb_log/(bremss_const*gff))*(avg_atomic_charge*(p-pe)/pe - 1.0)/(pe*v*h); // ratio of exchange to radiation
+    const double grav = 0.5*proj_r_w/(r*r)/rad;
+    const double conv = v*convergance/(h*rad);
 
-    const double common_factor = mdot*(x-v)/s;
-
-    double dw_ds = -1.5*common_factor*v/(scale_factors[1]*rad);
-    double dx_ds = -1.5*common_factor*(grav + v*(x-v)*geom)/rad;
-    double dv_ds = (1.5*common_factor*v/(5*x-8*v))*(2./mdot + 3*grav/rad + 5*v*(x-v)*geom/rad);
-    double dp_ds = common_factor*(1 - exch/rad - 2.5*(pe/(5*x-8*v))*(2./mdot + 3*grav/rad + 3*v*v*geom/rad));
+    double dw_ds = -1.5*p*v/(s*h*rad);
+    double dx_ds = -1.5*(p/s)*(p*conv/mdot - grav);
+    double dv_ds = 1.5*(p*v/s)*(2.0/mdot + 5*p*conv/mdot -3*grav)/(5*x - 8*v);
+    double dp_ds = (p/s)*(1.0 - exch + 5*pe*(1.5*grav - 1.0/mdot - v*conv)/(5*x - 8*v));
 
     derivs[0] = dw_ds;
     derivs[1] = dx_ds;
@@ -141,7 +136,7 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
     while(error > error_control.absolute_error){
         integrator.Step(s, y);
         Flow_Equation(s,  y, slope);
-        error = 0.5*std::abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extroplation on w
+        error = 0.5*std::abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extrapolation on w
         s_prev = s;
         dw_prev = slope[0];
     }

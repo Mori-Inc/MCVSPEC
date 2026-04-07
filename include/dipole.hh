@@ -7,22 +7,27 @@ struct Dipole{
     Dipole(double uu):u(uu), w_0(sqrt(1-uu)){
         double r, proj, conv, metric[3];
         update_coordinates(w_0, r, proj, conv, metric);
-        a_0 = metric[0]*metric[2];
+        a_0 = metric[0];
+    }
+
+    double get_radial_coordinate(double w) const{
+        const double w2 = w*w;
+
+        const double _w = -u*u/(64*w2*w2);
+        const double _x = (u*u*u*u + 256*w2/27)/(16384*w2*w2*w2*w2);
+        const double _sp = cbrt(-0.5*_w + sqrt(_x));
+        const double _sm = cbrt(-0.5*_w - sqrt(_x));
+        const double ssum = _sp+_sm;
+        const double sdif = _sp-_sm;
+        const double _y = sqrt(ssum*ssum + 3*sdif*sdif);
+
+        return sqrt(_y-_sp-_sm) - u/(4*w2*_y);
     }
 
     // solves for the relevant coordinate transforms for a dipole geometry with r=1 -> stellar surface
     void update_coordinates(double w, double& r, double& proj_r_w, double& convergance, double scale_factors[3]) const{
-        const double w2 = w*w;
 
-        const double canalle_w = -u*u/(64*w2*w2);
-        const double canalle_x = (u*u*u*u + 256*w2/27)/(16384*w2*w2*w2*w2);
-        const double canalle_sp = cbrt(-0.5*canalle_w + sqrt(canalle_x));
-        const double canalle_sm = cbrt(-0.5*canalle_w - sqrt(canalle_x));
-        const double ssum = canalle_sp+canalle_sm;
-        const double sdif = canalle_sp-canalle_sm;
-        const double canalle_y = sqrt(ssum*ssum + 3*sdif*sdif);
-
-        r = sqrt(canalle_y-canalle_sp-canalle_sm) - u/(4*w2*canalle_y);
+        r = get_radial_coordinate(w);
 
         const double r2 = r*r;
         const double r3 = r2*r;
@@ -40,8 +45,8 @@ struct Dipole{
         simply store the area in h_u and set h_phi=1.
 
         The complete scale factors are:
-        scale_factors[0] = r2*psi/sintheta;
-        scale_factors[1] = r3*psi;
+        scale_factors[0] = r3*psi;
+        scale_factors[1] = r2*psi/sintheta;
         scale_factors[2] = r*sintheta;
         */
 
@@ -49,7 +54,7 @@ struct Dipole{
         scale_factors[1] = scale_factors[0];
         scale_factors[2] = 1;
 
-        convergance = -3*w*r4*psi*psi*psi*psi*(5*w2*r4 + 3);
+        convergance = -3*w*r4*psi*psi*psi*psi*(8 - 5*u*r);
         proj_r_w = -2*costheta*psi;
     }
 };
