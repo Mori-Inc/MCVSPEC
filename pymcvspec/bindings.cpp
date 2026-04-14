@@ -117,7 +117,7 @@ class Py_Cataclysmic_Variable : public Cataclysmic_Variable {
 
 PYBIND11_MODULE(_pymcvspec, module) {
     module.attr("_atomic_charges") = py::cast(atomic_charge);
-    module.attr("_atomic_masses") = py::cast(atomic_charge);
+    module.attr("_atomic_masses") = py::cast(atomic_mass);
     module.def("_mass_to_radius", Mass_to_Radius, "Returns the radius (cm) for a corresponding WD mass (g)");
     module.def("_luminosity_to_mdot", Luminosity_to_Accretion_Rate, "Returns the accretion rate (g/s) for a corresponding luminosity (erg/s), mass (g), and radius (cm)");
     py::class_<White_Dwarf>(module, "_white_dwarf", py::module_local())
