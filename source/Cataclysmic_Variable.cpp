@@ -385,6 +385,6 @@ void Cataclysmic_Variable::Print_Properties() const{
     cout << " accretion rate:     " << density[0]*velocity[0] << " --> " <<  density[density.size()-1]*velocity[velocity.size()-1] << " g/cm2/s" << endl;
     cout << " shock height:       " << altitude[0]/white_dwarf.radius << " (h/R_wd)" << endl;
     cout << " shock height:       " << altitude[0] << " cm" << endl;
-    cout << " shock temperature:  " << electron_temperature[0] << " keV" << endl;
+    cout << " shock temperature:  " << ion_temperature[0] << " keV" << endl;
     cout << " density:            " <<  electron_density[0] << " --> " << electron_density[electron_density.size()-1] <<  " e-/cm3" << endl;
 }
