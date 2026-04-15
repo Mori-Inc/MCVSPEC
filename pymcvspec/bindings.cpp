@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include "Cataclysmic_Variable.hh"
+#include "Cataclysmic_Variable_Others.hh"
 #include "constants.hh"
 #include "dipole.hh"
 #include <vector>
@@ -202,8 +203,145 @@ PYBIND11_MODULE(_pymcvspec, module) {
         .def_property_readonly("ion_temperature", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Ion_Temperature());})
         .def_property_readonly("abundance", [](Py_Cataclysmic_Variable& self) { return Vector_to_Numpy(self.Get_Abundance());})
         .def("solve", &Py_Cataclysmic_Variable::Solve_Profile)
-        .def("print", &Py_Cataclysmic_Variable::Print_Properties)
         .def("flow_equation", [](Py_Cataclysmic_Variable& self, double s, py::array_t<double, py::array::c_style | py::array::forcecast> state_py){
+            Numpy_to_State(state_py.data(), self.state);
+            self.Flow_Equation(s, self.state, self.deriv);
+            py::array_t<double> np_array(self.n_dim);
+            State_to_Numpy(self.deriv, np_array.mutable_data());
+            return np_array;
+        });
+    py::class_<Saxton_CV>(module, "_saxton_cv", py::module_local())
+        .def(py::init<White_Dwarf, Accretion_Column, Tolerance>(),
+                py::arg("white_dwarf"), py::arg("accretion_column"), py::arg("tol"))
+        .def_property_readonly("mass", &Saxton_CV::Get_Mass)
+        .def_property_readonly("b_field", &Saxton_CV::Get_B_Field)
+        .def_property_readonly("inv_r_m", &Saxton_CV::Get_inv_Mag_Radius)
+        .def_property_readonly("corotation_radius", &Saxton_CV::Get_Corotation_Radius)
+        .def_property_readonly("distance", &Saxton_CV::Get_Distance)
+        .def_property_readonly("accretion_rate", &Saxton_CV::Get_Mdot)
+        .def_property_readonly("accretion_area", &Saxton_CV::Get_Area)
+        .def_property_readonly("metallicity", &Saxton_CV::Get_Abund)
+        .def_property_readonly("shock_ratio", &Saxton_CV::Get_Shock_Ratio)
+        .def_property_readonly("cos_inclination_angle", &Saxton_CV::Get_Cos_Inclination_Angle)
+        .def_property_readonly("average_ion_mass", &Saxton_CV::Get_mBar)
+        .def_property_readonly("average_ion_charge", &Saxton_CV::Get_ZBar)
+        .def_property_readonly("density_to_ne", &Saxton_CV::Get_Dens_to_ne)
+        .def_property_readonly("exchange_const", &Saxton_CV::Get_Exch_Const)
+        .def_property_readonly("bremss_const", &Saxton_CV::Get_Bremss_Const)
+        .def_property_readonly("cyclotron_const", &Saxton_CV::Get_Cycl_Const)
+        .def_property_readonly("length_converter", &Saxton_CV::Get_Length_Conv)
+        .def_property_readonly("mass_converter", &Saxton_CV::Get_Mass_Conv)
+        .def_property_readonly("time_converter", &Saxton_CV::Get_Time_Conv)
+        .def_property_readonly("velocity_converter", &Saxton_CV::Get_Vel_Conv)
+        .def_property_readonly("volume_converter", &Saxton_CV::Get_Vol_Conv)
+        .def_property_readonly("energy_converter", &Saxton_CV::Get_Energy_Conv)
+        .def_property_readonly("density_converter", &Saxton_CV::Get_Density_Conv)
+        .def_property_readonly("column_coord", &Saxton_CV::Get_Column_Coord)
+        .def_property_readonly("position", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Position());})
+        .def_property_readonly("altitude", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Altitude());})
+        .def_property_readonly("volume_element", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Volume_Element());})
+        .def_property_readonly("velocity", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Velocity());})
+        .def_property_readonly("density", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Density());})
+        .def_property_readonly("total_pressure", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Pressure());})
+        .def_property_readonly("electron_pressure", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Electron_Pressure());})
+        .def_property_readonly("electron_density", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Electron_Density());})
+        .def_property_readonly("electron_temperature", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Electron_Temperature());})
+        .def_property_readonly("ion_temperature", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Ion_Temperature());})
+        .def_property_readonly("abundance", [](Saxton_CV& self) { return Vector_to_Numpy(self.Get_Abundance());})
+        .def("solve", &Saxton_CV::Solve_Profile)
+        .def("flow_equation", [](Saxton_CV& self, double s, py::array_t<double, py::array::c_style | py::array::forcecast> state_py){
+            Numpy_to_State(state_py.data(), self.state);
+            self.Flow_Equation(s, self.state, self.deriv);
+            py::array_t<double> np_array(self.n_dim);
+            State_to_Numpy(self.deriv, np_array.mutable_data());
+            return np_array;
+        });
+    py::class_<Cropper_CV>(module, "_cropper_cv", py::module_local())
+        .def(py::init<White_Dwarf, Accretion_Column, Tolerance>(),
+                py::arg("white_dwarf"), py::arg("accretion_column"), py::arg("tol"))
+        .def_property_readonly("mass", &Cropper_CV::Get_Mass)
+        .def_property_readonly("b_field", &Cropper_CV::Get_B_Field)
+        .def_property_readonly("inv_r_m", &Cropper_CV::Get_inv_Mag_Radius)
+        .def_property_readonly("corotation_radius", &Cropper_CV::Get_Corotation_Radius)
+        .def_property_readonly("distance", &Cropper_CV::Get_Distance)
+        .def_property_readonly("accretion_rate", &Cropper_CV::Get_Mdot)
+        .def_property_readonly("accretion_area", &Cropper_CV::Get_Area)
+        .def_property_readonly("metallicity", &Cropper_CV::Get_Abund)
+        .def_property_readonly("shock_ratio", &Cropper_CV::Get_Shock_Ratio)
+        .def_property_readonly("cos_inclination_angle", &Cropper_CV::Get_Cos_Inclination_Angle)
+        .def_property_readonly("average_ion_mass", &Cropper_CV::Get_mBar)
+        .def_property_readonly("average_ion_charge", &Cropper_CV::Get_ZBar)
+        .def_property_readonly("density_to_ne", &Cropper_CV::Get_Dens_to_ne)
+        .def_property_readonly("exchange_const", &Cropper_CV::Get_Exch_Const)
+        .def_property_readonly("bremss_const", &Cropper_CV::Get_Bremss_Const)
+        .def_property_readonly("cyclotron_const", &Cropper_CV::Get_Cycl_Const)
+        .def_property_readonly("length_converter", &Cropper_CV::Get_Length_Conv)
+        .def_property_readonly("mass_converter", &Cropper_CV::Get_Mass_Conv)
+        .def_property_readonly("time_converter", &Cropper_CV::Get_Time_Conv)
+        .def_property_readonly("velocity_converter", &Cropper_CV::Get_Vel_Conv)
+        .def_property_readonly("volume_converter", &Cropper_CV::Get_Vol_Conv)
+        .def_property_readonly("energy_converter", &Cropper_CV::Get_Energy_Conv)
+        .def_property_readonly("density_converter", &Cropper_CV::Get_Density_Conv)
+        .def_property_readonly("column_coord", &Cropper_CV::Get_Column_Coord)
+        .def_property_readonly("position", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Position());})
+        .def_property_readonly("altitude", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Altitude());})
+        .def_property_readonly("volume_element", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Volume_Element());})
+        .def_property_readonly("velocity", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Velocity());})
+        .def_property_readonly("density", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Density());})
+        .def_property_readonly("total_pressure", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Pressure());})
+        .def_property_readonly("electron_pressure", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Electron_Pressure());})
+        .def_property_readonly("electron_density", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Electron_Density());})
+        .def_property_readonly("electron_temperature", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Electron_Temperature());})
+        .def_property_readonly("ion_temperature", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Ion_Temperature());})
+        .def_property_readonly("abundance", [](Cropper_CV& self) { return Vector_to_Numpy(self.Get_Abundance());})
+        .def("solve", &Cropper_CV::Solve_Profile)
+        .def("flow_equation", [](Cropper_CV& self, double s, py::array_t<double, py::array::c_style | py::array::forcecast> state_py){
+            Numpy_to_State(state_py.data(), self.state);
+            self.Flow_Equation(s, self.state, self.deriv);
+            py::array_t<double> np_array(self.n_dim);
+            State_to_Numpy(self.deriv, np_array.mutable_data());
+            return np_array;
+        });
+    py::class_<Wu_CV>(module, "_wu_cv", py::module_local())
+        .def(py::init<White_Dwarf, Accretion_Column, Tolerance>(),
+                py::arg("white_dwarf"), py::arg("accretion_column"), py::arg("tol"))
+        .def_property_readonly("mass", &Wu_CV::Get_Mass)
+        .def_property_readonly("b_field", &Wu_CV::Get_B_Field)
+        .def_property_readonly("inv_r_m", &Wu_CV::Get_inv_Mag_Radius)
+        .def_property_readonly("corotation_radius", &Wu_CV::Get_Corotation_Radius)
+        .def_property_readonly("distance", &Wu_CV::Get_Distance)
+        .def_property_readonly("accretion_rate", &Wu_CV::Get_Mdot)
+        .def_property_readonly("accretion_area", &Wu_CV::Get_Area)
+        .def_property_readonly("metallicity", &Wu_CV::Get_Abund)
+        .def_property_readonly("shock_ratio", &Wu_CV::Get_Shock_Ratio)
+        .def_property_readonly("cos_inclination_angle", &Wu_CV::Get_Cos_Inclination_Angle)
+        .def_property_readonly("average_ion_mass", &Wu_CV::Get_mBar)
+        .def_property_readonly("average_ion_charge", &Wu_CV::Get_ZBar)
+        .def_property_readonly("density_to_ne", &Wu_CV::Get_Dens_to_ne)
+        .def_property_readonly("exchange_const", &Wu_CV::Get_Exch_Const)
+        .def_property_readonly("bremss_const", &Wu_CV::Get_Bremss_Const)
+        .def_property_readonly("cyclotron_const", &Wu_CV::Get_Cycl_Const)
+        .def_property_readonly("length_converter", &Wu_CV::Get_Length_Conv)
+        .def_property_readonly("mass_converter", &Wu_CV::Get_Mass_Conv)
+        .def_property_readonly("time_converter", &Wu_CV::Get_Time_Conv)
+        .def_property_readonly("velocity_converter", &Wu_CV::Get_Vel_Conv)
+        .def_property_readonly("volume_converter", &Wu_CV::Get_Vol_Conv)
+        .def_property_readonly("energy_converter", &Wu_CV::Get_Energy_Conv)
+        .def_property_readonly("density_converter", &Wu_CV::Get_Density_Conv)
+        .def_property_readonly("column_coord", &Wu_CV::Get_Column_Coord)
+        .def_property_readonly("position", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Position());})
+        .def_property_readonly("altitude", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Altitude());})
+        .def_property_readonly("volume_element", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Volume_Element());})
+        .def_property_readonly("velocity", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Velocity());})
+        .def_property_readonly("density", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Density());})
+        .def_property_readonly("total_pressure", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Pressure());})
+        .def_property_readonly("electron_pressure", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Electron_Pressure());})
+        .def_property_readonly("electron_density", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Electron_Density());})
+        .def_property_readonly("electron_temperature", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Electron_Temperature());})
+        .def_property_readonly("ion_temperature", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Ion_Temperature());})
+        .def_property_readonly("abundance", [](Wu_CV& self) { return Vector_to_Numpy(self.Get_Abundance());})
+        .def("solve", &Wu_CV::Solve_Profile)
+        .def("flow_equation", [](Wu_CV& self, double s, py::array_t<double, py::array::c_style | py::array::forcecast> state_py){
             Numpy_to_State(state_py.data(), self.state);
             self.Flow_Equation(s, self.state, self.deriv);
             py::array_t<double> np_array(self.n_dim);

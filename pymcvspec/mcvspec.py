@@ -11,7 +11,7 @@ import pyatomdb
 import astropy.units as u
 from astropy.constants import G
 
-from _pymcvspec import _cataclysmic_variable
+from _pymcvspec import _cataclysmic_variable, _saxton_cv, _cropper_cv, _wu_cv
 from _pymcvspec import _dipole, _white_dwarf, _accretion_column, _tolerance
 from _pymcvspec import _mass_to_radius, _luminosity_to_mdot
 from _pymcvspec import _atomic_charges, _atomic_masses
@@ -453,6 +453,8 @@ class cataclysmic_variable:
 
     Parameters
     ----------
+    model: `str`
+        choice of model for accretion column. One of: mcvspec, saxton, cropper, or wu
     mass : `~astropy.units.Quantity`
         white dwarf mass
     b_field : `~astropy.units.Quantity`
@@ -562,6 +564,7 @@ class cataclysmic_variable:
     @u.quantity_input
     def __init__(
         self,
+        model: str,
         mass: u.Quantity[u.M_sun],
         b_field: u.Quantity[u.MG],
         mdot: u.Quantity[u.g/u.cm**2/u.s],
@@ -579,6 +582,7 @@ class cataclysmic_variable:
         delta_z: float = 0.1,
         solve: bool = True
     ) -> None:
+        self.model = model
         self.white_dwarf = white_dwarf(
             mass,
             b_field,
@@ -601,12 +605,34 @@ class cataclysmic_variable:
             delta_z
         )
 
-        self._cpp_impl = _cataclysmic_variable(
-            self.white_dwarf._cpp_impl,
-            self.accretion_column._cpp_impl,
-            self.tolerance._cpp_impl
-        )
-        self.geometry = dipole(self._cpp_impl.column_coord)
+        if self.model == "mcvspec":
+            self._cpp_impl = _cataclysmic_variable(
+                self.white_dwarf._cpp_impl,
+                self.accretion_column._cpp_impl,
+                self.tolerance._cpp_impl
+            )
+            self.geometry = dipole(self._cpp_impl.column_coord)
+        elif self.model == "saxton":
+            self._cpp_impl = _saxton_cv(
+                self.white_dwarf._cpp_impl,
+                self.accretion_column._cpp_impl,
+                self.tolerance._cpp_impl
+            )
+        elif self.model == "cropper":
+            self._cpp_impl = _cropper_cv(
+                self.white_dwarf._cpp_impl,
+                self.accretion_column._cpp_impl,
+                self.tolerance._cpp_impl
+            )
+        elif self.model == "wu":
+            self._cpp_impl = _wu_cv(
+                self.white_dwarf._cpp_impl,
+                self.accretion_column._cpp_impl,
+                self.tolerance._cpp_impl
+            )
+        else:
+            raise RuntimeError("model must be one of: mcvspec, saxton, cropper, or wu")
+
         if solve:
             status = self._cpp_impl.solve()
             if status == -1:

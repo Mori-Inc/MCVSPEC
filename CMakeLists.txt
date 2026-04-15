@@ -48,7 +48,8 @@ if(BUILD_PYBINDINGS)
     find_package(pybind11 CONFIG REQUIRED)
 
     pybind11_add_module(_pymcvspec pymcvspec/bindings.cpp
-                            source/Cataclysmic_Variable.cpp)
+                            source/Cataclysmic_Variable.cpp
+                            source/Cataclysmic_Variable_Others.cpp)
 
     add_dependencies(_pymcvspec embed_wd_mass_radius)
 
