@@ -129,7 +129,7 @@ void Integrator<n_dim,RHS>::Dense_Step(double& t, State<n_dim>& y){
         for(size_t j = 0; j<tableau::n_stages+1; j++){
             add_vector_inplace(q[i], p[j][i-1], k[j]);
         }
-        multiply_scalar_inplace(q[i], std::pow(h,1-i));
+        multiply_scalar_inplace(q[i], std::pow(h,1-static_cast<int>(i)));
     }
     add_vector_inplace(y, 1., dy);
     t += dt;
