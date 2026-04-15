@@ -142,7 +142,6 @@ void Integrator<n_dim,RHS>::Interpolate(double t, State<n_dim>& y){
     double dt = dir*(t-t_old);
     y = q[0];
     for(size_t i=1; i<tableau::order; i++){
-        add_vector_inplace(y, dir*std::
-        pow(dt,i), q[i]);
+        add_vector_inplace(y, dir*std::pow(dt,i), q[i]);
     }
 }
