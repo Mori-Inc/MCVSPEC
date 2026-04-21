@@ -9,7 +9,7 @@
 #include <vector>
 
 double Luminosity_to_Accretion_Rate(double luminosity, White_Dwarf wd){
-    double accretion_rate = luminosity/(grav_const*wd.mass*((1./wd.radius) - wd.inverse_mag_radius));
+    double accretion_rate = luminosity/(grav_const*wd.mass/wd.radius);
     return accretion_rate;
 }
 
@@ -70,7 +70,7 @@ void Cataclysmic_Variable::Set_Cooling_Constants(){ // "constant" insofar as the
 void Cataclysmic_Variable::Compute_Shock_Bound(double w_s, State<n_dim>& bound, double& s_s) const{
     double r_s, proj_r_w, convergance, scale_factors[3];
     geometry.update_coordinates(w_s, r_s, proj_r_w, convergance, scale_factors);
-    double mdot = 1./(scale_factors[0]*scale_factors[2]);
+    double mdot = 1./(scale_factors[1]*scale_factors[2]);
     double vff = sqrt(1./r_s - length_conv*white_dwarf.inverse_mag_radius);
     bound[0] = w_s;
     bound[1] = vff;
@@ -102,7 +102,7 @@ void Cataclysmic_Variable::Flow_Equation(double entropy,const State<n_dim>& stat
 
     const double cyc = (cyclotron_const/gff)*pe*pe*v*v*v*h*pow(v*v/h, 0.425);
     const double rad = bremss_const*gff*sqrt(pe/(h*h*h*v*v*v))*(1+cyc);
-    const double exch = (exchange_const*coulomb_log/(bremss_const*gff))*(avg_atomic_charge*(p-pe)/pe - 1.0)/(pe*v*h); // ratio of exchange to radiation
+    const double exch = (exchange_const*coulomb_log/(bremss_const*gff))*(avg_atomic_charge*(p-pe)/pe - 1.0)/(pe*v*h*(1+cyc)); // ratio of exchange to radiation
     const double grav = 0.5*proj_r_w/(r*r)/rad;
     const double conv = v*convergance/(h*rad);
 
@@ -356,7 +356,7 @@ void Cataclysmic_Variable::Build_Column_Profile(){
         volume_element[i] = (accretion_column.accretion_area*length_conv/geometry.a_0)*scale_factors[0]*scale_factors[1]*scale_factors[2];
         altitude[i] = length_conv*(r-1);
         velocity[i] = vel_conv*grid[i][2];
-        mdot = 1./(scale_factors[0]*scale_factors[2]);
+        mdot = 1./(scale_factors[1]*scale_factors[2]);
         total_pressure[i] = pressure_conv*mdot*(grid[i][1]-grid[i][2]);
         electron_pressure[i] = pressure_conv*grid[i][3];
         density[i] = density_conv*mdot/grid[i][2];
