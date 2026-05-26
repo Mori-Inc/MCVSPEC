@@ -32,14 +32,14 @@ void XS_Cataclysmic_Variable::Set_Abundances(){
 }
 
 const void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const int spectrum_num, RealArray& flux, const string& init_string, const bool do_refl){
-    if(!valid_solution){
+    if(!valid_solution || position.size()==1){
         std::cout << "No valid solution found!" << std::endl;
         std::cout << "Column does not reach WD surface for any shock height" << std::endl;
         flux = std::nan("");
         return;
     }
     int n = flux.size();
-    double alt, ion_density;
+    double alt, ion_density, cosi=white_dwarf.cos_inclination;
     double refl_amp;
     RealArray flux_integrand[2] = {RealArray(n), RealArray(n)};
     RealArray direct_flux(n);
@@ -50,9 +50,10 @@ const void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const i
     RealArray refl_parameters = {-1,0,accretion_column.metallicity,accretion_column.metallicity,white_dwarf.cos_inclination};
     // refl_amp = -1 means only return reflected spectrum, this ensures that reflection can be done separately to apec
 
-    if(ion_temperature[0]>64.0){
-        brem_parameters = electron_temperature[0];
+    if(electron_temperature[0] > 86.0 || ion_temperature[0] > 86.0){
+        brem_parameters[0] = electron_temperature[0];
         CXX_bremss(energy, brem_parameters, spectrum_num, flux_integrand[1], flux_error, init_string);
+        flux_integrand[1] *= 3.02e-15/1e-14;
     }
     else{
         apec_parameters[0] = electron_temperature[0];
@@ -66,9 +67,11 @@ const void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const i
     for(size_t i=1; i<position.size(); i++){
         flux_integrand[0] = flux_integrand[1];
         flux_integrand[1] = 0.;
-        if (electron_temperature[i] > 64.0 || ion_temperature[i] > 64.0){
-            brem_parameters = electron_temperature[i];
+
+        if (electron_temperature[i] > 86.0 || ion_temperature[i] > 86.0){
+            brem_parameters[0] = electron_temperature[i];
             CXX_bremss(energy, brem_parameters, spectrum_num, flux_integrand[1], flux_error, init_string);
+            flux_integrand[1] *= 3.02e-15/1e-14;
         }
         else{
             apec_parameters[0] = electron_temperature[i];
@@ -81,11 +84,11 @@ const void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const i
         direct_flux = 0.5*(position[i]-position[i-1])*(flux_integrand[1]+flux_integrand[0]);
 
         if(do_refl){
-            alt = 0.5*(altitude[i]+altitude[i-1]);
+            alt = 0.5*(altitude[i]+altitude[i-1])/white_dwarf.radius;
             if(alt<0){
                 alt=0.;
             }
-            refl_amp = 1-sqrt(1.0-1.0/pow(1+alt/white_dwarf.radius,2));
+            refl_amp = 1 - (sqrt(alt*(alt+2))/(1+alt))*(1 - (3*cosi*cosi - 1)/(8*(1+alt)*(1+alt)));
             reflected_flux += refl_amp*direct_flux;
         }
         flux += direct_flux;
@@ -94,4 +97,19 @@ const void XS_Cataclysmic_Variable::XS_Spectrum(const RealArray& energy, const i
         CXX_reflect(energy, refl_parameters, spectrum_num, reflected_flux, flux_error, init_string);
         flux += reflected_flux;
     }
+}
+
+void XS_Cataclysmic_Variable::Set_TCL() const {
+    if(altitude.size() < 1){
+        return;
+    }
+    FunctionUtility::loadDbValue("R_wd", white_dwarf.radius); // cm
+    FunctionUtility::loadDbValue("B_0", white_dwarf.b_field/1e6); // MG
+    if(white_dwarf.inverse_mag_radius != 0){
+        FunctionUtility::loadDbValue("R_m", 1./white_dwarf.inverse_mag_radius); // cm
+    }
+    FunctionUtility::loadDbValue("Mdot", accretion_column.accretion_rate*accretion_column.accretion_area); // g/s
+    FunctionUtility::loadDbValue("mdot", accretion_column.accretion_rate); // g/cm2/s
+    FunctionUtility::loadDbValue("h_s", altitude[0]); // cm
+    FunctionUtility::loadDbValue("kT_s", ion_temperature[0]); // keV
 }

@@ -65,7 +65,7 @@ void Polarspec(const RealArray& energy, const RealArray& params, int spectrum_nu
     bool refl;
     XS_Cataclysmic_Variable polar = make_mcv(params, refl, false, true, true);
     polar.XS_Spectrum(energy, spectrum_num, flux, init_string, refl);
-    polar.Print_Properties();
+    polar.Set_TCL();
 }
 
 extern "C"
@@ -77,7 +77,7 @@ void PolarspecArea(const RealArray& energy, const RealArray& params, int spectru
     bool refl;
     XS_Cataclysmic_Variable polar = make_mcv(params, refl, false, true, false);
     polar.XS_Spectrum(energy, spectrum_num, flux, init_string, refl);
-    polar.Print_Properties();
+    polar.Set_TCL();
 }
 
 extern "C"
@@ -89,7 +89,7 @@ void PolarspecMdot(const RealArray& energy, const RealArray& params, int spectru
     bool refl;
     XS_Cataclysmic_Variable polar = make_mcv(params, refl, false, false, true);
     polar.XS_Spectrum(energy, spectrum_num, flux, init_string, refl);
-    polar.Print_Properties();
+    polar.Set_TCL();
 }
 
 extern "C"
@@ -101,7 +101,7 @@ void PolarspecMdotArea(const RealArray& energy, const RealArray& params, int spe
     bool refl;
     XS_Cataclysmic_Variable polar = make_mcv(params, refl, false, false, false);
     polar.XS_Spectrum(energy, spectrum_num, flux, init_string, refl);
-    polar.Print_Properties();
+    polar.Set_TCL();
 }
 
 extern "C"
@@ -113,7 +113,7 @@ void IPspec(const RealArray& energy, const RealArray& params, int spectrum_num, 
     bool refl;
     XS_Cataclysmic_Variable ip = make_mcv(params, refl, true, true, true);
     ip.XS_Spectrum(energy, spectrum_num, flux, init_string, refl);
-    ip.Print_Properties();
+    ip.Set_TCL();
 }
 
 extern "C"
@@ -125,7 +125,7 @@ void IPspecArea(const RealArray& energy, const RealArray& params, int spectrum_n
     bool refl;
     XS_Cataclysmic_Variable ip = make_mcv(params, refl, true, true, false);
     ip.XS_Spectrum(energy, spectrum_num, flux, init_string, refl);
-    ip.Print_Properties();
+    ip.Set_TCL();
 }
 
 extern "C"
@@ -137,7 +137,7 @@ void IPspecMdot(const RealArray& energy, const RealArray& params, int spectrum_n
     bool refl;
     XS_Cataclysmic_Variable ip = make_mcv(params, refl, true, false, true);
     ip.XS_Spectrum(energy, spectrum_num, flux, init_string, refl);
-    ip.Print_Properties();
+    ip.Set_TCL();
 }
 
 extern "C"
@@ -149,5 +149,5 @@ void IPspecMdotArea(const RealArray& energy, const RealArray& params, int spectr
     bool refl;
     XS_Cataclysmic_Variable ip = make_mcv(params, refl, true, false, false);
     ip.XS_Spectrum(energy, spectrum_num, flux, init_string, refl);
-    ip.Print_Properties();
+    ip.Set_TCL();
 }
