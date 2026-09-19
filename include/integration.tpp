@@ -45,7 +45,7 @@ void Integrator<n_dim,RHS>::Initialize(double& t, const double t_end, const Stat
 }
 
 template <size_t n_dim, class RHS>
-void Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, double& h_new){
+int Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, double& h_new){
     using tableau::a;
     using tableau::b;
     using tableau::c;
@@ -53,7 +53,9 @@ void Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, 
     bool step_succeded = false;
     bool step_failed = false;
     double err_norm;
-    while(!step_succeded){
+    int n_tries=0;
+    constexpr int max_attempt=1000;
+    while(!step_succeded && n_tries<max_attempt){
         multiply_scalar(e[0], k[0], err_arr);
         for(size_t i=1; i<tableau::n_stages; i++){
             dy.fill(0.0);
@@ -102,18 +104,24 @@ void Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, 
             step_failed = true;
             h *= 0.2;
         }
+        n_tries++;
     }
+    if(n_tries<max_attempt){
+        return 0;
+    }
+    return 1;
 }
 
 template <size_t n_dim, class RHS>
-void Integrator<n_dim,RHS>::Step(double& t, State<n_dim>& y){
+int Integrator<n_dim,RHS>::Step(double& t, State<n_dim>& y){
     double h_new = h;
     dt = h;
-    Prepare_Step(t, y, h_new);
+    int status = Prepare_Step(t, y, h_new);
     add_vector_inplace(y, 1., dy);
     t += dt;
     h = h_new;
     swap(k[0], k[tableau::n_stages]);
+    return status;
 }
 
 template <size_t n_dim, class RHS>

@@ -123,9 +123,13 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
     State<n_dim> y;
     Compute_Shock_Bound(w_s, y, s_s);
     double s = s_s;
+    int status=0;
     integrator.Initialize(s, 0, y);
-    while(s/s_s > 1e-2){
-         integrator.Step(s, y);
+    while(s/s_s > 1e-2 && status==0){
+         status=integrator.Step(s, y);
+    }
+    if(status!=0){
+        return -2;
     }
     double error = 1;
     State<n_dim> slope{};
@@ -154,6 +158,9 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
 int Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& lower_bound, double& upper_landing, double& lower_landing) const {
     upper_bound = geometry.w_0;
     upper_landing = Landing_Altitude(upper_bound);
+    if(upper_landing==-2){
+        return 1;
+    }
 
     double r=1.;
     double dr = 0.01;

@@ -30,11 +30,11 @@ class Integrator{
     public:
         explicit Integrator(RHS, const double absolute_err = 1e-8, const double relative_err = 1e-6);
         void Initialize(double&, const double, const State<n_dim>&);
-        void Step(double&, State<n_dim>&);
+        int Step(double&, State<n_dim>&);
         void Dense_Step(double&, State<n_dim>&);
         void Interpolate(double, State<n_dim>&);
     private:
-        void Prepare_Step(const double&, const State<n_dim>&, double&);
+        int Prepare_Step(const double&, const State<n_dim>&, double&);
         void Set_Initial_Step(const double&, const State<n_dim>&);
         void Dense_Output(const double, const double, const State<n_dim>, const double);
 };
