@@ -1,5 +1,8 @@
 #pragma once
 #include "constants.hh"
+#include <cmath>
+#include <limits>
+#include <algorithm>
 
 namespace gaunt{
     // coefficients for exact non-relativistic gaunt factor
@@ -18,8 +21,14 @@ namespace gaunt{
         const double gamma_sqr = ryd_to_erg/kT;
         const double log_gam = log10(gamma_sqr);
         double p,q;
+        if(!std::isfinite(log_gam)){
+            // kT = inf (or <= 0) used to produce i = INT_MIN below -> out-of-bounds read -> segfault
+            return std::numeric_limits<double>::quiet_NaN();
+        }
         if(kT > 1./erg_to_kev){
-            int i = (log_gam-gamma_interp[0])/0.1;
+            // clamp to the table: above ~270 keV the old index went negative and read garbage memory
+            int i = static_cast<int>((log_gam-gamma_interp[0])/0.1);
+            i = std::max(0, std::min(i, 24));
             return ((gaunt_interp[i+1]-gaunt_interp[i])/(gamma_interp[i+1]-gamma_interp[i]))*(log_gam-gamma_interp[i]) + gaunt_interp[i];
         }
         else if(log_gam<=0.8){

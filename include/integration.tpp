@@ -40,6 +40,7 @@ void Integrator<n_dim,RHS>::Set_Initial_Step(const double& t0, const State<n_dim
 template <size_t n_dim, class RHS>
 void Integrator<n_dim,RHS>::Initialize(double& t, const double t_end, const State<n_dim>& y){
     dir = (0. < (t_end-t)) - ((t_end-t) < 0.);
+    n_steps = 0;
     func(t, y, k[0]);
     Set_Initial_Step(t, y);
 }
@@ -106,10 +107,21 @@ int Integrator<n_dim,RHS>::Prepare_Step(const double& t,const State<n_dim>& y, d
         }
         n_tries++;
     }
-    if(n_tries<max_attempt){
-        return 0;
+    if(n_tries>=max_attempt){
+        return 1; // could not find an acceptable step
     }
-    return 1;
+    if(!std::isfinite(h_new) || !std::isfinite(dt) || t+dt == t){
+        return 2; // step size collapsed: t no longer advances
+    }
+    if(++n_steps > max_steps){
+        return 3; // integration creeping (e.g. toward a sonic point)
+    }
+    for(size_t i=0; i<n_dim; i++){
+        if(!std::isfinite(dy[i])){
+            return 4; // non-finite state
+        }
+    }
+    return 0;
 }
 
 template <size_t n_dim, class RHS>
@@ -125,13 +137,13 @@ int Integrator<n_dim,RHS>::Step(double& t, State<n_dim>& y){
 }
 
 template <size_t n_dim, class RHS>
-void Integrator<n_dim,RHS>::Dense_Step(double& t, State<n_dim>& y){
+int Integrator<n_dim,RHS>::Dense_Step(double& t, State<n_dim>& y){
     using tableau::p;
     double h_new=h;
     dt = h;
     t_old = t;
     q[0]=y;
-    Prepare_Step(t, y, h_new);
+    int status = Prepare_Step(t, y, h_new);
     for(size_t i = 1; i<tableau::order; i++){
         q[i].fill(0.0);
         for(size_t j = 0; j<tableau::n_stages+1; j++){
@@ -143,6 +155,7 @@ void Integrator<n_dim,RHS>::Dense_Step(double& t, State<n_dim>& y){
     t += dt;
     h = h_new;
     swap(k[0], k[tableau::n_stages]);
+    return status;
 }
 
 template <size_t n_dim, class RHS>

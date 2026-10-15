@@ -7,6 +7,11 @@
 #include <cstddef>
 #include <iostream>
 #include <vector>
+#include <limits>
+
+static constexpr double failed_landing = std::numeric_limits<double>::quiet_NaN();
+static constexpr int max_root_iterations = 1000;
+static constexpr size_t max_grid_points = 100000; // healthy columns have O(100) grid points
 
 double Luminosity_to_Accretion_Rate(double luminosity, White_Dwarf wd){
     double accretion_rate = luminosity/(grav_const*wd.mass/wd.radius);
@@ -129,7 +134,7 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
          status=integrator.Step(s, y);
     }
     if(status!=0){
-        return -2;
+        return failed_landing;
     }
     double error = 1;
     State<n_dim> slope{};
@@ -138,15 +143,24 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
     double dw_prev = slope[0];
 
     while(error > error_control.absolute_error){
-        integrator.Step(s, y);
+        status = integrator.Step(s, y);
+        if(status!=0){
+            return failed_landing;
+        }
         Flow_Equation(s,  y, slope);
         error = 0.5*std::abs((slope[0]-dw_prev)/(s-s_prev))*s*s; //difference between linear and quadratic extrapolation on w
         s_prev = s;
         dw_prev = slope[0];
     }
-    integrator.Step(s, y);
+    status = integrator.Step(s, y);
+    if(status!=0){
+        return failed_landing;
+    }
     Flow_Equation(s,  y, slope);
     double landing = y[0] - slope[0]*s;
+    if(!std::isfinite(landing)){
+        return failed_landing;
+    }
     return landing - geometry.w_0;
 }
 
@@ -158,7 +172,7 @@ double Cataclysmic_Variable::Landing_Altitude(double w_s) const {
 int Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& lower_bound, double& upper_landing, double& lower_landing) const {
     upper_bound = geometry.w_0;
     upper_landing = Landing_Altitude(upper_bound);
-    if(upper_landing==-2){
+    if(!std::isfinite(upper_landing)){
         return 1;
     }
 
@@ -171,7 +185,15 @@ int Cataclysmic_Variable::Bracket_Shock_Position(double& upper_bound, double& lo
 
     double dwl_drs[2] = {(samples[1]-samples[0])/dr, (samples[2]-samples[1])/dr};
     double step = 0;
+    int n_iter = 0;
+    // Note: a failed trial integration returns NaN, which ends this loop (NaN > 0 is false) and is then
+    // bisected past in Find_Shock_Position. That is the same path the original code takes for failures
+    // in the refinement loop, and it does recover genuine roots; the solution is only accepted if the
+    // final bracket ends with finite landing altitudes of opposite sign (checked in Find_Shock_Position).
     while(dwl_drs[0]*dwl_drs[1] > 0){ // while minima not bounded
+        if(++n_iter > max_root_iterations){
+            return 1;
+        }
         if(samples[2]<0){
             lower_bound = r_to_w(r+dr);
             lower_landing = samples[2];
@@ -230,6 +252,11 @@ void Cataclysmic_Variable::Find_Shock_Position(){
         }
 
         new_altitude = Landing_Altitude(new_bound);
+        // previously a failed evaluation here collapsed the bracket onto the failed point and called it a solution
+        if(!std::isfinite(new_altitude) || i > max_root_iterations){
+            valid_solution = false;
+            return;
+        }
         if(new_altitude>0){
             upper_bound = new_bound;
             upper_landing = new_altitude;
@@ -244,6 +271,10 @@ void Cataclysmic_Variable::Find_Shock_Position(){
         }
         i++;
     }
+    if(!(std::isfinite(upper_landing) && std::isfinite(lower_landing) && upper_landing*lower_landing <= 0)){
+        valid_solution = false; // never achieved a genuine sign change
+        return;
+    }
     State<n_dim> bound{};
     double s_s;
     Compute_Shock_Bound(0.5*(upper_bound+lower_bound), bound, s_s);
@@ -252,9 +283,14 @@ void Cataclysmic_Variable::Find_Shock_Position(){
 }
 
 template <typename func>
-void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& grid_spacing, std::vector<State<n_dim>>& grid) const {
+bool Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& grid_spacing, std::vector<State<n_dim>>& grid) const {
     if(!valid_solution){
-        return;
+        return false;
+    }
+    for(size_t i=0; i<n_grid_vars; i++){
+        if(!std::isfinite(grid_spacing[i]) || grid_spacing[i]==0.){
+            return false;
+        }
     }
     constexpr int n_segments=16;
     // integration variables
@@ -265,7 +301,11 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
     // grid variables
     State<n_grid_vars> grid_vars{};
     grid_func(t,y,grid_vars);
-    grid.reserve(size_t(std::abs(grid_vars[0]/grid_spacing[0]))+1);
+    const double n_expected = std::abs(grid_vars[0]/grid_spacing[0]);
+    if(!std::isfinite(n_expected)){
+        return false;
+    }
+    grid.reserve(size_t(std::min(n_expected, 1e5))+1);
     grid.push_back(y);
 
     // segment variables
@@ -297,7 +337,9 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
 
     while(grid_vars[0] > grid_spacing[0] && t > error_control.absolute_error){
         double t0 = t;
-        integrator.Dense_Step(t,y);
+        if(integrator.Dense_Step(t,y) != 0){
+            return false;
+        }
         double dt = (t-t0)/double(n_segments);
         for(size_t seg=0; seg<n_segments; seg++){
             t_left = t0 + dt*seg;
@@ -312,9 +354,13 @@ void Cataclysmic_Variable::Build_Grid(func grid_func, const State<n_grid_vars>& 
                 grid_func(t_left, y_left, grid_left);
                 grid.push_back(y_left);
                 grid_vars = grid_left;
+                if(grid.size() > max_grid_points){
+                    return false;
+                }
             }
         }
     }
+    return true;
 }
 
 void Cataclysmic_Variable::Build_Column_Profile(){
@@ -341,7 +387,10 @@ void Cataclysmic_Variable::Build_Column_Profile(){
     };
 
     std::vector<State<n_dim>> grid;
-    Build_Grid(grid_func, grid_spacing, grid);
+    if(!Build_Grid(grid_func, grid_spacing, grid)){
+        valid_solution = false;
+        return;
+    }
 
     int n_points = grid.size();
     position.resize(n_points);

@@ -1,8 +1,34 @@
 #include "Cataclysmic_Variable.hh"
 #include "XS_Cataclysmic_Variable.hh"
 #include "constants.hh"
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <unistd.h>
+
+// Opt-in debugging: `export MCVSPEC_DEBUG_DIR=/some/dir` before starting xspec.
+// Each process (including each `parallel walkers` worker) overwrites <dir>/mcvspec_<pid>.txt with the
+// parameters it is ABOUT to evaluate. If a worker hangs or crashes, its file holds the culprit point,
+// which is usually a rejected MCMC proposal and so never appears in the chain file.
+static void Log_Current_Parameters(const RealArray& params){
+    static const char* dir = std::getenv("MCVSPEC_DEBUG_DIR");
+    if(dir == nullptr){
+        return;
+    }
+    const std::string path = std::string(dir) + "/mcvspec_" + std::to_string(getpid()) + ".txt";
+    FILE* fp = std::fopen(path.c_str(), "w");
+    if(fp == nullptr){
+        return;
+    }
+    for(size_t i=0; i<params.size(); i++){
+        std::fprintf(fp, "%.17g ", params[i]);
+    }
+    std::fprintf(fp, "\n");
+    std::fclose(fp);
+}
 
 XS_Cataclysmic_Variable make_mcv(const RealArray& user_params, bool& refl, const bool is_ip=false, const bool use_lum=false, const bool use_f=false){
+    Log_Current_Parameters(user_params);
     White_Dwarf wd;
     Accretion_Column col;
     Tolerance tol;

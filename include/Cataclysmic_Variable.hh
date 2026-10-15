@@ -85,7 +85,7 @@ class Cataclysmic_Variable{
         void Set_Cooling_Constants();
         int Bracket_Shock_Position(double&,double&,double&,double&) const;
         template <typename func>
-        void Build_Grid(func,const State<n_grid_vars>&,std::vector<State<n_dim>>&) const;
+        bool Build_Grid(func,const State<n_grid_vars>&,std::vector<State<n_dim>>&) const;
         void Compute_Shock_Bound(double, State<n_dim>&, double&) const;
         double Landing_Altitude(double) const;
         struct Diff_EQ {
