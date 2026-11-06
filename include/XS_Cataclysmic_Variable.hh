@@ -5,8 +5,9 @@
 
 class XS_Cataclysmic_Variable : public Cataclysmic_Variable {
     public:
-        XS_Cataclysmic_Variable(double,double,double,double,double,double,double,double,double,double,double,int);
-        void XS_Spectrum(const RealArray&, const int, RealArray&, const string&);
+        XS_Cataclysmic_Variable(White_Dwarf, Accretion_Column, Tolerance);
+        const void XS_Spectrum(const RealArray&, const int, RealArray&, const string&, const bool);
+        void Set_TCL() const;
     protected:
-        void Set_Abundances(double) override;
+        void Set_Abundances() override;
 };

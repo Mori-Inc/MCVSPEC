@@ -11,3 +11,4 @@ pkgIndex.tcl
 *FunctionMap.o
 build
 include/mass_radius.hh
+compile_commands.json

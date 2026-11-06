@@ -1,42 +1,42 @@
 #pragma once
 
+#include <array>
 #include "tableau.hh"
-#include <valarray>
-#include <vector>
 
-using std::valarray;
-using std::vector;
+template <size_t n_dim>
+using State = std::array<double, n_dim>;
 
-using tableau::n_stages;
-using tableau::order;
-
-const int max_itter = 1000000;
-
-template <typename model>
-using exec = void (model::*)(double, const valarray<double>&, valarray<double>&) const;
-template <typename model, exec<model> call>
+template <size_t n_dim, class RHS>
 class Integrator{
     private:
-        const model* func;
-        double abs_err, rel_err;
-        valarray<double> k[n_stages+1];
-        valarray<double> q[order];
-        valarray<double> tol;
-        double dir;
-        double h;
-        double t_old;
+        RHS func;
+        double abs_err = 1e-8;
+        double rel_err = 1e-6;
+
+        std::array<State<n_dim>, tableau::n_stages+1> k{};
+        std::array<State<n_dim>, tableau::order> q{};
+        double t_internal = 0.0;
+        State<n_dim> y_internal{};
+        double dt = 0.0;
+        State<n_dim> dy{};
+        State<n_dim> err_arr{};
+        State<n_dim> tol{};
+        double dir = 1.;
+        double h = 0.0;
+        double t_old = 0.0;
+
+        State<n_dim> buffer{};
 
     public:
-        explicit Integrator(const model&, const double absolute_err=1e-8, const double relative_err=1e-6);
-        void Initialize(double&, const double, const valarray<double>&);
-        void Integrate(double&, const double, valarray<double>&);
-        void Step(double&, valarray<double>&);
-        void Dense_Step(double&, valarray<double>&);
-        void Interpolate(double, valarray<double>&);
+        explicit Integrator(RHS, const double absolute_err = 1e-8, const double relative_err = 1e-6);
+        void Initialize(double&, const double, const State<n_dim>&);
+        int Step(double&, State<n_dim>&);
+        void Dense_Step(double&, State<n_dim>&);
+        void Interpolate(double, State<n_dim>&);
     private:
-        void Prepare_Step(const double&, double&, const valarray<double>&, valarray<double>&, double&);
-        void Set_Initial_Step(const double, const valarray<double>);
-        void Dense_Output(const double, const double, const valarray<double>, const double);
+        int Prepare_Step(const double&, const State<n_dim>&, double&);
+        void Set_Initial_Step(const double&, const State<n_dim>&);
+        void Dense_Output(const double, const double, const State<n_dim>, const double);
 };
 
 #include "integration.tpp"

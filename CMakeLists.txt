@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(BUILD_PYBINDINGS True CACHE BOOL "Build pyMCVSPEC")
 set(BUILD_XSMODEL True CACHE BOOL "Build XSpec Model")
@@ -68,16 +68,17 @@ if(BUILD_XSMODEL)
 
     set(SOURCE_FILES ${CMAKE_SOURCE_DIR}/source/Cataclysmic_Variable.cpp;
                     ${CMAKE_SOURCE_DIR}/source/XS_Cataclysmic_Variable.cpp)
-    set(MODEL_FILES ${CMAKE_SOURCE_DIR}/model_funcs/polarspec.cpp;
-                    ${CMAKE_SOURCE_DIR}/model_funcs/ipspec.cpp;
+    set(MODEL_FILES ${CMAKE_SOURCE_DIR}/model_funcs/mcvspec.cpp;
                     ${CMAKE_SOURCE_DIR}/model_funcs/mcvspec.dat)
     set(HEADER_FILES ${CMAKE_SOURCE_DIR}/include/Cataclysmic_Variable.hh;
                     ${CMAKE_SOURCE_DIR}/include/XS_Cataclysmic_Variable.hh;
                     ${CMAKE_SOURCE_DIR}/include/integration.hh;
                     ${CMAKE_SOURCE_DIR}/include/integration.tpp;
+                    ${CMAKE_SOURCE_DIR}/include/array_operators.hh;
                     ${CMAKE_SOURCE_DIR}/include/constants.hh;
                     ${CMAKE_SOURCE_DIR}/include/tableau.hh;
                     ${CMAKE_SOURCE_DIR}/include/gaunt.hh;
+                    ${CMAKE_SOURCE_DIR}/include/dipole.hh;
                     ${MR_HEADER_PATH})
 
     foreach(FILE IN LISTS SOURCE_FILES MODEL_FILES HEADER_FILES)
